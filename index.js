@@ -7,7 +7,7 @@ const textToSVG = TextToSVG.loadSync();
 
 const server = express().use(helmet());
 
-server.get('/math/:tokenId', async (req, res) => {
+server.get('/:tokenId', async (req, res) => {
   const { tokenId } = req.params;
   return res.status(200).json({
     image_data: textToSVG.getSVG(tokenId),
