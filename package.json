@@ -1,19 +1,12 @@
 {
-  "name": "math",
+  "name": "MATH",
   "version": "1.0.0",
-  "description": "MATH",
-  "main": "index.js",
+  "description": "",
   "scripts": {
-    "start": "cross-env node index.js"
+    "test": "echo \"No tests yet...\""
   },
-  "author": "Alex Hansen <alxo@cryptokitties.city>",
-  "license": "ISC",
   "dependencies": {
-    "express": "^4.16.4",
-    "helmet": "^3.15.1",
     "text-to-svg": "^3.1.5"
   },
-  "devDependencies": {
-    "cross-env": "^5.2.0"
-  }
+  "devDependencies": {}
 }
