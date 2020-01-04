@@ -5,8 +5,6 @@
   "scripts": {
     "test": "echo \"No tests yet...\""
   },
-  "dependencies": {
-    "text-to-svg": "^3.1.5"
-  },
+  "dependencies": {},
   "devDependencies": {}
 }
