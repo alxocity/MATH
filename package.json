@@ -8,5 +8,7 @@
   "dependencies": {
     "@openzeppelin/contracts": "^2.4.0"
   },
-  "devDependencies": {}
+  "devDependencies": {
+    "truffle-flattener": "^1.4.2"
+  }
 }
