@@ -24,7 +24,7 @@ module.exports = async function (context, req) {
           value: sum
         }
       ],
-      background_color: bigInt.toString(16).padStart(6, '0').slice(-6)
+      background_color: (bigInt % 16777216n).toString(16).padStart(6, '0')
     }
   };
 };
