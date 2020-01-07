@@ -23,7 +23,8 @@ module.exports = async function (context, req) {
           trait_type: 'digit_sum',
           value: sum
         }
-      ]
+      ],
+      background_color: bigInt.toString(16).padStart(6, '0').slice(-6)
     }
   };
 };
