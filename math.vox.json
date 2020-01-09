@@ -4,6 +4,1689 @@
     "id": 574,
     "features": [
       {
+        "type": "image",
+        "scale": [
+          4.5,
+          4.5,
+          1
+        ],
+        "url": "https://lh3.googleusercontent.com/3GMmndJG-ToWoRRyB_xnknwK2zfq-SLwiZpTSuNgPB_oclWVjfhrUhKTnMY5DZ3W2R82XSJSGdZS0MceSfGCZuqk",
+        "position": [
+          7.25,
+          3.25,
+          0.25
+        ],
+        "rotation": [
+          0,
+          1.5707963267948966,
+          0
+        ],
+        "uuid": "1d2d2825-0d78-4af7-a2c2-7e73105f59b5",
+        "color": true,
+        "inverted": true
+      },
+      {
+        "type": "sign",
+        "scale": [
+          0.5,
+          0.5,
+          0.5
+        ],
+        "text": "7",
+        "position": [
+          5.5,
+          2.75,
+          3.75
+        ],
+        "rotation": [
+          0,
+          0,
+          0
+        ],
+        "uuid": "0d6a9a71-41a6-44ff-b4b2-0cd744e21169",
+        "fontSize": 92,
+        "inverted": true
+      },
+      {
+        "type": "sign",
+        "scale": [
+          0.5,
+          0.5,
+          0.5
+        ],
+        "text": "8",
+        "position": [
+          5.5,
+          1.5,
+          3.75
+        ],
+        "rotation": [
+          0,
+          0,
+          0
+        ],
+        "uuid": "c5dba780-47c7-4612-8e6b-5d9e8acf4c15",
+        "inverted": true,
+        "fontSize": 92
+      },
+      {
+        "type": "sign",
+        "scale": [
+          0.5,
+          0.5,
+          0.5
+        ],
+        "text": "11",
+        "position": [
+          4.25,
+          2.75,
+          3.75
+        ],
+        "rotation": [
+          0,
+          0,
+          0
+        ],
+        "uuid": "a4005adc-996b-4773-ac29-aeaad53cdc73",
+        "fontSize": 92,
+        "inverted": true
+      },
+      {
+        "type": "sign",
+        "scale": [
+          0.5,
+          0.5,
+          0.5
+        ],
+        "text": "3",
+        "position": [
+          6.75,
+          2.75,
+          3.75
+        ],
+        "rotation": [
+          0,
+          0,
+          0
+        ],
+        "uuid": "2fb30f9d-cfed-4ff2-a41d-9f6b77b45081",
+        "fontSize": 92,
+        "inverted": true
+      },
+      {
+        "type": "sign",
+        "scale": [
+          0.5,
+          0.5,
+          0.5
+        ],
+        "text": "6",
+        "position": [
+          5.5,
+          4,
+          3.75
+        ],
+        "rotation": [
+          0,
+          0,
+          0
+        ],
+        "uuid": "1106635e-fd6f-4202-8a4e-3ab8624990b8",
+        "fontSize": 92,
+        "inverted": true
+      },
+      {
+        "type": "sign",
+        "scale": [
+          0.5,
+          0.5,
+          0.5
+        ],
+        "text": "12",
+        "position": [
+          4.25,
+          1.5,
+          3.75
+        ],
+        "rotation": [
+          0,
+          0,
+          0
+        ],
+        "uuid": "62377f37-691a-4276-a6a5-6a0cc2f1c3c0",
+        "fontSize": 92,
+        "inverted": true
+      },
+      {
+        "type": "sign",
+        "scale": [
+          0.5,
+          0.5,
+          0.5
+        ],
+        "text": "4",
+        "position": [
+          6.75,
+          1.5,
+          3.75
+        ],
+        "rotation": [
+          0,
+          0,
+          0
+        ],
+        "uuid": "280ccdd8-d670-4a09-82a7-75fc33a3679a",
+        "fontSize": 92,
+        "inverted": true
+      },
+      {
+        "type": "sign",
+        "scale": [
+          0.5,
+          0.5,
+          0.5
+        ],
+        "text": "10",
+        "position": [
+          4.25,
+          4,
+          3.75
+        ],
+        "rotation": [
+          0,
+          0,
+          0
+        ],
+        "uuid": "a3ccab34-fd55-4047-873c-444e54d1710d",
+        "fontSize": 92,
+        "inverted": true
+      },
+      {
+        "type": "sign",
+        "scale": [
+          0.5,
+          0.5,
+          0.5
+        ],
+        "text": "2",
+        "position": [
+          6.75,
+          4,
+          3.75
+        ],
+        "rotation": [
+          0,
+          0,
+          0
+        ],
+        "uuid": "325b0859-11f6-47a2-bd85-fa43c3311506",
+        "fontSize": 92,
+        "inverted": true
+      },
+      {
+        "type": "sign",
+        "scale": [
+          0.5,
+          0.5,
+          0.5
+        ],
+        "text": "95",
+        "position": [
+          5.5,
+          2.75,
+          -3.25
+        ],
+        "rotation": [
+          0,
+          3.141592653589793,
+          0
+        ],
+        "uuid": "3e7fba53-c4a2-44c0-b341-f75268639e17",
+        "inverted": true,
+        "fontSize": 92
+      },
+      {
+        "type": "nft-image",
+        "scale": [
+          1,
+          1,
+          0
+        ],
+        "url": "https://opensea.io/assets/0x6b4fccdd888bb6fd3934a9e49ef64dfd2c0d8e6d/7",
+        "position": [
+          5.5,
+          2.75,
+          4.25
+        ],
+        "rotation": [
+          0,
+          0,
+          0
+        ],
+        "uuid": "d2f9176d-3504-47f1-9881-772edd7351be"
+      },
+      {
+        "type": "sign",
+        "scale": [
+          0.5,
+          0.5,
+          0.5
+        ],
+        "text": "96",
+        "position": [
+          5.5,
+          1.5,
+          -3.25
+        ],
+        "rotation": [
+          0,
+          3.141592653589793,
+          0
+        ],
+        "uuid": "1f3e9c21-8512-4057-bdec-e9f01fc585f0",
+        "fontSize": 92,
+        "inverted": true
+      },
+      {
+        "type": "nft-image",
+        "scale": [
+          1,
+          1,
+          0
+        ],
+        "url": "https://opensea.io/assets/0x6b4fccdd888bb6fd3934a9e49ef64dfd2c0d8e6d/8",
+        "position": [
+          5.5,
+          1.5,
+          4.25
+        ],
+        "rotation": [
+          0,
+          0,
+          0
+        ],
+        "uuid": "5db5f710-dba9-498e-b248-c4336e12c9de"
+      },
+      {
+        "type": "sign",
+        "scale": [
+          0.5,
+          0.5,
+          0.5
+        ],
+        "text": "91",
+        "position": [
+          4.25,
+          2.75,
+          -3.25
+        ],
+        "rotation": [
+          0,
+          3.141592653589793,
+          0
+        ],
+        "uuid": "b2a56e48-4378-465c-8566-8b3153703cb2",
+        "fontSize": 92,
+        "inverted": true
+      },
+      {
+        "type": "nft-image",
+        "scale": [
+          1,
+          1,
+          0
+        ],
+        "url": "https://opensea.io/assets/0x6b4fccdd888bb6fd3934a9e49ef64dfd2c0d8e6d/11",
+        "position": [
+          4.25,
+          2.75,
+          4.25
+        ],
+        "rotation": [
+          0,
+          0,
+          0
+        ],
+        "uuid": "309dff9d-6da9-414d-8cdd-975ccc4bbca1"
+      },
+      {
+        "type": "sign",
+        "scale": [
+          0.5,
+          0.5,
+          0.5
+        ],
+        "text": "99",
+        "position": [
+          6.75,
+          2.75,
+          -3.25
+        ],
+        "rotation": [
+          0,
+          3.141592653589793,
+          0
+        ],
+        "uuid": "7f7850bf-7fcf-4f92-a0e1-8c15ddbef678",
+        "fontSize": 92,
+        "inverted": true
+      },
+      {
+        "type": "nft-image",
+        "scale": [
+          1,
+          1,
+          0
+        ],
+        "url": "https://opensea.io/assets/0x6b4fccdd888bb6fd3934a9e49ef64dfd2c0d8e6d/3",
+        "position": [
+          6.75,
+          2.75,
+          4.25
+        ],
+        "rotation": [
+          0,
+          0,
+          0
+        ],
+        "uuid": "b3f98ba3-0c29-4dc3-87e8-151a214c4c6d"
+      },
+      {
+        "type": "sign",
+        "scale": [
+          0.5,
+          0.5,
+          0.5
+        ],
+        "text": "94",
+        "position": [
+          5.5,
+          4,
+          -3.25
+        ],
+        "rotation": [
+          0,
+          3.141592653589793,
+          0
+        ],
+        "uuid": "89e96bf1-8795-4628-a986-e9cc36d54f36",
+        "fontSize": 92,
+        "inverted": true
+      },
+      {
+        "type": "nft-image",
+        "scale": [
+          1,
+          1,
+          0
+        ],
+        "url": "https://opensea.io/assets/0x6b4fccdd888bb6fd3934a9e49ef64dfd2c0d8e6d/6",
+        "position": [
+          5.5,
+          4,
+          4.25
+        ],
+        "rotation": [
+          0,
+          0,
+          0
+        ],
+        "uuid": "824ef223-d88c-4998-962c-a5bf6ff941d1"
+      },
+      {
+        "type": "sign",
+        "scale": [
+          0.5,
+          0.5,
+          0.5
+        ],
+        "text": "15",
+        "position": [
+          3,
+          2.75,
+          3.75
+        ],
+        "rotation": [
+          0,
+          0,
+          0
+        ],
+        "uuid": "7865f3d2-2a6f-40bb-9ee7-ea0b39348ba6",
+        "fontSize": 92,
+        "inverted": true
+      },
+      {
+        "type": "sign",
+        "scale": [
+          0.5,
+          0.5,
+          0.5
+        ],
+        "text": "92",
+        "position": [
+          4.25,
+          1.5,
+          -3.25
+        ],
+        "rotation": [
+          0,
+          3.141592653589793,
+          0
+        ],
+        "uuid": "24ad76f9-b84b-4d7b-8959-f43e5b2d3c98",
+        "fontSize": 92,
+        "inverted": true
+      },
+      {
+        "type": "nft-image",
+        "scale": [
+          1,
+          1,
+          0
+        ],
+        "url": "https://opensea.io/assets/0x6b4fccdd888bb6fd3934a9e49ef64dfd2c0d8e6d/12",
+        "position": [
+          4.25,
+          1.5,
+          4.25
+        ],
+        "rotation": [
+          0,
+          0,
+          0
+        ],
+        "uuid": "bc00b2a0-4a41-4a1f-a5f1-6313396e1922"
+      },
+      {
+        "type": "sign",
+        "scale": [
+          0.646875,
+          0.5,
+          0.5
+        ],
+        "text": "100",
+        "position": [
+          6.75,
+          1.5,
+          -3.25
+        ],
+        "rotation": [
+          0,
+          3.141592653589793,
+          0
+        ],
+        "uuid": "65de90ed-b058-49ac-b184-c5479fc84448",
+        "fontSize": 92,
+        "inverted": true
+      },
+      {
+        "type": "nft-image",
+        "scale": [
+          1,
+          1,
+          0
+        ],
+        "url": "https://opensea.io/assets/0x6b4fccdd888bb6fd3934a9e49ef64dfd2c0d8e6d/4",
+        "position": [
+          6.75,
+          1.5,
+          4.25
+        ],
+        "rotation": [
+          0,
+          0,
+          0
+        ],
+        "uuid": "0ce7c800-55dd-426a-a42a-03dbd8b20bc7"
+      },
+      {
+        "type": "sign",
+        "scale": [
+          0.5,
+          0.5,
+          0.5
+        ],
+        "text": "5",
+        "position": [
+          5.5,
+          5.25,
+          3.75
+        ],
+        "rotation": [
+          0,
+          0,
+          0
+        ],
+        "uuid": "155d1539-8554-4e64-8bd5-2f80f8ab2bc3",
+        "fontSize": 92,
+        "inverted": true
+      },
+      {
+        "type": "sign",
+        "scale": [
+          0.5,
+          0.5,
+          0.5
+        ],
+        "text": "90",
+        "position": [
+          4.25,
+          4,
+          -3.25
+        ],
+        "rotation": [
+          0,
+          3.141592653589793,
+          0
+        ],
+        "uuid": "aa20d1c7-65cb-4255-83db-e4a78c69a8c1",
+        "fontSize": 92,
+        "inverted": true
+      },
+      {
+        "type": "nft-image",
+        "scale": [
+          1,
+          1,
+          0
+        ],
+        "url": "https://opensea.io/assets/0x6b4fccdd888bb6fd3934a9e49ef64dfd2c0d8e6d/10",
+        "position": [
+          4.25,
+          4,
+          4.25
+        ],
+        "rotation": [
+          0,
+          0,
+          0
+        ],
+        "uuid": "3528ba4a-58a2-4519-a542-45cb721de369"
+      },
+      {
+        "type": "sign",
+        "scale": [
+          0.5,
+          0.5,
+          0.5
+        ],
+        "text": "98",
+        "position": [
+          6.75,
+          4,
+          -3.25
+        ],
+        "rotation": [
+          0,
+          3.141592653589793,
+          0
+        ],
+        "uuid": "116d47ad-fb48-43b0-9c36-4b15e36fb498",
+        "fontSize": 92,
+        "inverted": true
+      },
+      {
+        "type": "nft-image",
+        "scale": [
+          1,
+          1,
+          0
+        ],
+        "url": "https://opensea.io/assets/0x6b4fccdd888bb6fd3934a9e49ef64dfd2c0d8e6d/2",
+        "position": [
+          6.75,
+          4,
+          4.25
+        ],
+        "rotation": [
+          0,
+          0,
+          0
+        ],
+        "uuid": "ea5808d1-7bfa-4a97-b81e-fa1a7fc04683"
+      },
+      {
+        "type": "sign",
+        "scale": [
+          0.5,
+          0.5,
+          0.5
+        ],
+        "text": "16",
+        "position": [
+          3,
+          1.5,
+          3.75
+        ],
+        "rotation": [
+          0,
+          0,
+          0
+        ],
+        "uuid": "7ebe0192-fba8-4010-9cd7-6931b5a61985",
+        "fontSize": 92,
+        "inverted": true
+      },
+      {
+        "type": "nft-image",
+        "scale": [
+          1,
+          1,
+          0
+        ],
+        "url": "https://opensea.io/assets/0x6b4fccdd888bb6fd3934a9e49ef64dfd2c0d8e6d/95",
+        "position": [
+          5.5,
+          2.75,
+          -3.75
+        ],
+        "rotation": [
+          0,
+          3.141592653589793,
+          0
+        ],
+        "uuid": "72939dd8-503d-4379-87b2-78f4427d9ac1"
+      },
+      {
+        "type": "sign",
+        "scale": [
+          0.5,
+          0.5,
+          0.5
+        ],
+        "text": "14",
+        "position": [
+          3,
+          4,
+          3.75
+        ],
+        "rotation": [
+          0,
+          0,
+          0
+        ],
+        "uuid": "0c43d152-32c6-446b-b51e-b935fb486a1d",
+        "fontSize": 92,
+        "inverted": true
+      },
+      {
+        "type": "sign",
+        "scale": [
+          0.5,
+          0.5,
+          0.5
+        ],
+        "text": "9",
+        "position": [
+          4.25,
+          5.25,
+          3.75
+        ],
+        "rotation": [
+          0,
+          0,
+          0
+        ],
+        "uuid": "133249d4-7780-45f9-961c-9c42da5e1f64",
+        "fontSize": 92,
+        "inverted": true
+      },
+      {
+        "type": "sign",
+        "scale": [
+          0.5,
+          0.5,
+          0.5
+        ],
+        "text": "1",
+        "position": [
+          6.75,
+          5.25,
+          3.75
+        ],
+        "rotation": [
+          0,
+          0,
+          0
+        ],
+        "uuid": "62ace840-0c69-4139-9eeb-922af7847e34",
+        "fontSize": 92,
+        "inverted": true
+      },
+      {
+        "type": "nft-image",
+        "scale": [
+          1,
+          1,
+          0
+        ],
+        "url": "https://opensea.io/assets/0x6b4fccdd888bb6fd3934a9e49ef64dfd2c0d8e6d/96",
+        "position": [
+          5.5,
+          1.5,
+          -3.75
+        ],
+        "rotation": [
+          0,
+          3.141592653589793,
+          0
+        ],
+        "uuid": "73c235d4-c52c-48be-b8aa-6051fa1ddd52"
+      },
+      {
+        "type": "nft-image",
+        "scale": [
+          1,
+          1,
+          0
+        ],
+        "url": "https://opensea.io/assets/0x6b4fccdd888bb6fd3934a9e49ef64dfd2c0d8e6d/91",
+        "position": [
+          4.25,
+          2.75,
+          -3.75
+        ],
+        "rotation": [
+          0,
+          3.141592653589793,
+          0
+        ],
+        "uuid": "cd2d8fa2-9706-40be-b4ce-34de6c96ff12"
+      },
+      {
+        "type": "nft-image",
+        "scale": [
+          1,
+          1,
+          0
+        ],
+        "url": "https://opensea.io/assets/0x6b4fccdd888bb6fd3934a9e49ef64dfd2c0d8e6d/99",
+        "position": [
+          6.75,
+          2.75,
+          -3.75
+        ],
+        "rotation": [
+          0,
+          3.141592653589793,
+          0
+        ],
+        "uuid": "9c933af2-8506-4f55-9da9-6a62adb1fe23"
+      },
+      {
+        "type": "nft-image",
+        "scale": [
+          1,
+          1,
+          0
+        ],
+        "url": "https://opensea.io/assets/0x6b4fccdd888bb6fd3934a9e49ef64dfd2c0d8e6d/94",
+        "position": [
+          5.5,
+          4,
+          -3.75
+        ],
+        "rotation": [
+          0,
+          3.141592653589793,
+          0
+        ],
+        "uuid": "23f73deb-c479-4509-93f3-42ac01c95a4c"
+      },
+      {
+        "type": "sign",
+        "scale": [
+          0.5,
+          0.5,
+          0.5
+        ],
+        "text": "87",
+        "position": [
+          3,
+          2.75,
+          -3.25
+        ],
+        "rotation": [
+          0,
+          3.141592653589793,
+          0
+        ],
+        "uuid": "5260050b-5e4a-4b30-b571-14a22492c041",
+        "fontSize": 92,
+        "inverted": true
+      },
+      {
+        "type": "nft-image",
+        "scale": [
+          1,
+          1,
+          0
+        ],
+        "url": "https://opensea.io/assets/0x6b4fccdd888bb6fd3934a9e49ef64dfd2c0d8e6d/15",
+        "position": [
+          3,
+          2.75,
+          4.25
+        ],
+        "rotation": [
+          0,
+          0,
+          0
+        ],
+        "uuid": "2a645e3a-8723-47b5-aa0e-a18ec65543b5"
+      },
+      {
+        "type": "nft-image",
+        "scale": [
+          1,
+          1,
+          0
+        ],
+        "url": "https://opensea.io/assets/0x6b4fccdd888bb6fd3934a9e49ef64dfd2c0d8e6d/92",
+        "position": [
+          4.25,
+          1.5,
+          -3.75
+        ],
+        "rotation": [
+          0,
+          3.141592653589793,
+          0
+        ],
+        "uuid": "0f3900e5-020f-4c00-b18f-e70c92c74c1a"
+      },
+      {
+        "type": "nft-image",
+        "scale": [
+          1,
+          1,
+          0
+        ],
+        "url": "https://opensea.io/assets/0x6b4fccdd888bb6fd3934a9e49ef64dfd2c0d8e6d/100",
+        "position": [
+          6.75,
+          1.5,
+          -3.75
+        ],
+        "rotation": [
+          0,
+          3.141592653589793,
+          0
+        ],
+        "uuid": "a542078c-1e34-42fb-8a2f-01e0dddc6972"
+      },
+      {
+        "type": "sign",
+        "scale": [
+          0.5,
+          0.5,
+          0.5
+        ],
+        "text": "93",
+        "position": [
+          5.5,
+          5.25,
+          -3.25
+        ],
+        "rotation": [
+          0,
+          3.141592653589793,
+          0
+        ],
+        "uuid": "5de65e93-5ff9-4a1d-9afe-ec9f7b7d206d",
+        "fontSize": 92,
+        "inverted": true
+      },
+      {
+        "type": "nft-image",
+        "scale": [
+          1,
+          1,
+          0
+        ],
+        "url": "https://opensea.io/assets/0x6b4fccdd888bb6fd3934a9e49ef64dfd2c0d8e6d/5",
+        "position": [
+          5.5,
+          5.25,
+          4.25
+        ],
+        "rotation": [
+          0,
+          0,
+          0
+        ],
+        "uuid": "d155671b-41ff-4754-99d5-1170f582c184"
+      },
+      {
+        "type": "nft-image",
+        "scale": [
+          1,
+          1,
+          0
+        ],
+        "url": "https://opensea.io/assets/0x6b4fccdd888bb6fd3934a9e49ef64dfd2c0d8e6d/90",
+        "position": [
+          4.25,
+          4,
+          -3.75
+        ],
+        "rotation": [
+          0,
+          3.141592653589793,
+          0
+        ],
+        "uuid": "0fc33825-f653-4e60-b76d-5049115bf155"
+      },
+      {
+        "type": "nft-image",
+        "scale": [
+          1,
+          1,
+          0
+        ],
+        "url": "https://opensea.io/assets/0x6b4fccdd888bb6fd3934a9e49ef64dfd2c0d8e6d/98",
+        "position": [
+          6.75,
+          4,
+          -3.75
+        ],
+        "rotation": [
+          0,
+          3.141592653589793,
+          0
+        ],
+        "uuid": "4e923897-4074-451a-9f10-de062eaec280"
+      },
+      {
+        "type": "sign",
+        "scale": [
+          0.5,
+          0.5,
+          0.5
+        ],
+        "text": "88",
+        "position": [
+          3,
+          1.5,
+          -3.25
+        ],
+        "rotation": [
+          0,
+          3.141592653589793,
+          0
+        ],
+        "uuid": "e8a64295-ffe1-44dd-ab58-dbbd25ba7585",
+        "fontSize": 92,
+        "inverted": true
+      },
+      {
+        "type": "nft-image",
+        "scale": [
+          1,
+          1,
+          0
+        ],
+        "url": "https://opensea.io/assets/0x6b4fccdd888bb6fd3934a9e49ef64dfd2c0d8e6d/16",
+        "position": [
+          3,
+          1.5,
+          4.25
+        ],
+        "rotation": [
+          0,
+          0,
+          0
+        ],
+        "uuid": "021e3e9f-b03b-4e8a-9876-651dc902fd0b"
+      },
+      {
+        "type": "sign",
+        "scale": [
+          0.5,
+          0.5,
+          0.5
+        ],
+        "text": "86",
+        "position": [
+          3,
+          4,
+          -3.25
+        ],
+        "rotation": [
+          0,
+          3.141592653589793,
+          0
+        ],
+        "uuid": "b04dc569-4a36-4adb-a19d-eaef1210e7bf",
+        "fontSize": 92,
+        "inverted": true
+      },
+      {
+        "type": "nft-image",
+        "scale": [
+          1,
+          1,
+          0
+        ],
+        "url": "https://opensea.io/assets/0x6b4fccdd888bb6fd3934a9e49ef64dfd2c0d8e6d/14",
+        "position": [
+          3,
+          4,
+          4.25
+        ],
+        "rotation": [
+          0,
+          0,
+          0
+        ],
+        "uuid": "290f7265-bea2-47c4-8fab-0a3b52a9f5a6"
+      },
+      {
+        "type": "sign",
+        "scale": [
+          0.5,
+          0.5,
+          0.5
+        ],
+        "text": "89",
+        "position": [
+          4.25,
+          5.25,
+          -3.25
+        ],
+        "rotation": [
+          0,
+          3.141592653589793,
+          0
+        ],
+        "uuid": "d34480dc-04de-46b4-9fc4-687a2c769dd6",
+        "fontSize": 92,
+        "inverted": true
+      },
+      {
+        "type": "nft-image",
+        "scale": [
+          1,
+          1,
+          0
+        ],
+        "url": "https://opensea.io/assets/0x6b4fccdd888bb6fd3934a9e49ef64dfd2c0d8e6d/9",
+        "position": [
+          4.25,
+          5.25,
+          4.25
+        ],
+        "rotation": [
+          0,
+          0,
+          0
+        ],
+        "uuid": "c29531e2-95c5-43fb-90bf-14416a245c40"
+      },
+      {
+        "type": "sign",
+        "scale": [
+          0.5,
+          0.5,
+          0.5
+        ],
+        "text": "97",
+        "position": [
+          6.75,
+          5.25,
+          -3.25
+        ],
+        "rotation": [
+          0,
+          3.141592653589793,
+          0
+        ],
+        "uuid": "e90458c1-40d5-4d98-aa86-50a69f8adc3c",
+        "fontSize": 92,
+        "inverted": true
+      },
+      {
+        "type": "nft-image",
+        "scale": [
+          1,
+          1,
+          0
+        ],
+        "url": "https://opensea.io/assets/0x6b4fccdd888bb6fd3934a9e49ef64dfd2c0d8e6d/1",
+        "position": [
+          6.75,
+          5.25,
+          4.25
+        ],
+        "rotation": [
+          0,
+          0,
+          0
+        ],
+        "uuid": "d7dc89fc-3cef-4ef3-817d-a9645e219998",
+        "id": ""
+      },
+      {
+        "type": "sign",
+        "scale": [
+          0.5,
+          0.5,
+          0.5
+        ],
+        "text": "13",
+        "position": [
+          3,
+          5.25,
+          3.75
+        ],
+        "rotation": [
+          0,
+          0,
+          0
+        ],
+        "uuid": "b3cb9d8a-f346-473c-9eb4-9dc3d5edea52",
+        "fontSize": 92,
+        "inverted": true
+      },
+      {
+        "type": "nft-image",
+        "scale": [
+          1,
+          1,
+          0
+        ],
+        "url": "https://opensea.io/assets/0x6b4fccdd888bb6fd3934a9e49ef64dfd2c0d8e6d/87",
+        "position": [
+          3,
+          2.75,
+          -3.75
+        ],
+        "rotation": [
+          0,
+          3.141592653589793,
+          0
+        ],
+        "uuid": "e18786ba-27dc-4303-b7f9-8c204c2f6723"
+      },
+      {
+        "type": "sign",
+        "scale": [
+          0.5,
+          0.5,
+          0.5
+        ],
+        "text": "19",
+        "position": [
+          1.75,
+          2.75,
+          3.75
+        ],
+        "rotation": [
+          0,
+          0,
+          0
+        ],
+        "uuid": "6f0e280d-37ef-4a9a-9ddc-5fe44c2fa0e1",
+        "fontSize": 92,
+        "inverted": true
+      },
+      {
+        "type": "nft-image",
+        "scale": [
+          1,
+          1,
+          0
+        ],
+        "url": "https://opensea.io/assets/0x6b4fccdd888bb6fd3934a9e49ef64dfd2c0d8e6d/93",
+        "position": [
+          5.5,
+          5.25,
+          -3.75
+        ],
+        "rotation": [
+          0,
+          3.141592653589793,
+          0
+        ],
+        "uuid": "8c0f7d1e-0be2-4438-be76-c7260d0d7bef"
+      },
+      {
+        "type": "nft-image",
+        "scale": [
+          1,
+          1,
+          0
+        ],
+        "url": "https://opensea.io/assets/0x6b4fccdd888bb6fd3934a9e49ef64dfd2c0d8e6d/88",
+        "position": [
+          3,
+          1.5,
+          -3.75
+        ],
+        "rotation": [
+          0,
+          3.141592653589793,
+          0
+        ],
+        "uuid": "a2ac1c75-51fc-4012-851a-46b0e2bc1b27"
+      },
+      {
+        "type": "sign",
+        "scale": [
+          0.5,
+          0.5,
+          0.5
+        ],
+        "text": "20",
+        "position": [
+          1.75,
+          1.5,
+          3.75
+        ],
+        "rotation": [
+          0,
+          0,
+          0
+        ],
+        "uuid": "2702167d-6e20-4315-934b-149221b6d90d",
+        "fontSize": 92,
+        "inverted": true
+      },
+      {
+        "type": "nft-image",
+        "scale": [
+          1,
+          1,
+          0
+        ],
+        "url": "https://opensea.io/assets/0x6b4fccdd888bb6fd3934a9e49ef64dfd2c0d8e6d/86",
+        "position": [
+          3,
+          4,
+          -3.75
+        ],
+        "rotation": [
+          0,
+          3.141592653589793,
+          0
+        ],
+        "uuid": "5363c2c9-6510-4890-ba81-627d0a7462f9"
+      },
+      {
+        "type": "sign",
+        "scale": [
+          0.5,
+          0.5,
+          0.5
+        ],
+        "text": "18",
+        "position": [
+          1.75,
+          4,
+          3.75
+        ],
+        "rotation": [
+          0,
+          0,
+          0
+        ],
+        "uuid": "4caaca9e-51ba-420b-a89c-3a046318aaf7",
+        "fontSize": 92,
+        "inverted": true
+      },
+      {
+        "type": "nft-image",
+        "scale": [
+          1,
+          1,
+          0
+        ],
+        "url": "https://opensea.io/assets/0x6b4fccdd888bb6fd3934a9e49ef64dfd2c0d8e6d/89",
+        "position": [
+          4.25,
+          5.25,
+          -3.75
+        ],
+        "rotation": [
+          0,
+          3.141592653589793,
+          0
+        ],
+        "uuid": "c188e5ed-a0c8-4342-928d-028c4eea3508"
+      },
+      {
+        "type": "nft-image",
+        "scale": [
+          1,
+          1,
+          0
+        ],
+        "url": "https://opensea.io/assets/0x6b4fccdd888bb6fd3934a9e49ef64dfd2c0d8e6d/97",
+        "position": [
+          6.75,
+          5.25,
+          -3.75
+        ],
+        "rotation": [
+          0,
+          3.141592653589793,
+          0
+        ],
+        "uuid": "9c5f86a5-0f37-47b0-8caa-d310b548b90f"
+      },
+      {
+        "type": "sign",
+        "scale": [
+          0.5,
+          0.5,
+          0.5
+        ],
+        "text": "85",
+        "position": [
+          3,
+          5.25,
+          -3.25
+        ],
+        "rotation": [
+          0,
+          3.141592653589793,
+          0
+        ],
+        "uuid": "21935519-6cb0-44e1-ae5c-02c06250de5e",
+        "fontSize": 92,
+        "inverted": true
+      },
+      {
+        "type": "nft-image",
+        "scale": [
+          1,
+          1,
+          0
+        ],
+        "url": "https://opensea.io/assets/0x6b4fccdd888bb6fd3934a9e49ef64dfd2c0d8e6d/13",
+        "position": [
+          3,
+          5.25,
+          4.25
+        ],
+        "rotation": [
+          0,
+          0,
+          0
+        ],
+        "uuid": "97fb69c5-4631-485b-80ae-dfc8bda8ab8c"
+      },
+      {
+        "type": "sign",
+        "scale": [
+          0.5,
+          0.5,
+          0.5
+        ],
+        "text": "83",
+        "position": [
+          1.75,
+          2.75,
+          -3.25
+        ],
+        "rotation": [
+          0,
+          3.141592653589793,
+          0
+        ],
+        "uuid": "83d3e4bd-0eee-40fd-8f8b-8efc53d9af7f",
+        "fontSize": 92,
+        "inverted": true
+      },
+      {
+        "type": "nft-image",
+        "scale": [
+          1,
+          1,
+          0
+        ],
+        "url": "https://opensea.io/assets/0x6b4fccdd888bb6fd3934a9e49ef64dfd2c0d8e6d/19",
+        "position": [
+          1.75,
+          2.75,
+          4.25
+        ],
+        "rotation": [
+          0,
+          0,
+          0
+        ],
+        "uuid": "821d2bc1-8c82-4bde-a46a-4bc38e7fa5c7"
+      },
+      {
+        "type": "sign",
+        "scale": [
+          0.5,
+          0.5,
+          0.5
+        ],
+        "text": "84",
+        "position": [
+          1.75,
+          1.5,
+          -3.25
+        ],
+        "rotation": [
+          0,
+          3.141592653589793,
+          0
+        ],
+        "uuid": "d6e1e3dd-e834-447a-b39e-825173e19b5c",
+        "inverted": true,
+        "fontSize": 92
+      },
+      {
+        "type": "nft-image",
+        "scale": [
+          1,
+          1,
+          0
+        ],
+        "url": "https://opensea.io/assets/0x6b4fccdd888bb6fd3934a9e49ef64dfd2c0d8e6d/20",
+        "position": [
+          1.75,
+          1.5,
+          4.25
+        ],
+        "rotation": [
+          0,
+          0,
+          0
+        ],
+        "uuid": "3e9fa16e-3815-4888-9778-ba8188b5d8e2"
+      },
+      {
+        "type": "sign",
+        "scale": [
+          0.5,
+          0.5,
+          0.5
+        ],
+        "text": "82",
+        "position": [
+          1.75,
+          4,
+          -3.25
+        ],
+        "rotation": [
+          0,
+          3.141592653589793,
+          0
+        ],
+        "uuid": "cdfed1a0-4b04-4756-aca4-4722624a02bb",
+        "fontSize": 92,
+        "inverted": true
+      },
+      {
+        "type": "nft-image",
+        "scale": [
+          1,
+          1,
+          0
+        ],
+        "url": "https://opensea.io/assets/0x6b4fccdd888bb6fd3934a9e49ef64dfd2c0d8e6d/18",
+        "position": [
+          1.75,
+          4,
+          4.25
+        ],
+        "rotation": [
+          0,
+          0,
+          0
+        ],
+        "uuid": "9519474f-dbc8-446e-8480-348710a5771c"
+      },
+      {
+        "type": "nft-image",
+        "scale": [
+          1,
+          1,
+          0
+        ],
+        "url": "https://opensea.io/assets/0x6b4fccdd888bb6fd3934a9e49ef64dfd2c0d8e6d/85",
+        "position": [
+          3,
+          5.25,
+          -3.75
+        ],
+        "rotation": [
+          0,
+          3.141592653589793,
+          0
+        ],
+        "uuid": "b09024c2-1f18-43e6-9625-b8ebb797fa38"
+      },
+      {
+        "type": "sign",
+        "scale": [
+          0.5,
+          0.5,
+          0.5
+        ],
+        "text": "17",
+        "position": [
+          1.75,
+          5.25,
+          3.75
+        ],
+        "rotation": [
+          0,
+          0,
+          0
+        ],
+        "uuid": "fb33eec9-1a90-4d3a-b0f5-eaebca00d633",
+        "fontSize": 92,
+        "inverted": true
+      },
+      {
+        "type": "nft-image",
+        "scale": [
+          1,
+          1,
+          0
+        ],
+        "url": "https://opensea.io/assets/0x6b4fccdd888bb6fd3934a9e49ef64dfd2c0d8e6d/83",
+        "position": [
+          1.75,
+          2.75,
+          -3.75
+        ],
+        "rotation": [
+          0,
+          3.141592653589793,
+          0
+        ],
+        "uuid": "bdf3d893-50ad-46c4-a6cc-c3a89a081e55"
+      },
+      {
+        "type": "nft-image",
+        "scale": [
+          1,
+          1,
+          0
+        ],
+        "url": "https://opensea.io/assets/0x6b4fccdd888bb6fd3934a9e49ef64dfd2c0d8e6d/84",
+        "position": [
+          1.75,
+          1.5,
+          -3.75
+        ],
+        "rotation": [
+          0,
+          3.141592653589793,
+          0
+        ],
+        "uuid": "06697a8f-c5b1-4612-8797-4e169cac8e06"
+      },
+      {
+        "type": "nft-image",
+        "scale": [
+          1,
+          1,
+          0
+        ],
+        "url": "https://opensea.io/assets/0x6b4fccdd888bb6fd3934a9e49ef64dfd2c0d8e6d/82",
+        "position": [
+          1.75,
+          4,
+          -3.75
+        ],
+        "rotation": [
+          0,
+          3.141592653589793,
+          0
+        ],
+        "uuid": "f18d3253-b3f0-4a43-8bb0-fd52f5e78458"
+      },
+      {
+        "type": "sign",
+        "scale": [
+          0.5,
+          0.5,
+          0.5
+        ],
+        "text": "81",
+        "position": [
+          1.75,
+          5.25,
+          -3.25
+        ],
+        "rotation": [
+          0,
+          3.141592653589793,
+          0
+        ],
+        "uuid": "a2e8d886-892e-403f-a7b8-fac10153e085",
+        "fontSize": 92,
+        "inverted": true
+      },
+      {
+        "type": "nft-image",
+        "scale": [
+          1,
+          1,
+          0
+        ],
+        "url": "https://opensea.io/assets/0x6b4fccdd888bb6fd3934a9e49ef64dfd2c0d8e6d/17",
+        "position": [
+          1.75,
+          5.25,
+          4.25
+        ],
+        "rotation": [
+          0,
+          0,
+          0
+        ],
+        "uuid": "b92efc44-c8f3-4a02-9cd8-d5840f648d2f"
+      },
+      {
         "type": "sign",
         "scale": [
           0.5,
@@ -22,7 +1705,8 @@
           0
         ],
         "uuid": "6bc21249-6c9c-45e1-967a-2aa5553f7096",
-        "fontSize": 92
+        "fontSize": 92,
+        "inverted": true
       },
       {
         "type": "sign",
@@ -53,50 +1737,6 @@
           0.5,
           0.5
         ],
-        "text": "19",
-        "position": [
-          1.75,
-          2.75,
-          3.75
-        ],
-        "rotation": [
-          0,
-          0,
-          0
-        ],
-        "uuid": "6f0e280d-37ef-4a9a-9ddc-5fe44c2fa0e1",
-        "fontSize": 92,
-        "inverted": true
-      },
-      {
-        "type": "sign",
-        "scale": [
-          0.5,
-          0.5,
-          0.5
-        ],
-        "text": "27",
-        "position": [
-          -0.75,
-          2.75,
-          3.75
-        ],
-        "rotation": [
-          0,
-          0,
-          0
-        ],
-        "uuid": "df137ac9-6936-417d-9a06-ee415e1d1d26",
-        "fontSize": 92,
-        "inverted": true
-      },
-      {
-        "type": "sign",
-        "scale": [
-          0.5,
-          0.5,
-          0.5
-        ],
         "text": "22",
         "position": [
           0.5,
@@ -113,88 +1753,24 @@
         "inverted": true
       },
       {
-        "type": "sign",
+        "type": "nft-image",
         "scale": [
-          0.5,
-          0.5,
-          0.5
+          1,
+          1,
+          0
         ],
-        "text": "20",
+        "url": "https://opensea.io/assets/0x6b4fccdd888bb6fd3934a9e49ef64dfd2c0d8e6d/81",
         "position": [
           1.75,
-          1.5,
-          3.75
+          5.25,
+          -3.75
         ],
         "rotation": [
           0,
-          0,
+          3.141592653589793,
           0
         ],
-        "uuid": "2702167d-6e20-4315-934b-149221b6d90d",
-        "fontSize": 92
-      },
-      {
-        "type": "sign",
-        "scale": [
-          0.5,
-          0.5,
-          0.5
-        ],
-        "text": "28",
-        "position": [
-          -0.75,
-          1.5,
-          3.75
-        ],
-        "rotation": [
-          0,
-          0,
-          0
-        ],
-        "uuid": "7a418537-e202-4b7a-b345-d9543961540d",
-        "fontSize": 92
-      },
-      {
-        "type": "sign",
-        "scale": [
-          0.5,
-          0.5,
-          0.5
-        ],
-        "text": "18",
-        "position": [
-          1.75,
-          4,
-          3.75
-        ],
-        "rotation": [
-          0,
-          0,
-          0
-        ],
-        "uuid": "4caaca9e-51ba-420b-a89c-3a046318aaf7",
-        "fontSize": 92
-      },
-      {
-        "type": "sign",
-        "scale": [
-          0.5,
-          0.5,
-          0.5
-        ],
-        "text": "26",
-        "position": [
-          -0.75,
-          4,
-          3.75
-        ],
-        "rotation": [
-          0,
-          0,
-          0
-        ],
-        "uuid": "e1649b11-c902-426c-a721-27f4aa3f431a",
-        "fontSize": 92
+        "uuid": "d8137c5b-6ecc-4685-bb29-378d98ba4447"
       },
       {
         "type": "sign",
@@ -257,7 +1833,8 @@
           0
         ],
         "uuid": "7716c589-b8bb-4462-83da-49d0e63d7a3e",
-        "fontSize": 92
+        "fontSize": 92,
+        "inverted": true
       },
       {
         "type": "nft-image",
@@ -286,88 +1863,6 @@
           0.5,
           0.5
         ],
-        "text": "83",
-        "position": [
-          1.75,
-          2.75,
-          -3.25
-        ],
-        "rotation": [
-          0,
-          3.141592653589793,
-          0
-        ],
-        "uuid": "83d3e4bd-0eee-40fd-8f8b-8efc53d9af7f",
-        "fontSize": 92
-      },
-      {
-        "type": "nft-image",
-        "scale": [
-          1,
-          1,
-          0
-        ],
-        "url": "https://opensea.io/assets/0x6b4fccdd888bb6fd3934a9e49ef64dfd2c0d8e6d/19",
-        "position": [
-          1.75,
-          2.75,
-          4.25
-        ],
-        "rotation": [
-          0,
-          0,
-          0
-        ],
-        "uuid": "821d2bc1-8c82-4bde-a46a-4bc38e7fa5c7"
-      },
-      {
-        "type": "sign",
-        "scale": [
-          0.5,
-          0.5,
-          0.5
-        ],
-        "text": "75",
-        "position": [
-          -0.75,
-          2.75,
-          -3.25
-        ],
-        "rotation": [
-          0,
-          3.141592653589793,
-          0
-        ],
-        "uuid": "ee5b5049-b52a-460c-b192-4bef1011169d",
-        "fontSize": 92
-      },
-      {
-        "type": "nft-image",
-        "scale": [
-          1,
-          1,
-          0
-        ],
-        "url": "https://opensea.io/assets/0x6b4fccdd888bb6fd3934a9e49ef64dfd2c0d8e6d/27",
-        "position": [
-          -0.75,
-          2.75,
-          4.25
-        ],
-        "rotation": [
-          0,
-          0,
-          0
-        ],
-        "uuid": "1bb7e1c8-1b8f-4ad5-a0d9-cbbffc50fea1"
-      },
-      {
-        "type": "sign",
-        "scale": [
-          0.5,
-          0.5,
-          0.5
-        ],
         "text": "78",
         "position": [
           0.5,
@@ -380,7 +1875,8 @@
           0
         ],
         "uuid": "7cb83095-d8c1-4511-a219-ca11cc258ec2",
-        "fontSize": 92
+        "fontSize": 92,
+        "inverted": true
       },
       {
         "type": "nft-image",
@@ -409,10 +1905,10 @@
           0.5,
           0.5
         ],
-        "text": "15",
+        "text": "21",
         "position": [
-          3,
-          2.75,
+          0.5,
+          5.25,
           3.75
         ],
         "rotation": [
@@ -420,51 +1916,9 @@
           0,
           0
         ],
-        "uuid": "7865f3d2-2a6f-40bb-9ee7-ea0b39348ba6",
-        "fontSize": 92
-      },
-      {
-        "type": "sign",
-        "scale": [
-          0.5,
-          0.5,
-          0.5
-        ],
-        "text": "31",
-        "position": [
-          -2,
-          2.75,
-          3.75
-        ],
-        "rotation": [
-          0,
-          0,
-          0
-        ],
-        "uuid": "41501d1c-b509-4a7f-9fd6-14646f58e99a",
-        "fontSize": 92
-      },
-      {
-        "type": "sign",
-        "scale": [
-          0.5,
-          0.5,
-          0.5
-        ],
-        "text": "84",
-        "position": [
-          1.75,
-          1.5,
-          -3.25
-        ],
-        "rotation": [
-          0,
-          3.141592653589793,
-          0
-        ],
-        "uuid": "d6e1e3dd-e834-447a-b39e-825173e19b5c",
-        "inverted": true,
-        "fontSize": 92
+        "uuid": "8d3a04a9-6014-47a1-bc43-556233e3d7ae",
+        "fontSize": 92,
+        "inverted": true
       },
       {
         "type": "nft-image",
@@ -473,10 +1927,92 @@
           1,
           0
         ],
-        "url": "https://opensea.io/assets/0x6b4fccdd888bb6fd3934a9e49ef64dfd2c0d8e6d/20",
+        "url": "https://opensea.io/assets/0x6b4fccdd888bb6fd3934a9e49ef64dfd2c0d8e6d/79",
         "position": [
-          1.75,
+          0.5,
+          2.75,
+          -3.75
+        ],
+        "rotation": [
+          0,
+          3.141592653589793,
+          0
+        ],
+        "uuid": "e45f86a2-c785-4ace-a94f-e0ea91c398cc"
+      },
+      {
+        "type": "nft-image",
+        "scale": [
+          1,
+          1,
+          0
+        ],
+        "url": "https://opensea.io/assets/0x6b4fccdd888bb6fd3934a9e49ef64dfd2c0d8e6d/80",
+        "position": [
+          0.5,
           1.5,
+          -3.75
+        ],
+        "rotation": [
+          0,
+          3.141592653589793,
+          0
+        ],
+        "uuid": "04e8df56-16e9-4133-8cce-91cbdf575131"
+      },
+      {
+        "type": "nft-image",
+        "scale": [
+          1,
+          1,
+          0
+        ],
+        "url": "https://opensea.io/assets/0x6b4fccdd888bb6fd3934a9e49ef64dfd2c0d8e6d/78",
+        "position": [
+          0.5,
+          4,
+          -3.75
+        ],
+        "rotation": [
+          0,
+          3.141592653589793,
+          0
+        ],
+        "uuid": "8bae2f59-a5d0-430f-9ab2-c8499aaa7dbd"
+      },
+      {
+        "type": "sign",
+        "scale": [
+          0.5,
+          0.5,
+          0.5
+        ],
+        "text": "77",
+        "position": [
+          0.5,
+          5.25,
+          -3.25
+        ],
+        "rotation": [
+          0,
+          3.141592653589793,
+          0
+        ],
+        "uuid": "4bfb5df9-5c3b-4241-8ea1-cb1716461d52",
+        "fontSize": 92,
+        "inverted": true
+      },
+      {
+        "type": "nft-image",
+        "scale": [
+          1,
+          1,
+          0
+        ],
+        "url": "https://opensea.io/assets/0x6b4fccdd888bb6fd3934a9e49ef64dfd2c0d8e6d/21",
+        "position": [
+          0.5,
+          5.25,
           4.25
         ],
         "rotation": [
@@ -484,7 +2020,135 @@
           0,
           0
         ],
-        "uuid": "3e9fa16e-3815-4888-9778-ba8188b5d8e2"
+        "uuid": "9f368b80-c563-4c1d-8ec7-e38d90b9de5c"
+      },
+      {
+        "type": "sign",
+        "scale": [
+          0.5,
+          0.5,
+          0.5
+        ],
+        "text": "27",
+        "position": [
+          -0.75,
+          2.75,
+          3.75
+        ],
+        "rotation": [
+          0,
+          0,
+          0
+        ],
+        "uuid": "df137ac9-6936-417d-9a06-ee415e1d1d26",
+        "fontSize": 92,
+        "inverted": true
+      },
+      {
+        "type": "nft-image",
+        "scale": [
+          1,
+          1,
+          0
+        ],
+        "url": "https://opensea.io/assets/0x6b4fccdd888bb6fd3934a9e49ef64dfd2c0d8e6d/77",
+        "position": [
+          0.5,
+          5.25,
+          -3.75
+        ],
+        "rotation": [
+          0,
+          3.141592653589793,
+          0
+        ],
+        "uuid": "bb7cbdce-d393-445d-8bcd-7e51f435e6c8"
+      },
+      {
+        "type": "sign",
+        "scale": [
+          0.5,
+          0.5,
+          0.5
+        ],
+        "text": "28",
+        "position": [
+          -0.75,
+          1.5,
+          3.75
+        ],
+        "rotation": [
+          0,
+          0,
+          0
+        ],
+        "uuid": "7a418537-e202-4b7a-b345-d9543961540d",
+        "fontSize": 92,
+        "inverted": true
+      },
+      {
+        "type": "sign",
+        "scale": [
+          0.5,
+          0.5,
+          0.5
+        ],
+        "text": "26",
+        "position": [
+          -0.75,
+          4,
+          3.75
+        ],
+        "rotation": [
+          0,
+          0,
+          0
+        ],
+        "uuid": "e1649b11-c902-426c-a721-27f4aa3f431a",
+        "fontSize": 92,
+        "inverted": true
+      },
+      {
+        "type": "sign",
+        "scale": [
+          0.5,
+          0.5,
+          0.5
+        ],
+        "text": "75",
+        "position": [
+          -0.75,
+          2.75,
+          -3.25
+        ],
+        "rotation": [
+          0,
+          3.141592653589793,
+          0
+        ],
+        "uuid": "ee5b5049-b52a-460c-b192-4bef1011169d",
+        "fontSize": 92,
+        "inverted": true
+      },
+      {
+        "type": "nft-image",
+        "scale": [
+          1,
+          1,
+          0
+        ],
+        "url": "https://opensea.io/assets/0x6b4fccdd888bb6fd3934a9e49ef64dfd2c0d8e6d/27",
+        "position": [
+          -0.75,
+          2.75,
+          4.25
+        ],
+        "rotation": [
+          0,
+          0,
+          0
+        ],
+        "uuid": "1bb7e1c8-1b8f-4ad5-a0d9-cbbffc50fea1"
       },
       {
         "type": "sign",
@@ -535,69 +2199,6 @@
           0.5,
           0.5
         ],
-        "text": "21",
-        "position": [
-          0.5,
-          5.25,
-          3.75
-        ],
-        "rotation": [
-          0,
-          0,
-          0
-        ],
-        "uuid": "8d3a04a9-6014-47a1-bc43-556233e3d7ae",
-        "fontSize": 92
-      },
-      {
-        "type": "sign",
-        "scale": [
-          0.5,
-          0.5,
-          0.5
-        ],
-        "text": "82",
-        "position": [
-          1.75,
-          4,
-          -3.25
-        ],
-        "rotation": [
-          0,
-          3.141592653589793,
-          0
-        ],
-        "uuid": "cdfed1a0-4b04-4756-aca4-4722624a02bb",
-        "fontSize": 92,
-        "inverted": true
-      },
-      {
-        "type": "nft-image",
-        "scale": [
-          1,
-          1,
-          0
-        ],
-        "url": "https://opensea.io/assets/0x6b4fccdd888bb6fd3934a9e49ef64dfd2c0d8e6d/18",
-        "position": [
-          1.75,
-          4,
-          4.25
-        ],
-        "rotation": [
-          0,
-          0,
-          0
-        ],
-        "uuid": "9519474f-dbc8-446e-8480-348710a5771c"
-      },
-      {
-        "type": "sign",
-        "scale": [
-          0.5,
-          0.5,
-          0.5
-        ],
         "text": "74",
         "position": [
           -0.75,
@@ -640,136 +2241,6 @@
           0.5,
           0.5
         ],
-        "text": "16",
-        "position": [
-          3,
-          1.5,
-          3.75
-        ],
-        "rotation": [
-          0,
-          0,
-          0
-        ],
-        "uuid": "7ebe0192-fba8-4010-9cd7-6931b5a61985",
-        "fontSize": 92,
-        "inverted": true
-      },
-      {
-        "type": "sign",
-        "scale": [
-          0.5,
-          0.5,
-          0.5
-        ],
-        "text": "32",
-        "position": [
-          -2,
-          1.5,
-          3.75
-        ],
-        "rotation": [
-          0,
-          0,
-          0
-        ],
-        "uuid": "546fb976-0afd-4cac-973c-5bf58a230c55",
-        "fontSize": 92,
-        "inverted": true
-      },
-      {
-        "type": "nft-image",
-        "scale": [
-          1,
-          1,
-          0
-        ],
-        "url": "https://opensea.io/assets/0x6b4fccdd888bb6fd3934a9e49ef64dfd2c0d8e6d/79",
-        "position": [
-          0.5,
-          2.75,
-          -3.75
-        ],
-        "rotation": [
-          0,
-          3.141592653589793,
-          0
-        ],
-        "uuid": "e45f86a2-c785-4ace-a94f-e0ea91c398cc"
-      },
-      {
-        "type": "sign",
-        "scale": [
-          0.5,
-          0.5,
-          0.5
-        ],
-        "text": "14",
-        "position": [
-          3,
-          4,
-          3.75
-        ],
-        "rotation": [
-          0,
-          0,
-          0
-        ],
-        "uuid": "0c43d152-32c6-446b-b51e-b935fb486a1d",
-        "fontSize": 92,
-        "inverted": true
-      },
-      {
-        "type": "sign",
-        "scale": [
-          0.5,
-          0.5,
-          0.5
-        ],
-        "text": "30",
-        "position": [
-          -2,
-          4,
-          3.75
-        ],
-        "rotation": [
-          0,
-          0,
-          0
-        ],
-        "uuid": "534a1b69-9339-47f8-b959-9c899259dc96",
-        "fontSize": 92,
-        "inverted": true
-      },
-      {
-        "type": "sign",
-        "scale": [
-          0.5,
-          0.5,
-          0.5
-        ],
-        "text": "17",
-        "position": [
-          1.75,
-          5.25,
-          3.75
-        ],
-        "rotation": [
-          0,
-          0,
-          0
-        ],
-        "uuid": "fb33eec9-1a90-4d3a-b0f5-eaebca00d633",
-        "fontSize": 92,
-        "inverted": true
-      },
-      {
-        "type": "sign",
-        "scale": [
-          0.5,
-          0.5,
-          0.5
-        ],
         "text": "25",
         "position": [
           -0.75,
@@ -784,46 +2255,6 @@
         "uuid": "50ff264f-8656-4db9-97b1-72500f2ae6c6",
         "fontSize": 92,
         "inverted": true
-      },
-      {
-        "type": "nft-image",
-        "scale": [
-          1,
-          1,
-          0
-        ],
-        "url": "https://opensea.io/assets/0x6b4fccdd888bb6fd3934a9e49ef64dfd2c0d8e6d/80",
-        "position": [
-          0.5,
-          1.5,
-          -3.75
-        ],
-        "rotation": [
-          0,
-          3.141592653589793,
-          0
-        ],
-        "uuid": "04e8df56-16e9-4133-8cce-91cbdf575131"
-      },
-      {
-        "type": "nft-image",
-        "scale": [
-          1,
-          1,
-          0
-        ],
-        "url": "https://opensea.io/assets/0x6b4fccdd888bb6fd3934a9e49ef64dfd2c0d8e6d/83",
-        "position": [
-          1.75,
-          2.75,
-          -3.75
-        ],
-        "rotation": [
-          0,
-          3.141592653589793,
-          0
-        ],
-        "uuid": "bdf3d893-50ad-46c4-a6cc-c3a89a081e55"
       },
       {
         "type": "nft-image",
@@ -852,9 +2283,29 @@
           1,
           0
         ],
-        "url": "https://opensea.io/assets/0x6b4fccdd888bb6fd3934a9e49ef64dfd2c0d8e6d/78",
+        "url": "https://opensea.io/assets/0x6b4fccdd888bb6fd3934a9e49ef64dfd2c0d8e6d/76",
         "position": [
-          0.5,
+          -0.75,
+          1.5,
+          -3.75
+        ],
+        "rotation": [
+          0,
+          3.141592653589793,
+          0
+        ],
+        "uuid": "d67b0ee8-6914-4a75-8793-07df89eceea6"
+      },
+      {
+        "type": "nft-image",
+        "scale": [
+          1,
+          1,
+          0
+        ],
+        "url": "https://opensea.io/assets/0x6b4fccdd888bb6fd3934a9e49ef64dfd2c0d8e6d/74",
+        "position": [
+          -0.75,
           4,
           -3.75
         ],
@@ -863,7 +2314,7 @@
           3.141592653589793,
           0
         ],
-        "uuid": "8bae2f59-a5d0-430f-9ab2-c8499aaa7dbd"
+        "uuid": "c66f2f8f-34d5-48b6-95a2-5cdadd6adab6"
       },
       {
         "type": "sign",
@@ -872,10 +2323,10 @@
           0.5,
           0.5
         ],
-        "text": "87",
+        "text": "73",
         "position": [
-          3,
-          2.75,
+          -0.75,
+          5.25,
           -3.25
         ],
         "rotation": [
@@ -883,7 +2334,7 @@
           3.141592653589793,
           0
         ],
-        "uuid": "5260050b-5e4a-4b30-b571-14a22492c041",
+        "uuid": "cfe45d26-6a6e-4ac3-9176-1cf0752f7199",
         "fontSize": 92,
         "inverted": true
       },
@@ -894,10 +2345,10 @@
           1,
           0
         ],
-        "url": "https://opensea.io/assets/0x6b4fccdd888bb6fd3934a9e49ef64dfd2c0d8e6d/15",
+        "url": "https://opensea.io/assets/0x6b4fccdd888bb6fd3934a9e49ef64dfd2c0d8e6d/25",
         "position": [
-          3,
-          2.75,
+          -0.75,
+          5.25,
           4.25
         ],
         "rotation": [
@@ -905,7 +2356,93 @@
           0,
           0
         ],
-        "uuid": "2a645e3a-8723-47b5-aa0e-a18ec65543b5"
+        "uuid": "4b8a974e-ca36-49b0-a19a-ee22d25417e0"
+      },
+      {
+        "type": "nft-image",
+        "scale": [
+          1,
+          1,
+          0
+        ],
+        "url": "https://opensea.io/assets/0x6b4fccdd888bb6fd3934a9e49ef64dfd2c0d8e6d/73",
+        "position": [
+          -0.75,
+          5.25,
+          -3.75
+        ],
+        "rotation": [
+          0,
+          3.141592653589793,
+          0
+        ],
+        "uuid": "a4efbf50-1295-41df-b326-3fadcd849ec4"
+      },
+      {
+        "type": "sign",
+        "scale": [
+          0.5,
+          0.5,
+          0.5
+        ],
+        "text": "31",
+        "position": [
+          -2,
+          2.75,
+          3.75
+        ],
+        "rotation": [
+          0,
+          0,
+          0
+        ],
+        "uuid": "41501d1c-b509-4a7f-9fd6-14646f58e99a",
+        "fontSize": 92,
+        "inverted": true
+      },
+      {
+        "type": "sign",
+        "scale": [
+          0.5,
+          0.5,
+          0.5
+        ],
+        "text": "32",
+        "position": [
+          -2,
+          1.5,
+          3.75
+        ],
+        "rotation": [
+          0,
+          0,
+          0
+        ],
+        "uuid": "546fb976-0afd-4cac-973c-5bf58a230c55",
+        "fontSize": 92,
+        "inverted": true
+      },
+      {
+        "type": "sign",
+        "scale": [
+          0.5,
+          0.5,
+          0.5
+        ],
+        "text": "30",
+        "position": [
+          -2,
+          4,
+          3.75
+        ],
+        "rotation": [
+          0,
+          0,
+          0
+        ],
+        "uuid": "534a1b69-9339-47f8-b959-9c899259dc96",
+        "fontSize": 92,
+        "inverted": true
       },
       {
         "type": "sign",
@@ -950,169 +2487,6 @@
         "uuid": "c8f49c16-f886-4b29-b136-6bbae6d23b47"
       },
       {
-        "type": "nft-image",
-        "scale": [
-          1,
-          1,
-          0
-        ],
-        "url": "https://opensea.io/assets/0x6b4fccdd888bb6fd3934a9e49ef64dfd2c0d8e6d/84",
-        "position": [
-          1.75,
-          1.5,
-          -3.75
-        ],
-        "rotation": [
-          0,
-          3.141592653589793,
-          0
-        ],
-        "uuid": "06697a8f-c5b1-4612-8797-4e169cac8e06"
-      },
-      {
-        "type": "nft-image",
-        "scale": [
-          1,
-          1,
-          0
-        ],
-        "url": "https://opensea.io/assets/0x6b4fccdd888bb6fd3934a9e49ef64dfd2c0d8e6d/76",
-        "position": [
-          -0.75,
-          1.5,
-          -3.75
-        ],
-        "rotation": [
-          0,
-          3.141592653589793,
-          0
-        ],
-        "uuid": "d67b0ee8-6914-4a75-8793-07df89eceea6"
-      },
-      {
-        "type": "sign",
-        "scale": [
-          0.5,
-          0.5,
-          0.5
-        ],
-        "text": "77",
-        "position": [
-          0.5,
-          5.25,
-          -3.25
-        ],
-        "rotation": [
-          0,
-          3.141592653589793,
-          0
-        ],
-        "uuid": "4bfb5df9-5c3b-4241-8ea1-cb1716461d52",
-        "fontSize": 92,
-        "inverted": true
-      },
-      {
-        "type": "nft-image",
-        "scale": [
-          1,
-          1,
-          0
-        ],
-        "url": "https://opensea.io/assets/0x6b4fccdd888bb6fd3934a9e49ef64dfd2c0d8e6d/21",
-        "position": [
-          0.5,
-          5.25,
-          4.25
-        ],
-        "rotation": [
-          0,
-          0,
-          0
-        ],
-        "uuid": "9f368b80-c563-4c1d-8ec7-e38d90b9de5c"
-      },
-      {
-        "type": "nft-image",
-        "scale": [
-          1,
-          1,
-          0
-        ],
-        "url": "https://opensea.io/assets/0x6b4fccdd888bb6fd3934a9e49ef64dfd2c0d8e6d/82",
-        "position": [
-          1.75,
-          4,
-          -3.75
-        ],
-        "rotation": [
-          0,
-          3.141592653589793,
-          0
-        ],
-        "uuid": "f18d3253-b3f0-4a43-8bb0-fd52f5e78458"
-      },
-      {
-        "type": "nft-image",
-        "scale": [
-          1,
-          1,
-          0
-        ],
-        "url": "https://opensea.io/assets/0x6b4fccdd888bb6fd3934a9e49ef64dfd2c0d8e6d/74",
-        "position": [
-          -0.75,
-          4,
-          -3.75
-        ],
-        "rotation": [
-          0,
-          3.141592653589793,
-          0
-        ],
-        "uuid": "c66f2f8f-34d5-48b6-95a2-5cdadd6adab6"
-      },
-      {
-        "type": "sign",
-        "scale": [
-          0.5,
-          0.5,
-          0.5
-        ],
-        "text": "88",
-        "position": [
-          3,
-          1.5,
-          -3.25
-        ],
-        "rotation": [
-          0,
-          3.141592653589793,
-          0
-        ],
-        "uuid": "e8a64295-ffe1-44dd-ab58-dbbd25ba7585",
-        "fontSize": 92
-      },
-      {
-        "type": "nft-image",
-        "scale": [
-          1,
-          1,
-          0
-        ],
-        "url": "https://opensea.io/assets/0x6b4fccdd888bb6fd3934a9e49ef64dfd2c0d8e6d/16",
-        "position": [
-          3,
-          1.5,
-          4.25
-        ],
-        "rotation": [
-          0,
-          0,
-          0
-        ],
-        "uuid": "021e3e9f-b03b-4e8a-9876-651dc902fd0b"
-      },
-      {
         "type": "sign",
         "scale": [
           0.5,
@@ -1131,7 +2505,8 @@
           0
         ],
         "uuid": "d17ca642-a31b-414c-9622-7b532b891f38",
-        "fontSize": 92
+        "fontSize": 92,
+        "inverted": true
       },
       {
         "type": "nft-image",
@@ -1160,47 +2535,6 @@
           0.5,
           0.5
         ],
-        "text": "86",
-        "position": [
-          3,
-          4,
-          -3.25
-        ],
-        "rotation": [
-          0,
-          3.141592653589793,
-          0
-        ],
-        "uuid": "b04dc569-4a36-4adb-a19d-eaef1210e7bf",
-        "fontSize": 92
-      },
-      {
-        "type": "nft-image",
-        "scale": [
-          1,
-          1,
-          0
-        ],
-        "url": "https://opensea.io/assets/0x6b4fccdd888bb6fd3934a9e49ef64dfd2c0d8e6d/14",
-        "position": [
-          3,
-          4,
-          4.25
-        ],
-        "rotation": [
-          0,
-          0,
-          0
-        ],
-        "uuid": "290f7265-bea2-47c4-8fab-0a3b52a9f5a6"
-      },
-      {
-        "type": "sign",
-        "scale": [
-          0.5,
-          0.5,
-          0.5
-        ],
         "text": "70",
         "position": [
           -2,
@@ -1213,7 +2547,8 @@
           0
         ],
         "uuid": "603ab82a-61f6-47a8-9abb-befce202f50e",
-        "fontSize": 92
+        "fontSize": 92,
+        "inverted": true
       },
       {
         "type": "nft-image",
@@ -1242,109 +2577,6 @@
           0.5,
           0.5
         ],
-        "text": "81",
-        "position": [
-          1.75,
-          5.25,
-          -3.25
-        ],
-        "rotation": [
-          0,
-          3.141592653589793,
-          0
-        ],
-        "uuid": "a2e8d886-892e-403f-a7b8-fac10153e085",
-        "fontSize": 92
-      },
-      {
-        "type": "nft-image",
-        "scale": [
-          1,
-          1,
-          0
-        ],
-        "url": "https://opensea.io/assets/0x6b4fccdd888bb6fd3934a9e49ef64dfd2c0d8e6d/17",
-        "position": [
-          1.75,
-          5.25,
-          4.25
-        ],
-        "rotation": [
-          0,
-          0,
-          0
-        ],
-        "uuid": "b92efc44-c8f3-4a02-9cd8-d5840f648d2f"
-      },
-      {
-        "type": "sign",
-        "scale": [
-          0.5,
-          0.5,
-          0.5
-        ],
-        "text": "73",
-        "position": [
-          -0.75,
-          5.25,
-          -3.25
-        ],
-        "rotation": [
-          0,
-          3.141592653589793,
-          0
-        ],
-        "uuid": "cfe45d26-6a6e-4ac3-9176-1cf0752f7199",
-        "fontSize": 92
-      },
-      {
-        "type": "nft-image",
-        "scale": [
-          1,
-          1,
-          0
-        ],
-        "url": "https://opensea.io/assets/0x6b4fccdd888bb6fd3934a9e49ef64dfd2c0d8e6d/25",
-        "position": [
-          -0.75,
-          5.25,
-          4.25
-        ],
-        "rotation": [
-          0,
-          0,
-          0
-        ],
-        "uuid": "4b8a974e-ca36-49b0-a19a-ee22d25417e0"
-      },
-      {
-        "type": "sign",
-        "scale": [
-          0.5,
-          0.5,
-          0.5
-        ],
-        "text": "13",
-        "position": [
-          3,
-          5.25,
-          3.75
-        ],
-        "rotation": [
-          0,
-          0,
-          0
-        ],
-        "uuid": "b3cb9d8a-f346-473c-9eb4-9dc3d5edea52",
-        "fontSize": 92
-      },
-      {
-        "type": "sign",
-        "scale": [
-          0.5,
-          0.5,
-          0.5
-        ],
         "text": "29",
         "position": [
           -2,
@@ -1357,27 +2589,8 @@
           0
         ],
         "uuid": "c051cca8-50c0-434d-8903-a9fe0cab3438",
-        "fontSize": 92
-      },
-      {
-        "type": "nft-image",
-        "scale": [
-          1,
-          1,
-          0
-        ],
-        "url": "https://opensea.io/assets/0x6b4fccdd888bb6fd3934a9e49ef64dfd2c0d8e6d/87",
-        "position": [
-          3,
-          2.75,
-          -3.75
-        ],
-        "rotation": [
-          0,
-          3.141592653589793,
-          0
-        ],
-        "uuid": "e18786ba-27dc-4303-b7f9-8c204c2f6723"
+        "fontSize": 92,
+        "inverted": true
       },
       {
         "type": "nft-image",
@@ -1400,90 +2613,6 @@
         "uuid": "c64d50af-4662-48a4-a1b8-a3abd9be8810"
       },
       {
-        "type": "sign",
-        "scale": [
-          0.5,
-          0.5,
-          0.5
-        ],
-        "text": "11",
-        "position": [
-          4.25,
-          2.75,
-          3.75
-        ],
-        "rotation": [
-          0,
-          0,
-          0
-        ],
-        "uuid": "a4005adc-996b-4773-ac29-aeaad53cdc73",
-        "fontSize": 92,
-        "inverted": true
-      },
-      {
-        "type": "sign",
-        "scale": [
-          0.5,
-          0.5,
-          0.5
-        ],
-        "text": "35",
-        "position": [
-          -3.25,
-          2.75,
-          3.75
-        ],
-        "rotation": [
-          0,
-          0,
-          0
-        ],
-        "uuid": "6c554f8e-09fc-4d79-846e-9c42de28bfb7",
-        "fontSize": 92,
-        "inverted": true
-      },
-      {
-        "type": "nft-image",
-        "scale": [
-          1,
-          1,
-          0
-        ],
-        "url": "https://opensea.io/assets/0x6b4fccdd888bb6fd3934a9e49ef64dfd2c0d8e6d/77",
-        "position": [
-          0.5,
-          5.25,
-          -3.75
-        ],
-        "rotation": [
-          0,
-          3.141592653589793,
-          0
-        ],
-        "uuid": "bb7cbdce-d393-445d-8bcd-7e51f435e6c8"
-      },
-      {
-        "type": "nft-image",
-        "scale": [
-          1,
-          1,
-          0
-        ],
-        "url": "https://opensea.io/assets/0x6b4fccdd888bb6fd3934a9e49ef64dfd2c0d8e6d/88",
-        "position": [
-          3,
-          1.5,
-          -3.75
-        ],
-        "rotation": [
-          0,
-          3.141592653589793,
-          0
-        ],
-        "uuid": "a2ac1c75-51fc-4012-851a-46b0e2bc1b27"
-      },
-      {
         "type": "nft-image",
         "scale": [
           1,
@@ -1504,68 +2633,6 @@
         "uuid": "158fc013-17b7-45c0-94c7-0dfc6a0a46f1"
       },
       {
-        "type": "sign",
-        "scale": [
-          0.5,
-          0.5,
-          0.5
-        ],
-        "text": "12",
-        "position": [
-          4.25,
-          1.5,
-          3.75
-        ],
-        "rotation": [
-          0,
-          0,
-          0
-        ],
-        "uuid": "62377f37-691a-4276-a6a5-6a0cc2f1c3c0",
-        "fontSize": 92
-      },
-      {
-        "type": "sign",
-        "scale": [
-          0.5,
-          0.5,
-          0.5
-        ],
-        "text": "36",
-        "position": [
-          -3.25,
-          1.5,
-          3.75
-        ],
-        "rotation": [
-          0,
-          0,
-          0
-        ],
-        "uuid": "bfa4ea39-4ab9-4e78-b06f-c6e1b1f3cca3",
-        "fontSize": 92
-      },
-      {
-        "type": "nft-image",
-        "scale": [
-          1,
-          1,
-          0
-        ],
-        "url": "https://opensea.io/assets/0x6b4fccdd888bb6fd3934a9e49ef64dfd2c0d8e6d/86",
-        "position": [
-          3,
-          4,
-          -3.75
-        ],
-        "rotation": [
-          0,
-          3.141592653589793,
-          0
-        ],
-        "uuid": "5363c2c9-6510-4890-ba81-627d0a7462f9"
-      },
-      {
         "type": "nft-image",
         "scale": [
           1,
@@ -1584,130 +2651,6 @@
           0
         ],
         "uuid": "1a728e14-95c9-4c3d-85e8-7289f59485e3"
-      },
-      {
-        "type": "sign",
-        "scale": [
-          0.5,
-          0.5,
-          0.5
-        ],
-        "text": "10",
-        "position": [
-          4.25,
-          4,
-          3.75
-        ],
-        "rotation": [
-          0,
-          0,
-          0
-        ],
-        "uuid": "a3ccab34-fd55-4047-873c-444e54d1710d",
-        "fontSize": 92
-      },
-      {
-        "type": "sign",
-        "scale": [
-          0.5,
-          0.5,
-          0.5
-        ],
-        "text": "34",
-        "position": [
-          -3.25,
-          4,
-          3.75
-        ],
-        "rotation": [
-          0,
-          0,
-          0
-        ],
-        "uuid": "698d6e59-7834-4ef5-8716-10edef8be59a",
-        "fontSize": 92
-      },
-      {
-        "type": "nft-image",
-        "scale": [
-          1,
-          1,
-          0
-        ],
-        "url": "https://opensea.io/assets/0x6b4fccdd888bb6fd3934a9e49ef64dfd2c0d8e6d/81",
-        "position": [
-          1.75,
-          5.25,
-          -3.75
-        ],
-        "rotation": [
-          0,
-          3.141592653589793,
-          0
-        ],
-        "uuid": "d8137c5b-6ecc-4685-bb29-378d98ba4447"
-      },
-      {
-        "type": "nft-image",
-        "scale": [
-          1,
-          1,
-          0
-        ],
-        "url": "https://opensea.io/assets/0x6b4fccdd888bb6fd3934a9e49ef64dfd2c0d8e6d/73",
-        "position": [
-          -0.75,
-          5.25,
-          -3.75
-        ],
-        "rotation": [
-          0,
-          3.141592653589793,
-          0
-        ],
-        "uuid": "a4efbf50-1295-41df-b326-3fadcd849ec4"
-      },
-      {
-        "type": "sign",
-        "scale": [
-          0.5,
-          0.5,
-          0.5
-        ],
-        "text": "85",
-        "position": [
-          3,
-          5.25,
-          -3.25
-        ],
-        "rotation": [
-          0,
-          3.141592653589793,
-          0
-        ],
-        "uuid": "21935519-6cb0-44e1-ae5c-02c06250de5e",
-        "fontSize": 92,
-        "inverted": true
-      },
-      {
-        "type": "nft-image",
-        "scale": [
-          1,
-          1,
-          0
-        ],
-        "url": "https://opensea.io/assets/0x6b4fccdd888bb6fd3934a9e49ef64dfd2c0d8e6d/13",
-        "position": [
-          3,
-          5.25,
-          4.25
-        ],
-        "rotation": [
-          0,
-          0,
-          0
-        ],
-        "uuid": "97fb69c5-4631-485b-80ae-dfc8bda8ab8c"
       },
       {
         "type": "sign",
@@ -1752,45 +2695,90 @@
         "uuid": "8410cb72-4e6d-4ed6-ab72-24fca85926f1"
       },
       {
-        "type": "sign",
-        "scale": [
-          0.5,
-          0.5,
-          0.5
-        ],
-        "text": "91",
-        "position": [
-          4.25,
-          2.75,
-          -3.25
-        ],
-        "rotation": [
-          0,
-          3.141592653589793,
-          0
-        ],
-        "uuid": "b2a56e48-4378-465c-8566-8b3153703cb2",
-        "fontSize": 92
-      },
-      {
         "type": "nft-image",
         "scale": [
           1,
           1,
           0
         ],
-        "url": "https://opensea.io/assets/0x6b4fccdd888bb6fd3934a9e49ef64dfd2c0d8e6d/11",
+        "url": "https://opensea.io/assets/0x6b4fccdd888bb6fd3934a9e49ef64dfd2c0d8e6d/69",
         "position": [
-          4.25,
+          -2,
+          5.25,
+          -3.75
+        ],
+        "rotation": [
+          0,
+          3.141592653589793,
+          0
+        ],
+        "uuid": "9efe45ec-d8f9-4bc6-833c-e1389d304362"
+      },
+      {
+        "type": "sign",
+        "scale": [
+          0.5,
+          0.5,
+          0.5
+        ],
+        "text": "35",
+        "position": [
+          -3.25,
           2.75,
-          4.25
+          3.75
         ],
         "rotation": [
           0,
           0,
           0
         ],
-        "uuid": "309dff9d-6da9-414d-8cdd-975ccc4bbca1"
+        "uuid": "6c554f8e-09fc-4d79-846e-9c42de28bfb7",
+        "fontSize": 92,
+        "inverted": true
+      },
+      {
+        "type": "sign",
+        "scale": [
+          0.5,
+          0.5,
+          0.5
+        ],
+        "text": "36",
+        "position": [
+          -3.25,
+          1.5,
+          3.75
+        ],
+        "rotation": [
+          0,
+          0,
+          0
+        ],
+        "uuid": "bfa4ea39-4ab9-4e78-b06f-c6e1b1f3cca3",
+        "fontSize": 92,
+        "inverted": true
+      },
+      {
+        "type": "sign",
+        "scale": [
+          0.5,
+          0.5,
+          0.5
+        ],
+        "text": "34",
+        "position": [
+          -3.25,
+          4,
+          3.75
+        ],
+        "rotation": [
+          0,
+          0,
+          0
+        ],
+        "uuid": "698d6e59-7834-4ef5-8716-10edef8be59a",
+        "fontSize": 92,
+        "inverted": true
       },
       {
         "type": "sign",
@@ -1811,7 +2799,8 @@
           0
         ],
         "uuid": "afb4b933-306d-4d85-ac00-44dd5897e8a3",
-        "fontSize": 92
+        "fontSize": 92,
+        "inverted": true
       },
       {
         "type": "nft-image",
@@ -1832,48 +2821,6 @@
           0
         ],
         "uuid": "31a2603a-3f60-4c40-ae3b-b03f698abd05"
-      },
-      {
-        "type": "sign",
-        "scale": [
-          0.5,
-          0.5,
-          0.5
-        ],
-        "text": "92",
-        "position": [
-          4.25,
-          1.5,
-          -3.25
-        ],
-        "rotation": [
-          0,
-          3.141592653589793,
-          0
-        ],
-        "uuid": "24ad76f9-b84b-4d7b-8959-f43e5b2d3c98",
-        "fontSize": 92,
-        "inverted": true
-      },
-      {
-        "type": "nft-image",
-        "scale": [
-          1,
-          1,
-          0
-        ],
-        "url": "https://opensea.io/assets/0x6b4fccdd888bb6fd3934a9e49ef64dfd2c0d8e6d/12",
-        "position": [
-          4.25,
-          1.5,
-          4.25
-        ],
-        "rotation": [
-          0,
-          0,
-          0
-        ],
-        "uuid": "bc00b2a0-4a41-4a1f-a5f1-6313396e1922"
       },
       {
         "type": "sign",
@@ -1924,48 +2871,6 @@
           0.5,
           0.5
         ],
-        "text": "90",
-        "position": [
-          4.25,
-          4,
-          -3.25
-        ],
-        "rotation": [
-          0,
-          3.141592653589793,
-          0
-        ],
-        "uuid": "aa20d1c7-65cb-4255-83db-e4a78c69a8c1",
-        "fontSize": 92,
-        "inverted": true
-      },
-      {
-        "type": "nft-image",
-        "scale": [
-          1,
-          1,
-          0
-        ],
-        "url": "https://opensea.io/assets/0x6b4fccdd888bb6fd3934a9e49ef64dfd2c0d8e6d/10",
-        "position": [
-          4.25,
-          4,
-          4.25
-        ],
-        "rotation": [
-          0,
-          0,
-          0
-        ],
-        "uuid": "3528ba4a-58a2-4519-a542-45cb721de369"
-      },
-      {
-        "type": "sign",
-        "scale": [
-          0.5,
-          0.5,
-          0.5
-        ],
         "text": "66",
         "position": [
           -3.25,
@@ -2002,68 +2907,6 @@
         "uuid": "dd730224-d634-494a-8dcd-83e543991988"
       },
       {
-        "type": "nft-image",
-        "scale": [
-          1,
-          1,
-          0
-        ],
-        "url": "https://opensea.io/assets/0x6b4fccdd888bb6fd3934a9e49ef64dfd2c0d8e6d/85",
-        "position": [
-          3,
-          5.25,
-          -3.75
-        ],
-        "rotation": [
-          0,
-          3.141592653589793,
-          0
-        ],
-        "uuid": "b09024c2-1f18-43e6-9625-b8ebb797fa38"
-      },
-      {
-        "type": "nft-image",
-        "scale": [
-          1,
-          1,
-          0
-        ],
-        "url": "https://opensea.io/assets/0x6b4fccdd888bb6fd3934a9e49ef64dfd2c0d8e6d/69",
-        "position": [
-          -2,
-          5.25,
-          -3.75
-        ],
-        "rotation": [
-          0,
-          3.141592653589793,
-          0
-        ],
-        "uuid": "9efe45ec-d8f9-4bc6-833c-e1389d304362"
-      },
-      {
-        "type": "sign",
-        "scale": [
-          0.5,
-          0.5,
-          0.5
-        ],
-        "text": "9",
-        "position": [
-          4.25,
-          5.25,
-          3.75
-        ],
-        "rotation": [
-          0,
-          0,
-          0
-        ],
-        "uuid": "133249d4-7780-45f9-961c-9c42da5e1f64",
-        "fontSize": 92,
-        "inverted": true
-      },
-      {
         "type": "sign",
         "scale": [
           0.5,
@@ -2092,26 +2935,6 @@
           1,
           0
         ],
-        "url": "https://opensea.io/assets/0x6b4fccdd888bb6fd3934a9e49ef64dfd2c0d8e6d/91",
-        "position": [
-          4.25,
-          2.75,
-          -3.75
-        ],
-        "rotation": [
-          0,
-          3.141592653589793,
-          0
-        ],
-        "uuid": "cd2d8fa2-9706-40be-b4ce-34de6c96ff12"
-      },
-      {
-        "type": "nft-image",
-        "scale": [
-          1,
-          1,
-          0
-        ],
         "url": "https://opensea.io/assets/0x6b4fccdd888bb6fd3934a9e49ef64dfd2c0d8e6d/67",
         "position": [
           -3.25,
@@ -2124,26 +2947,6 @@
           0
         ],
         "uuid": "326dc955-18fc-4662-8283-bdbe9aa19053"
-      },
-      {
-        "type": "nft-image",
-        "scale": [
-          1,
-          1,
-          0
-        ],
-        "url": "https://opensea.io/assets/0x6b4fccdd888bb6fd3934a9e49ef64dfd2c0d8e6d/92",
-        "position": [
-          4.25,
-          1.5,
-          -3.75
-        ],
-        "rotation": [
-          0,
-          3.141592653589793,
-          0
-        ],
-        "uuid": "0f3900e5-020f-4c00-b18f-e70c92c74c1a"
       },
       {
         "type": "nft-image",
@@ -2172,26 +2975,6 @@
           1,
           0
         ],
-        "url": "https://opensea.io/assets/0x6b4fccdd888bb6fd3934a9e49ef64dfd2c0d8e6d/90",
-        "position": [
-          4.25,
-          4,
-          -3.75
-        ],
-        "rotation": [
-          0,
-          3.141592653589793,
-          0
-        ],
-        "uuid": "0fc33825-f653-4e60-b76d-5049115bf155"
-      },
-      {
-        "type": "nft-image",
-        "scale": [
-          1,
-          1,
-          0
-        ],
         "url": "https://opensea.io/assets/0x6b4fccdd888bb6fd3934a9e49ef64dfd2c0d8e6d/66",
         "position": [
           -3.25,
@@ -2212,47 +2995,6 @@
           0.5,
           0.5
         ],
-        "text": "89",
-        "position": [
-          4.25,
-          5.25,
-          -3.25
-        ],
-        "rotation": [
-          0,
-          3.141592653589793,
-          0
-        ],
-        "uuid": "d34480dc-04de-46b4-9fc4-687a2c769dd6",
-        "fontSize": 92
-      },
-      {
-        "type": "nft-image",
-        "scale": [
-          1,
-          1,
-          0
-        ],
-        "url": "https://opensea.io/assets/0x6b4fccdd888bb6fd3934a9e49ef64dfd2c0d8e6d/9",
-        "position": [
-          4.25,
-          5.25,
-          4.25
-        ],
-        "rotation": [
-          0,
-          0,
-          0
-        ],
-        "uuid": "c29531e2-95c5-43fb-90bf-14416a245c40"
-      },
-      {
-        "type": "sign",
-        "scale": [
-          0.5,
-          0.5,
-          0.5
-        ],
         "text": "65",
         "position": [
           -3.25,
@@ -2265,7 +3007,8 @@
           0
         ],
         "uuid": "1055ff81-aa3c-4fad-86df-e5a5aee7e7de",
-        "fontSize": 92
+        "fontSize": 92,
+        "inverted": true
       },
       {
         "type": "nft-image",
@@ -2288,25 +3031,24 @@
         "uuid": "f5b0f615-8a24-4231-8112-b5920bc2ffdb"
       },
       {
-        "type": "sign",
+        "type": "nft-image",
         "scale": [
-          0.5,
-          0.5,
-          0.5
+          1,
+          1,
+          0
         ],
-        "text": "7",
+        "url": "https://opensea.io/assets/0x6b4fccdd888bb6fd3934a9e49ef64dfd2c0d8e6d/65",
         "position": [
-          5.5,
-          2.75,
-          3.75
+          -3.25,
+          5.25,
+          -3.75
         ],
         "rotation": [
           0,
-          0,
+          3.141592653589793,
           0
         ],
-        "uuid": "0d6a9a71-41a6-44ff-b4b2-0cd744e21169",
-        "fontSize": 92
+        "uuid": "b9548feb-6119-4f28-b25b-f9739655ed7c"
       },
       {
         "type": "sign",
@@ -2327,29 +3069,8 @@
           0
         ],
         "uuid": "dd3c45d9-795f-4433-be4f-71294d65c32b",
-        "fontSize": 92
-      },
-      {
-        "type": "sign",
-        "scale": [
-          0.5,
-          0.5,
-          0.5
-        ],
-        "text": "8",
-        "position": [
-          5.5,
-          1.5,
-          3.75
-        ],
-        "rotation": [
-          0,
-          0,
-          0
-        ],
-        "uuid": "c5dba780-47c7-4612-8e6b-5d9e8acf4c15",
-        "inverted": true,
-        "fontSize": 92
+        "fontSize": 92,
+        "inverted": true
       },
       {
         "type": "sign",
@@ -2380,28 +3101,6 @@
           0.5,
           0.5
         ],
-        "text": "6",
-        "position": [
-          5.5,
-          4,
-          3.75
-        ],
-        "rotation": [
-          0,
-          0,
-          0
-        ],
-        "uuid": "1106635e-fd6f-4202-8a4e-3ab8624990b8",
-        "fontSize": 92,
-        "inverted": true
-      },
-      {
-        "type": "sign",
-        "scale": [
-          0.5,
-          0.5,
-          0.5
-        ],
         "text": "38",
         "position": [
           -4.5,
@@ -2416,88 +3115,6 @@
         "uuid": "a22563e3-98e6-4f3e-9374-b82d25bf182e",
         "fontSize": 92,
         "inverted": true
-      },
-      {
-        "type": "nft-image",
-        "scale": [
-          1,
-          1,
-          0
-        ],
-        "url": "https://opensea.io/assets/0x6b4fccdd888bb6fd3934a9e49ef64dfd2c0d8e6d/89",
-        "position": [
-          4.25,
-          5.25,
-          -3.75
-        ],
-        "rotation": [
-          0,
-          3.141592653589793,
-          0
-        ],
-        "uuid": "c188e5ed-a0c8-4342-928d-028c4eea3508"
-      },
-      {
-        "type": "nft-image",
-        "scale": [
-          1,
-          1,
-          0
-        ],
-        "url": "https://opensea.io/assets/0x6b4fccdd888bb6fd3934a9e49ef64dfd2c0d8e6d/65",
-        "position": [
-          -3.25,
-          5.25,
-          -3.75
-        ],
-        "rotation": [
-          0,
-          3.141592653589793,
-          0
-        ],
-        "uuid": "b9548feb-6119-4f28-b25b-f9739655ed7c"
-      },
-      {
-        "type": "sign",
-        "scale": [
-          0.5,
-          0.5,
-          0.5
-        ],
-        "text": "95",
-        "position": [
-          5.5,
-          2.75,
-          -3.25
-        ],
-        "rotation": [
-          0,
-          3.141592653589793,
-          0
-        ],
-        "uuid": "3e7fba53-c4a2-44c0-b341-f75268639e17",
-        "inverted": true,
-        "fontSize": 92
-      },
-      {
-        "type": "nft-image",
-        "scale": [
-          1,
-          1,
-          0
-        ],
-        "url": "https://opensea.io/assets/0x6b4fccdd888bb6fd3934a9e49ef64dfd2c0d8e6d/7",
-        "position": [
-          5.5,
-          2.75,
-          4.25
-        ],
-        "rotation": [
-          0,
-          0,
-          0
-        ],
-        "uuid": "d2f9176d-3504-47f1-9881-772edd7351be"
       },
       {
         "type": "sign",
@@ -2548,47 +3165,6 @@
           0.5,
           0.5
         ],
-        "text": "96",
-        "position": [
-          5.5,
-          1.5,
-          -3.25
-        ],
-        "rotation": [
-          0,
-          3.141592653589793,
-          0
-        ],
-        "uuid": "1f3e9c21-8512-4057-bdec-e9f01fc585f0",
-        "fontSize": 92
-      },
-      {
-        "type": "nft-image",
-        "scale": [
-          1,
-          1,
-          0
-        ],
-        "url": "https://opensea.io/assets/0x6b4fccdd888bb6fd3934a9e49ef64dfd2c0d8e6d/8",
-        "position": [
-          5.5,
-          1.5,
-          4.25
-        ],
-        "rotation": [
-          0,
-          0,
-          0
-        ],
-        "uuid": "5db5f710-dba9-498e-b248-c4336e12c9de"
-      },
-      {
-        "type": "sign",
-        "scale": [
-          0.5,
-          0.5,
-          0.5
-        ],
         "text": "64",
         "position": [
           -4.5,
@@ -2601,7 +3177,8 @@
           0
         ],
         "uuid": "8ead3556-f901-4428-8352-d8d70dca9069",
-        "fontSize": 92
+        "fontSize": 92,
+        "inverted": true
       },
       {
         "type": "nft-image",
@@ -2630,47 +3207,6 @@
           0.5,
           0.5
         ],
-        "text": "94",
-        "position": [
-          5.5,
-          4,
-          -3.25
-        ],
-        "rotation": [
-          0,
-          3.141592653589793,
-          0
-        ],
-        "uuid": "89e96bf1-8795-4628-a986-e9cc36d54f36",
-        "fontSize": 92
-      },
-      {
-        "type": "nft-image",
-        "scale": [
-          1,
-          1,
-          0
-        ],
-        "url": "https://opensea.io/assets/0x6b4fccdd888bb6fd3934a9e49ef64dfd2c0d8e6d/6",
-        "position": [
-          5.5,
-          4,
-          4.25
-        ],
-        "rotation": [
-          0,
-          0,
-          0
-        ],
-        "uuid": "824ef223-d88c-4998-962c-a5bf6ff941d1"
-      },
-      {
-        "type": "sign",
-        "scale": [
-          0.5,
-          0.5,
-          0.5
-        ],
         "text": "62",
         "position": [
           -4.5,
@@ -2683,7 +3219,8 @@
           0
         ],
         "uuid": "6b195ad5-1326-4918-a97b-8662d7438c74",
-        "fontSize": 92
+        "fontSize": 92,
+        "inverted": true
       },
       {
         "type": "nft-image",
@@ -2712,27 +3249,6 @@
           0.5,
           0.5
         ],
-        "text": "5",
-        "position": [
-          5.5,
-          5.25,
-          3.75
-        ],
-        "rotation": [
-          0,
-          0,
-          0
-        ],
-        "uuid": "155d1539-8554-4e64-8bd5-2f80f8ab2bc3",
-        "fontSize": 92
-      },
-      {
-        "type": "sign",
-        "scale": [
-          0.5,
-          0.5,
-          0.5
-        ],
         "text": "37",
         "position": [
           -4.5,
@@ -2745,27 +3261,8 @@
           0
         ],
         "uuid": "055696f1-0a87-4d6b-a46b-cfb5d3bff097",
-        "fontSize": 92
-      },
-      {
-        "type": "nft-image",
-        "scale": [
-          1,
-          1,
-          0
-        ],
-        "url": "https://opensea.io/assets/0x6b4fccdd888bb6fd3934a9e49ef64dfd2c0d8e6d/95",
-        "position": [
-          5.5,
-          2.75,
-          -3.75
-        ],
-        "rotation": [
-          0,
-          3.141592653589793,
-          0
-        ],
-        "uuid": "72939dd8-503d-4379-87b2-78f4427d9ac1"
+        "fontSize": 92,
+        "inverted": true
       },
       {
         "type": "nft-image",
@@ -2794,26 +3291,6 @@
           1,
           0
         ],
-        "url": "https://opensea.io/assets/0x6b4fccdd888bb6fd3934a9e49ef64dfd2c0d8e6d/96",
-        "position": [
-          5.5,
-          1.5,
-          -3.75
-        ],
-        "rotation": [
-          0,
-          3.141592653589793,
-          0
-        ],
-        "uuid": "73c235d4-c52c-48be-b8aa-6051fa1ddd52"
-      },
-      {
-        "type": "nft-image",
-        "scale": [
-          1,
-          1,
-          0
-        ],
         "url": "https://opensea.io/assets/0x6b4fccdd888bb6fd3934a9e49ef64dfd2c0d8e6d/64",
         "position": [
           -4.5,
@@ -2834,26 +3311,6 @@
           1,
           0
         ],
-        "url": "https://opensea.io/assets/0x6b4fccdd888bb6fd3934a9e49ef64dfd2c0d8e6d/94",
-        "position": [
-          5.5,
-          4,
-          -3.75
-        ],
-        "rotation": [
-          0,
-          3.141592653589793,
-          0
-        ],
-        "uuid": "23f73deb-c479-4509-93f3-42ac01c95a4c"
-      },
-      {
-        "type": "nft-image",
-        "scale": [
-          1,
-          1,
-          0
-        ],
         "url": "https://opensea.io/assets/0x6b4fccdd888bb6fd3934a9e49ef64dfd2c0d8e6d/62",
         "position": [
           -4.5,
@@ -2866,48 +3323,6 @@
           0
         ],
         "uuid": "43748dd8-bef3-47f7-8fd8-127578fbdd17"
-      },
-      {
-        "type": "sign",
-        "scale": [
-          0.5,
-          0.5,
-          0.5
-        ],
-        "text": "93",
-        "position": [
-          5.5,
-          5.25,
-          -3.25
-        ],
-        "rotation": [
-          0,
-          3.141592653589793,
-          0
-        ],
-        "uuid": "5de65e93-5ff9-4a1d-9afe-ec9f7b7d206d",
-        "fontSize": 92,
-        "inverted": true
-      },
-      {
-        "type": "nft-image",
-        "scale": [
-          1,
-          1,
-          0
-        ],
-        "url": "https://opensea.io/assets/0x6b4fccdd888bb6fd3934a9e49ef64dfd2c0d8e6d/5",
-        "position": [
-          5.5,
-          5.25,
-          4.25
-        ],
-        "rotation": [
-          0,
-          0,
-          0
-        ],
-        "uuid": "d155671b-41ff-4754-99d5-1170f582c184"
       },
       {
         "type": "sign",
@@ -2952,92 +3367,6 @@
         "uuid": "80f1cb2c-ce7a-42a9-ab2d-edff6db17ff8"
       },
       {
-        "type": "image",
-        "scale": [
-          4.5,
-          4.5,
-          1
-        ],
-        "url": "https://lh3.googleusercontent.com/3GMmndJG-ToWoRRyB_xnknwK2zfq-SLwiZpTSuNgPB_oclWVjfhrUhKTnMY5DZ3W2R82XSJSGdZS0MceSfGCZuqk",
-        "position": [
-          7.25,
-          3.25,
-          0.25
-        ],
-        "rotation": [
-          0,
-          1.5707963267948966,
-          0
-        ],
-        "uuid": "1d2d2825-0d78-4af7-a2c2-7e73105f59b5",
-        "color": true,
-        "inverted": true
-      },
-      {
-        "type": "sign",
-        "scale": [
-          0.5,
-          0.5,
-          0.5
-        ],
-        "text": "3",
-        "position": [
-          6.75,
-          2.75,
-          3.75
-        ],
-        "rotation": [
-          0,
-          0,
-          0
-        ],
-        "uuid": "2fb30f9d-cfed-4ff2-a41d-9f6b77b45081",
-        "fontSize": 92,
-        "inverted": true
-      },
-      {
-        "type": "sign",
-        "scale": [
-          0.5,
-          0.5,
-          0.5
-        ],
-        "text": "43",
-        "position": [
-          -5.75,
-          2.75,
-          3.75
-        ],
-        "rotation": [
-          0,
-          0,
-          0
-        ],
-        "uuid": "f7962dea-3f3d-4512-a212-1c6776c6afd1",
-        "fontSize": 92,
-        "inverted": true
-      },
-      {
-        "type": "nft-image",
-        "scale": [
-          1,
-          1,
-          0
-        ],
-        "url": "https://opensea.io/assets/0x6b4fccdd888bb6fd3934a9e49ef64dfd2c0d8e6d/93",
-        "position": [
-          5.5,
-          5.25,
-          -3.75
-        ],
-        "rotation": [
-          0,
-          3.141592653589793,
-          0
-        ],
-        "uuid": "8c0f7d1e-0be2-4438-be76-c7260d0d7bef"
-      },
-      {
         "type": "nft-image",
         "scale": [
           1,
@@ -3064,10 +3393,10 @@
           0.5,
           0.5
         ],
-        "text": "4",
+        "text": "43",
         "position": [
-          6.75,
-          1.5,
+          -5.75,
+          2.75,
           3.75
         ],
         "rotation": [
@@ -3075,8 +3404,9 @@
           0,
           0
         ],
-        "uuid": "280ccdd8-d670-4a09-82a7-75fc33a3679a",
-        "fontSize": 92
+        "uuid": "f7962dea-3f3d-4512-a212-1c6776c6afd1",
+        "fontSize": 92,
+        "inverted": true
       },
       {
         "type": "sign",
@@ -3097,28 +3427,8 @@
           0
         ],
         "uuid": "b62bfdc2-5c00-4e2c-8a41-8b3453430f1d",
-        "fontSize": 92
-      },
-      {
-        "type": "sign",
-        "scale": [
-          0.5,
-          0.5,
-          0.5
-        ],
-        "text": "2",
-        "position": [
-          6.75,
-          4,
-          3.75
-        ],
-        "rotation": [
-          0,
-          0,
-          0
-        ],
-        "uuid": "325b0859-11f6-47a2-bd85-fa43c3311506",
-        "fontSize": 92
+        "fontSize": 92,
+        "inverted": true
       },
       {
         "type": "sign",
@@ -3139,91 +3449,8 @@
           0
         ],
         "uuid": "9d8cd1e2-71cb-43ae-bd74-3767407cadd4",
-        "fontSize": 92
-      },
-      {
-        "type": "image",
-        "scale": [
-          3.5,
-          3.5,
-          1
-        ],
-        "url": "https://lh3.googleusercontent.com/3GMmndJG-ToWoRRyB_xnknwK2zfq-SLwiZpTSuNgPB_oclWVjfhrUhKTnMY5DZ3W2R82XSJSGdZS0MceSfGCZuqk",
-        "position": [
-          -6.75,
-          2.75,
-          0.25
-        ],
-        "rotation": [
-          0,
-          4.71238898038469,
-          0
-        ],
-        "uuid": "92b7d48b-643b-4fb4-b5bf-5c5917254b21",
-        "inverted": false,
-        "color": false
-      },
-      {
-        "type": "sign",
-        "scale": [
-          0.5,
-          0.5,
-          0.5
-        ],
-        "text": "50",
-        "position": [
-          -6.25,
-          5.25,
-          1
-        ],
-        "rotation": [
-          0,
-          4.71238898038469,
-          0
-        ],
-        "uuid": "e59e4bfd-648a-482b-ace6-476209fac938",
-        "fontSize": 92
-      },
-      {
-        "type": "sign",
-        "scale": [
-          0.5,
-          0.5,
-          0.5
-        ],
-        "text": "99",
-        "position": [
-          6.75,
-          2.75,
-          -3.25
-        ],
-        "rotation": [
-          0,
-          3.141592653589793,
-          0
-        ],
-        "uuid": "7f7850bf-7fcf-4f92-a0e1-8c15ddbef678",
-        "fontSize": 92
-      },
-      {
-        "type": "nft-image",
-        "scale": [
-          1,
-          1,
-          0
-        ],
-        "url": "https://opensea.io/assets/0x6b4fccdd888bb6fd3934a9e49ef64dfd2c0d8e6d/3",
-        "position": [
-          6.75,
-          2.75,
-          4.25
-        ],
-        "rotation": [
-          0,
-          0,
-          0
-        ],
-        "uuid": "b3f98ba3-0c29-4dc3-87e8-151a214c4c6d"
+        "fontSize": 92,
+        "inverted": true
       },
       {
         "type": "sign",
@@ -3244,7 +3471,8 @@
           0
         ],
         "uuid": "5426465d-4a78-41f2-9a55-c05895acd9f1",
-        "fontSize": 92
+        "fontSize": 92,
+        "inverted": true
       },
       {
         "type": "nft-image",
@@ -3265,70 +3493,6 @@
           0
         ],
         "uuid": "36c7fdf4-4cc4-4057-a196-d13b94d4d875"
-      },
-      {
-        "type": "sign",
-        "scale": [
-          0.5,
-          0.5,
-          0.5
-        ],
-        "text": "51",
-        "position": [
-          -6.25,
-          5.25,
-          -0.5
-        ],
-        "rotation": [
-          0,
-          4.71238898038469,
-          0
-        ],
-        "uuid": "7da7b97b-9efb-479c-a694-16799d0798c3",
-        "fontSize": 92,
-        "inverted": true
-      },
-      {
-        "type": "sign",
-        "scale": [
-          0.646875,
-          0.5,
-          0.5
-        ],
-        "text": "100",
-        "position": [
-          6.75,
-          1.5,
-          -3.25
-        ],
-        "rotation": [
-          0,
-          3.141592653589793,
-          0
-        ],
-        "uuid": "65de90ed-b058-49ac-b184-c5479fc84448",
-        "fontSize": 92,
-        "inverted": true
-      },
-      {
-        "type": "nft-image",
-        "scale": [
-          1,
-          1,
-          0
-        ],
-        "url": "https://opensea.io/assets/0x6b4fccdd888bb6fd3934a9e49ef64dfd2c0d8e6d/4",
-        "position": [
-          6.75,
-          1.5,
-          4.25
-        ],
-        "rotation": [
-          0,
-          0,
-          0
-        ],
-        "uuid": "0ce7c800-55dd-426a-a42a-03dbd8b20bc7"
       },
       {
         "type": "sign",
@@ -3379,69 +3543,6 @@
           0.5,
           0.5
         ],
-        "text": "47",
-        "position": [
-          -6.25,
-          2.75,
-          3.5
-        ],
-        "rotation": [
-          0,
-          4.71238898038469,
-          0
-        ],
-        "uuid": "9fb06ec4-8672-4bcb-99a3-2b4c95a948b0",
-        "fontSize": 92
-      },
-      {
-        "type": "sign",
-        "scale": [
-          0.5,
-          0.5,
-          0.5
-        ],
-        "text": "98",
-        "position": [
-          6.75,
-          4,
-          -3.25
-        ],
-        "rotation": [
-          0,
-          3.141592653589793,
-          0
-        ],
-        "uuid": "116d47ad-fb48-43b0-9c36-4b15e36fb498",
-        "fontSize": 92,
-        "inverted": true
-      },
-      {
-        "type": "nft-image",
-        "scale": [
-          1,
-          1,
-          0
-        ],
-        "url": "https://opensea.io/assets/0x6b4fccdd888bb6fd3934a9e49ef64dfd2c0d8e6d/2",
-        "position": [
-          6.75,
-          4,
-          4.25
-        ],
-        "rotation": [
-          0,
-          0,
-          0
-        ],
-        "uuid": "ea5808d1-7bfa-4a97-b81e-fa1a7fc04683"
-      },
-      {
-        "type": "sign",
-        "scale": [
-          0.5,
-          0.5,
-          0.5
-        ],
         "text": "58",
         "position": [
           -5.75,
@@ -3476,6 +3577,196 @@
           0
         ],
         "uuid": "5900dd85-42ce-4666-ba34-7ec8522a14a9"
+      },
+      {
+        "type": "sign",
+        "scale": [
+          0.5,
+          0.5,
+          0.5
+        ],
+        "text": "41",
+        "position": [
+          -5.75,
+          5.25,
+          3.75
+        ],
+        "rotation": [
+          0,
+          0,
+          0
+        ],
+        "uuid": "fdd8ef36-e79d-4e7e-ba3a-b766494ca6b6",
+        "fontSize": 92,
+        "inverted": true
+      },
+      {
+        "type": "nft-image",
+        "scale": [
+          1,
+          1,
+          0
+        ],
+        "url": "https://opensea.io/assets/0x6b4fccdd888bb6fd3934a9e49ef64dfd2c0d8e6d/59",
+        "position": [
+          -5.75,
+          2.75,
+          -3.75
+        ],
+        "rotation": [
+          0,
+          3.141592653589793,
+          0
+        ],
+        "uuid": "a0ccccf1-4cb5-4e1d-9c38-a756b07ef819"
+      },
+      {
+        "type": "sign",
+        "scale": [
+          0.5,
+          0.5,
+          0.5
+        ],
+        "text": "50",
+        "position": [
+          -6.25,
+          5.25,
+          1
+        ],
+        "rotation": [
+          0,
+          4.71238898038469,
+          0
+        ],
+        "uuid": "e59e4bfd-648a-482b-ace6-476209fac938",
+        "fontSize": 92,
+        "inverted": true
+      },
+      {
+        "type": "nft-image",
+        "scale": [
+          1,
+          1,
+          0
+        ],
+        "url": "https://opensea.io/assets/0x6b4fccdd888bb6fd3934a9e49ef64dfd2c0d8e6d/60",
+        "position": [
+          -5.75,
+          1.5,
+          -3.75
+        ],
+        "rotation": [
+          0,
+          3.141592653589793,
+          0
+        ],
+        "uuid": "e4ef59a5-b860-4e53-92db-76f4ebb36960"
+      },
+      {
+        "type": "sign",
+        "scale": [
+          0.5,
+          0.5,
+          0.5
+        ],
+        "text": "51",
+        "position": [
+          -6.25,
+          5.25,
+          -0.5
+        ],
+        "rotation": [
+          0,
+          4.71238898038469,
+          0
+        ],
+        "uuid": "7da7b97b-9efb-479c-a694-16799d0798c3",
+        "fontSize": 92,
+        "inverted": true
+      },
+      {
+        "type": "nft-image",
+        "scale": [
+          1,
+          1,
+          0
+        ],
+        "url": "https://opensea.io/assets/0x6b4fccdd888bb6fd3934a9e49ef64dfd2c0d8e6d/58",
+        "position": [
+          -5.75,
+          4,
+          -3.75
+        ],
+        "rotation": [
+          0,
+          3.141592653589793,
+          0
+        ],
+        "uuid": "6e5d651a-adba-4558-9fe3-62ca27d3927b"
+      },
+      {
+        "type": "sign",
+        "scale": [
+          0.5,
+          0.5,
+          0.5
+        ],
+        "text": "47",
+        "position": [
+          -6.25,
+          2.75,
+          3.5
+        ],
+        "rotation": [
+          0,
+          4.71238898038469,
+          0
+        ],
+        "uuid": "9fb06ec4-8672-4bcb-99a3-2b4c95a948b0",
+        "fontSize": 92,
+        "inverted": true
+      },
+      {
+        "type": "sign",
+        "scale": [
+          0.5,
+          0.5,
+          0.5
+        ],
+        "text": "57",
+        "position": [
+          -5.75,
+          5.25,
+          -3.25
+        ],
+        "rotation": [
+          0,
+          3.141592653589793,
+          0
+        ],
+        "uuid": "5a48a7a2-0c39-4a14-9866-63fefe285f1c",
+        "fontSize": 92,
+        "inverted": true
+      },
+      {
+        "type": "nft-image",
+        "scale": [
+          1,
+          1,
+          0
+        ],
+        "url": "https://opensea.io/assets/0x6b4fccdd888bb6fd3934a9e49ef64dfd2c0d8e6d/41",
+        "position": [
+          -5.75,
+          5.25,
+          4.25
+        ],
+        "rotation": [
+          0,
+          0,
+          0
+        ],
+        "uuid": "19c86d88-9bc4-4706-a599-e44cbca9bec7"
       },
       {
         "type": "sign",
@@ -3550,90 +3841,6 @@
           0.5,
           0.5
         ],
-        "text": "1",
-        "position": [
-          6.75,
-          5.25,
-          3.75
-        ],
-        "rotation": [
-          0,
-          0,
-          0
-        ],
-        "uuid": "62ace840-0c69-4139-9eeb-922af7847e34",
-        "fontSize": 92,
-        "inverted": true
-      },
-      {
-        "type": "sign",
-        "scale": [
-          0.5,
-          0.5,
-          0.5
-        ],
-        "text": "41",
-        "position": [
-          -5.75,
-          5.25,
-          3.75
-        ],
-        "rotation": [
-          0,
-          0,
-          0
-        ],
-        "uuid": "fdd8ef36-e79d-4e7e-ba3a-b766494ca6b6",
-        "fontSize": 92,
-        "inverted": true
-      },
-      {
-        "type": "nft-image",
-        "scale": [
-          1,
-          1,
-          0
-        ],
-        "url": "https://opensea.io/assets/0x6b4fccdd888bb6fd3934a9e49ef64dfd2c0d8e6d/99",
-        "position": [
-          6.75,
-          2.75,
-          -3.75
-        ],
-        "rotation": [
-          0,
-          3.141592653589793,
-          0
-        ],
-        "uuid": "9c933af2-8506-4f55-9da9-6a62adb1fe23"
-      },
-      {
-        "type": "nft-image",
-        "scale": [
-          1,
-          1,
-          0
-        ],
-        "url": "https://opensea.io/assets/0x6b4fccdd888bb6fd3934a9e49ef64dfd2c0d8e6d/59",
-        "position": [
-          -5.75,
-          2.75,
-          -3.75
-        ],
-        "rotation": [
-          0,
-          3.141592653589793,
-          0
-        ],
-        "uuid": "a0ccccf1-4cb5-4e1d-9c38-a756b07ef819"
-      },
-      {
-        "type": "sign",
-        "scale": [
-          0.5,
-          0.5,
-          0.5
-        ],
         "text": "52",
         "position": [
           -6.25,
@@ -3646,7 +3853,30 @@
           0
         ],
         "uuid": "b7d3f51d-f765-4454-b0c6-a50ae1b3f6e4",
-        "fontSize": 92
+        "fontSize": 92,
+        "inverted": true
+      },
+      {
+        "type": "image",
+        "scale": [
+          3.5,
+          3.5,
+          1
+        ],
+        "url": "https://lh3.googleusercontent.com/3GMmndJG-ToWoRRyB_xnknwK2zfq-SLwiZpTSuNgPB_oclWVjfhrUhKTnMY5DZ3W2R82XSJSGdZS0MceSfGCZuqk",
+        "position": [
+          -6.75,
+          2.75,
+          0.25
+        ],
+        "rotation": [
+          0,
+          4.71238898038469,
+          0
+        ],
+        "uuid": "92b7d48b-643b-4fb4-b5bf-5c5917254b21",
+        "inverted": false,
+        "color": false
       },
       {
         "type": "sign",
@@ -3677,30 +3907,10 @@
           1,
           0
         ],
-        "url": "https://opensea.io/assets/0x6b4fccdd888bb6fd3934a9e49ef64dfd2c0d8e6d/100",
-        "position": [
-          6.75,
-          1.5,
-          -3.75
-        ],
-        "rotation": [
-          0,
-          3.141592653589793,
-          0
-        ],
-        "uuid": "a542078c-1e34-42fb-8a2f-01e0dddc6972"
-      },
-      {
-        "type": "nft-image",
-        "scale": [
-          1,
-          1,
-          0
-        ],
-        "url": "https://opensea.io/assets/0x6b4fccdd888bb6fd3934a9e49ef64dfd2c0d8e6d/60",
+        "url": "https://opensea.io/assets/0x6b4fccdd888bb6fd3934a9e49ef64dfd2c0d8e6d/57",
         "position": [
           -5.75,
-          1.5,
+          5.25,
           -3.75
         ],
         "rotation": [
@@ -3708,47 +3918,7 @@
           3.141592653589793,
           0
         ],
-        "uuid": "e4ef59a5-b860-4e53-92db-76f4ebb36960"
-      },
-      {
-        "type": "nft-image",
-        "scale": [
-          1,
-          1,
-          0
-        ],
-        "url": "https://opensea.io/assets/0x6b4fccdd888bb6fd3934a9e49ef64dfd2c0d8e6d/98",
-        "position": [
-          6.75,
-          4,
-          -3.75
-        ],
-        "rotation": [
-          0,
-          3.141592653589793,
-          0
-        ],
-        "uuid": "4e923897-4074-451a-9f10-de062eaec280"
-      },
-      {
-        "type": "nft-image",
-        "scale": [
-          1,
-          1,
-          0
-        ],
-        "url": "https://opensea.io/assets/0x6b4fccdd888bb6fd3934a9e49ef64dfd2c0d8e6d/58",
-        "position": [
-          -5.75,
-          4,
-          -3.75
-        ],
-        "rotation": [
-          0,
-          3.141592653589793,
-          0
-        ],
-        "uuid": "6e5d651a-adba-4558-9fe3-62ca27d3927b"
+        "uuid": "c5960768-1660-4636-9199-d263e98ca676"
       },
       {
         "type": "sign",
@@ -3769,7 +3939,8 @@
           0
         ],
         "uuid": "44d24c63-09e0-4a0b-8058-5161cf4afe40",
-        "fontSize": 92
+        "fontSize": 92,
+        "inverted": true
       },
       {
         "type": "sign",
@@ -3790,7 +3961,30 @@
           0
         ],
         "uuid": "b4062da7-4e86-4a43-b16d-6da52b29c861",
-        "fontSize": 92
+        "fontSize": 92,
+        "inverted": true
+      },
+      {
+        "type": "sign",
+        "scale": [
+          0.5,
+          0.5,
+          0.5
+        ],
+        "text": "45",
+        "position": [
+          -6.25,
+          5.25,
+          3.5
+        ],
+        "rotation": [
+          0,
+          4.71238898038469,
+          0
+        ],
+        "uuid": "8cce3659-8d4e-4f6c-89bb-6f45ae85080f",
+        "fontSize": 92,
+        "inverted": true
       },
       {
         "type": "nft-image",
@@ -3819,81 +4013,20 @@
           0.5,
           0.5
         ],
-        "text": "97",
+        "text": "53",
         "position": [
-          6.75,
+          -6.25,
           5.25,
-          -3.25
+          -3
         ],
         "rotation": [
           0,
-          3.141592653589793,
+          4.71238898038469,
           0
         ],
-        "uuid": "e90458c1-40d5-4d98-aa86-50a69f8adc3c",
-        "fontSize": 92
-      },
-      {
-        "type": "nft-image",
-        "scale": [
-          1,
-          1,
-          0
-        ],
-        "url": "https://opensea.io/assets/0x6b4fccdd888bb6fd3934a9e49ef64dfd2c0d8e6d/1",
-        "position": [
-          6.75,
-          5.25,
-          4.25
-        ],
-        "rotation": [
-          0,
-          0,
-          0
-        ],
-        "uuid": "d7dc89fc-3cef-4ef3-817d-a9645e219998",
-        "id": ""
-      },
-      {
-        "type": "sign",
-        "scale": [
-          0.5,
-          0.5,
-          0.5
-        ],
-        "text": "57",
-        "position": [
-          -5.75,
-          5.25,
-          -3.25
-        ],
-        "rotation": [
-          0,
-          3.141592653589793,
-          0
-        ],
-        "uuid": "5a48a7a2-0c39-4a14-9866-63fefe285f1c",
-        "fontSize": 92
-      },
-      {
-        "type": "nft-image",
-        "scale": [
-          1,
-          1,
-          0
-        ],
-        "url": "https://opensea.io/assets/0x6b4fccdd888bb6fd3934a9e49ef64dfd2c0d8e6d/41",
-        "position": [
-          -5.75,
-          5.25,
-          4.25
-        ],
-        "rotation": [
-          0,
-          0,
-          0
-        ],
-        "uuid": "19c86d88-9bc4-4706-a599-e44cbca9bec7"
+        "uuid": "5d07c215-fe5a-4a80-836e-741a9d684c84",
+        "fontSize": 92,
+        "inverted": true
       },
       {
         "type": "nft-image",
@@ -3914,27 +4047,6 @@
           0
         ],
         "uuid": "74f2d546-e6c7-4c4c-83bd-2dd134e4cf45"
-      },
-      {
-        "type": "sign",
-        "scale": [
-          0.5,
-          0.5,
-          0.5
-        ],
-        "text": "45",
-        "position": [
-          -6.25,
-          5.25,
-          3.5
-        ],
-        "rotation": [
-          0,
-          4.71238898038469,
-          0
-        ],
-        "uuid": "8cce3659-8d4e-4f6c-89bb-6f45ae85080f",
-        "fontSize": 92
       },
       {
         "type": "nft-image",
@@ -4023,46 +4135,6 @@
           1,
           0
         ],
-        "url": "https://opensea.io/assets/0x6b4fccdd888bb6fd3934a9e49ef64dfd2c0d8e6d/97",
-        "position": [
-          6.75,
-          5.25,
-          -3.75
-        ],
-        "rotation": [
-          0,
-          3.141592653589793,
-          0
-        ],
-        "uuid": "9c5f86a5-0f37-47b0-8caa-d310b548b90f"
-      },
-      {
-        "type": "nft-image",
-        "scale": [
-          1,
-          1,
-          0
-        ],
-        "url": "https://opensea.io/assets/0x6b4fccdd888bb6fd3934a9e49ef64dfd2c0d8e6d/57",
-        "position": [
-          -5.75,
-          5.25,
-          -3.75
-        ],
-        "rotation": [
-          0,
-          3.141592653589793,
-          0
-        ],
-        "uuid": "c5960768-1660-4636-9199-d263e98ca676"
-      },
-      {
-        "type": "nft-image",
-        "scale": [
-          1,
-          1,
-          0
-        ],
         "url": "https://opensea.io/assets/0x6b4fccdd888bb6fd3934a9e49ef64dfd2c0d8e6d/52",
         "position": [
           -6.75,
@@ -4075,28 +4147,6 @@
           0
         ],
         "uuid": "e4a09e26-8c8a-41d1-9233-bf7d6e0b6045"
-      },
-      {
-        "type": "sign",
-        "scale": [
-          0.5,
-          0.5,
-          0.5
-        ],
-        "text": "53",
-        "position": [
-          -6.25,
-          5.25,
-          -3
-        ],
-        "rotation": [
-          0,
-          4.71238898038469,
-          0
-        ],
-        "uuid": "5d07c215-fe5a-4a80-836e-741a9d684c84",
-        "fontSize": 92,
-        "inverted": true
       },
       {
         "type": "nft-image",
