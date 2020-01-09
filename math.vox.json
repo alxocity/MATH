@@ -4259,7 +4259,7 @@
     "contributors": [
       ""
     ],
-    "description": null,
+    "description": "Collect your favorite number forever! Mint a new token by calling the \"add\" contract function with payableAmount = 0.002 and tokenId1/2 = existing token ids. This creates a new token with id = tokenId1 + tokenId2 and the owners of tokenId1/2 split the 0.002 ETH fee.",
     "images": [
       ""
     ],
