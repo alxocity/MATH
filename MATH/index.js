@@ -23,11 +23,15 @@ module.exports = async function (context, req) {
         {
           trait_type: 'digit_sum',
           value: sum
-        },        
+        },
         {
           trait_type: 'parity',
           value: number % 2n ? 'odd' : 'even'
-        }
+        },
+        ...(id == id.split('').reverse().join('') ? [{
+          trait_type: 'fancy',
+          value: 'palindrome'
+        }] : [])
       ],
       background_color: color(16777215n - number % 16777216n)
     }
