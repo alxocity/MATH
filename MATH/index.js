@@ -32,7 +32,7 @@ module.exports = async function (context, req) {
         },
         ...(id == id.split('').reverse().join('') ? [{
           trait_type: 'fancy',
-          value: 'palindrome'
+          value: 'palindromic'
         }] : []),
         ...(id == id.split('').reverse().join('').replace(/6/g, '-').replace(/9/g, '6').replace(/-/g, '9').replace(/2|3|4|5|7/g, '') ? [{
           trait_type: 'fancy',
