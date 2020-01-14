@@ -10,7 +10,7 @@ module.exports = async function (context, req) {
     body: {
       image_data: `<svg xmlns="http://www.w3.org/2000/svg" width="350" height="350"><text x="50%" y="50%" dominant-baseline="middle" text-anchor="middle" font-size="${Math.ceil(350 / id.length)}px" fill="#${color(colorNumber)}">${id}</text></svg>`,
       external_url: `https://etherscan.io/token/0x6b4fccdd888bb6fd3934a9e49ef64dfd2c0d8e6d?a=${id}`,
-      description: number.toString(2).padStart(256, '0'),
+      description: number.toString(2).padStart(256, '0').replace(/0/g, '⬛').replace(/1/g, '⬜').match(/.{16}/g).join('\n'),
       name: id,
       attributes: [
         ...Array.from(digits, (value, i) => ({ trait_type: `${i}_count`, value })),
