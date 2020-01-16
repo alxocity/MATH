@@ -13,9 +13,9 @@ module.exports = async function (context, req) {
       description: [
         `0x${number.toString(16).padStart(64, 0)}`,
         number.toString(2).padStart(256, 0).replace(/0/g, '⬛').replace(/1/g, '⬜').match(/.{16}/g).join('\n'),
-        number.toString(16).padStart(64, 0).match(/.{2}/g).map(x => String.fromCodePoint(`0x${x}`)).map(x => JSON.stringify(x).length == 3 ? x : '').join(''),
-        number.toString(16).padStart(64, 0).match(/.{4}/g).map(x => String.fromCodePoint(`0x${x}`)).map(x => JSON.stringify(x).length == 3 ? x : '').join(''),
-        number.toString(16).padStart(64, 0).match(/.{8}/g).map(x => `0x${x}` <= 0x10FFFF ? String.fromCodePoint(`0x${x}`) : '').map(x => JSON.stringify(x).length == 4 ? x : '').join('')
+        number.toString(16).padStart(64, 0).match(/.{2}/g).map(x => String.fromCodePoint(`0x${x}`)).map(x => JSON.stringify(x).length < 8 ? x : '').join(''),
+        number.toString(16).padStart(64, 0).match(/.{4}/g).map(x => String.fromCodePoint(`0x${x}`)).map(x => JSON.stringify(x).length < 8 ? x : '').join(''),
+        number.toString(16).padStart(64, 0).match(/.{8}/g).map(x => `0x${x}` <= 0x10FFFF ? String.fromCodePoint(`0x${x}`) : '').map(x => JSON.stringify(x).length < 8 ? x : '').join('')
       ].join('\n\n'),
       name: id,
       attributes: [
