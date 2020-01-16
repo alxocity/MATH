@@ -13,7 +13,8 @@ module.exports = async function (context, req) {
       description: [
         `0x${number.toString(16).padStart(64, '0')}`,
         number.toString(2).padStart(256, '0').replace(/0/g, '⬛').replace(/1/g, '⬜').match(/.{16}/g).join('\n'),
-        number.toString(16).padStart(64, '0').match(/.{2}/g).map(x => String.fromCharCode(`0x${x}`)).map(x => JSON.stringify(x).length == 3 ? x : '').join('')
+        number.toString(16).padStart(64, '0').match(/.{2}/g).map(x => String.fromCharCode(`0x${x}`)).map(x => JSON.stringify(x).length == 3 ? x : '').join(''),
+        number.toString(16).padStart(64, '0').match(/.{4}/g).map(x => String.fromCharCode(`0x${x}`)).map(x => JSON.stringify(x).length == 3 ? x : '').join('')
       ].join('\n\n'),
       name: id,
       attributes: [
