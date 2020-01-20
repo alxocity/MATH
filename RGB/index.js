@@ -1,12 +1,15 @@
+var Web3 = require('web3');
+var web3 = new Web3(Web3.givenProvider || "https://mainnet.infura.io/v3/c24754efadc94bb991951f94161f2c55");
+const rgbContract = new web3.eth.Contract([{ "constant": true, "inputs": [{ "internalType": "uint256", "name": "id", "type": "uint256" }], "name": "get", "outputs": [{ "internalType": "uint256", "name": "r", "type": "uint256" }, { "internalType": "uint256", "name": "g", "type": "uint256" }, { "internalType": "uint256", "name": "b", "type": "uint256" }], "payable": false, "stateMutability": "view", "type": "function" }], '0x9355Fb9693ffF9bB6f06721C82fe0B5F49E6c956');
 module.exports = async function (context, req) {
   const { id } = req.query;
-  const rgb = { r: '15297492', g: '15000000', b: '1097621870' };
-  const r = BigInt(rgb.r).toString(2).padStart(256, 0);
-  const g = BigInt(rgb.g).toString(2).padStart(256, 0);
-  const b = BigInt(rgb.b).toString(2).padStart(256, 0);
+  const { r, g, b } = await rgbContract.methods.get(id).call();
+  const rBits = BigInt(r).toString(2).padStart(256, 0);
+  const gBits = BigInt(g).toString(2).padStart(256, 0);
+  const bBits = BigInt(b).toString(2).padStart(256, 0);
   let image_data = '<svg xmlns="http://www.w3.org/2000/svg" width="350" height="350">';
   for (let i = 0; i < 256; i++)
-    image_data += `<rect x="${47 + 16 * (i % 16)}" y="${47 + 16 * Math.floor(i / 16)}" width="16" height="16" fill="#${parseInt(r[i]) ? 'ff' : '00'}${parseInt(g[i]) ? 'ff' : '00'}${parseInt(b[i]) ? 'ff' : '00'}"/>`;
+    image_data += `<rect x="${47 + 16 * (i % 16)}" y="${47 + 16 * Math.floor(i / 16)}" width="16" height="16" fill="#${parseInt(rBits[i]) ? 'ff' : '00'}${parseInt(gBits[i]) ? 'ff' : '00'}${parseInt(bBits[i]) ? 'ff' : '00'}"/>`;
   image_data += '</svg>';
   context.res = {
     body: {
@@ -15,15 +18,15 @@ module.exports = async function (context, req) {
       attributes: [
         {
           trait_type: 'r',
-          value: rgb.r
+          value: r
         },
         {
           trait_type: 'g',
-          value: rgb.g
+          value: g
         },
         {
           trait_type: 'b',
-          value: rgb.b
+          value: b
         }
       ]
     }
