@@ -9,14 +9,10 @@ module.exports = async function (context, req) {
   const { id } = req.query;
   const { r, g, b } = await contract.methods.get(id).call();
   const bits = x => BigInt(x).toString(2).padStart(256, 0).replace(/1/g, 'f');
-  const rBits = bits(r); const gBits = bits(g); const bBits = bits(b);
-  let image_data = '<svg xmlns="http://www.w3.org/2000/svg" width="350" height="350">';
-  for (let i = 0; i < 256; i++)
-    image_data += `<rect x="${47 + 16 * (i % 16)}" y="${47 + 16 * Math.floor(i / 16)}" width="16" height="16" fill="#${rBits[i]}${gBits[i]}${bBits[i]}"/>`;
-  image_data += '</svg>';
+  const rBits = bits(r), gBits = bits(g), bBits = bits(b);
   context.res = {
     body: {
-      image_data,
+      image_data: `<svg xmlns="http://www.w3.org/2000/svg" width="350" height="350">${Array(256).fill().reduce((a, _, i) => `${a}<rect x="${47 + 16 * (i % 16)}" y="${47 + 16 * Math.floor(i / 16)}" width="16" height="16" fill="#${rBits[i]}${gBits[i]}${bBits[i]}"/>`, '')}</svg>`,
       external_url: `https://etherscan.io/token/${address}?a=${id}`,
       attributes: [{ trait_type: 'r', value: r }, { trait_type: 'g', value: g }, { trait_type: 'b', value: b }]
     }
