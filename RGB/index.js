@@ -8,9 +8,8 @@ const contract = new (new (require('web3'))('https://mainnet.infura.io/v3/c24754
 module.exports = async function (context, req) {
   const { id } = req.query;
   const { r, g, b } = await contract.methods.get(id).call();
-  const rBits = BigInt(r).toString(2).padStart(256, 0).replace(/1/g, 'f');
-  const gBits = BigInt(g).toString(2).padStart(256, 0).replace(/1/g, 'f');
-  const bBits = BigInt(b).toString(2).padStart(256, 0).replace(/1/g, 'f');
+  const bits = x => BigInt(x).toString(2).padStart(256, 0).replace(/1/g, 'f');
+  const rBits = bits(r); const gBits = bits(g); const bBits = bits(b);
   let image_data = '<svg xmlns="http://www.w3.org/2000/svg" width="350" height="350">';
   for (let i = 0; i < 256; i++)
     image_data += `<rect x="${47 + 16 * (i % 16)}" y="${47 + 16 * Math.floor(i / 16)}" width="16" height="16" fill="#${rBits[i]}${gBits[i]}${bBits[i]}"/>`;
