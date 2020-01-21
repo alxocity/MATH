@@ -1,6 +1,20 @@
 var Web3 = require('web3');
 var web3 = new Web3(Web3.givenProvider || "https://mainnet.infura.io/v3/c24754efadc94bb991951f94161f2c55");
-const rgbContract = new web3.eth.Contract([{ "constant": true, "inputs": [{ "internalType": "uint256", "name": "id", "type": "uint256" }], "name": "get", "outputs": [{ "internalType": "uint256", "name": "r", "type": "uint256" }, { "internalType": "uint256", "name": "g", "type": "uint256" }, { "internalType": "uint256", "name": "b", "type": "uint256" }], "payable": false, "stateMutability": "view", "type": "function" }], '0x9355Fb9693ffF9bB6f06721C82fe0B5F49E6c956');
+const rgbContract = new web3.eth.Contract([{
+  constant: true,
+  inputs: [
+    { internalType: "uint256", name: "id", type: "uint256" }
+  ],
+  name: "get",
+  outputs: [
+    { internalType: "uint256", name: "r", type: "uint256" },
+    { internalType: "uint256", name: "g", type: "uint256" },
+    { internalType: "uint256", name: "b", type: "uint256" }
+  ],
+  payable: false,
+  stateMutability: "view",
+  type: "function"
+}], '0x9355Fb9693ffF9bB6f06721C82fe0B5F49E6c956');
 module.exports = async function (context, req) {
   const { id } = req.query;
   const { r, g, b } = await rgbContract.methods.get(id).call();
