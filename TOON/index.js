@@ -39,7 +39,7 @@ module.exports = async function (context, req) {
   const { word, face, rgb } = await contract.methods.get(id).call();
   const name = await wordContract.methods.getWord(word).call();
   const faceValue = await faceContract.methods.getFace(face).call();
-  const color = n => Number(n).toString(16).padStart(6, 0);
+  const color = n => Math.min(Number(n), 0xffffff).toString(16).padStart(6, 0);
   const faceTextColor = color(await faceContract.methods.getTextColor(face).call());
   const faceToneColor = color(await faceContract.methods.getBackgroundColor(face).call());
   const { r, g, b } = await rgbContract.methods.get(rgb).call();
