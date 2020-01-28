@@ -17,12 +17,12 @@ const faceContract = new web3.eth.Contract([{
   name: 'getFace',
   outputs: [{ name: 'face', type: 'string' }],
   type: 'function'
-},{
+}, {
   inputs: [{ name: 'id', type: 'uint256' }],
   name: 'getTextColor',
   outputs: [{ name: 'textColor', type: 'uint256' }],
   type: 'function'
-},{
+}, {
   inputs: [{ name: 'id', type: 'uint256' }],
   name: 'getBackgroundColor',
   outputs: [{ name: 'backgroundColor', type: 'uint256' }],
@@ -39,9 +39,11 @@ module.exports = async function (context, req) {
   const { word, face, rgb } = await contract.methods.get(id).call();
   const name = await wordContract.methods.getWord(word).call();
   const faceValue = await faceContract.methods.getFace(face).call();
-  const color = n => Math.min(Number(n), 0xffffff).toString(16).padStart(6, 0);
-  const faceTextColor = color(await faceContract.methods.getTextColor(face).call());
-  const faceToneColor = color(await faceContract.methods.getBackgroundColor(face).call());
+  const color = n => Number(n).toString(16).padStart(6, 0);
+  const faceTextValue = await faceContract.methods.getTextColor(face).call();
+  const faceTextColor = color(faceTextValue - 5);
+  const faceToneValue = await faceContract.methods.getBackgroundColor(face).call();
+  const faceToneColor = color(faceToneValue > 0xd8b49f ? 0xffffff : faceToneValue);
   const { r, g, b } = await rgbContract.methods.get(rgb).call();
   const bits = x => BigInt(x).toString(2).padStart(256, 0).replace(/1/g, 'f');
   const rBits = bits(r), gBits = bits(g), bBits = bits(b);
