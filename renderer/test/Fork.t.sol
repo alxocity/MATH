@@ -123,6 +123,7 @@ contract ForkTest is Test {
     function _svgOk(string memory svg) internal pure {
         bytes memory b = bytes(svg);
         assertTrue(_has(b, bytes('viewBox="0 0 350 350"')));
+        assertTrue(_has(b, bytes('shape-rendering="crispEdges"')));
         assertTrue(_has(b, bytes('xmlns="http://www.w3.org/2000/svg"')));
         assertEq(_count(b, bytes("http")), 1);
         assertFalse(_has(b, bytes("https")));

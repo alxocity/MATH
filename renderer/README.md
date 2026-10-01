@@ -12,16 +12,16 @@ OnChainChecker calls `tokenURI` on an address. OpenSea stores a metadata URL and
 
 ## Gas
 
-Measured with `forge test --match-test test_gas -vv` on a latest-block fork of `https://ethereum.publicnode.com`, block 26,099,551. The figure is the call's frame gas, which is what `eth_call` spends. It does not depend on the fixture block: the picture is a function of the token id and mint-time storage.
+Measured with `forge test --match-test test_gas -vv` on a latest-block fork of `https://ethereum.publicnode.com`, block 26,099,671. The figure is the call's frame gas, which is what `eth_call` spends. It does not depend on the fixture block: the picture is a function of the token id and mint-time storage.
 
 | Call | Gas |
 | --- | ---: |
-| `MATHRender.tokenSVG(1)` | 12,189 |
-| `MATHRender.tokenURI(1)` | 390,393 |
-| `RGBRender.tokenSVG(100)` | 237,285 |
-| `RGBRender.tokenURI(100)` | 2,454,162 |
-| `TOONRender.tokenSVG(1973)` | 269,163 |
-| `TOONRender.tokenURI(1973)` | 2,393,980 |
+| `MATHRender.tokenSVG(1)` | 12,314 |
+| `MATHRender.tokenURI(1)` | 394,716 |
+| `RGBRender.tokenSVG(100)` | 237,390 |
+| `RGBRender.tokenURI(100)` | 2,458,458 |
+| `TOONRender.tokenSVG(1973)` | 269,263 |
+| `TOONRender.tokenURI(1973)` | 2,398,456 |
 
 These calls have to stay well under the `eth_call` gas cap of the RPC node that reads them. That cap is chosen by the node operator and is not part of the protocol, so this repo does not quote one. `test_gas` fails if a `tokenURI` exceeds 10,000,000 gas.
 
@@ -31,10 +31,10 @@ Estimated deployment gas is one transaction per contract: 21,000 plus calldata p
 
 | Contract | Runtime bytes | Deploy gas |
 | --- | ---: | ---: |
-| `MATHRender` | 5,044 | 1,245,299 |
-| `RGBRender` | 3,004 | 771,596 |
-| `TOONRender` | 6,309 | 1,539,199 |
-| All three | | 3,556,094 |
+| `MATHRender` | 5,066 | 1,250,436 |
+| `RGBRender` | 3,033 | 778,548 |
+| `TOONRender` | 6,345 | 1,547,560 |
+| All three | | 3,576,544 |
 
 ## Usage
 
@@ -79,7 +79,7 @@ forge verify-contract --chain mainnet --verifier sourcify \
 
 The snapshots are the live Azure bodies (`/api/math`, `/api/RGB`, `/api/TOON`). Parsed image, name and traits match, except:
 
-- The outer return is a base64 JSON data URI. Azure serves a JSON object whose picture is raw SVG in `image_data`. Here the picture is `image` = `data:image/svg+xml;base64,...`. The decoded SVG matches `image_data` on the fixtures, aside from `viewBox="0 0 350 350"`. The namespace `http://www.w3.org/2000/svg` is the XML name, not a request. There is no stylesheet, web font, external image, or link.
+- The outer return is a base64 JSON data URI. Azure serves a JSON object whose picture is raw SVG in `image_data`. Here the picture is `image` = `data:image/svg+xml;base64,...`. The decoded SVG matches `image_data` on the fixtures, aside from `viewBox="0 0 350 350"` and `shape-rendering="crispEdges"`. Rects stay on whole viewBox units (`16` for RGB, `12` for TOON) so neighbours touch. The namespace `http://www.w3.org/2000/svg` is the XML name, not a request. There is no stylesheet, web font, external image, or link.
 - `external_url` is left out. It is an Etherscan link, not part of the token.
 - MATH's description keeps the `0x` hex and the 16×16 ⬛/⬜ bitmap. The UTF-8, UTF-16 and UTF-32 readings of that hex are left out.
 - `digit_mean` is rounded to 6 decimal places. Terminating values match (`1`, `7.5`, `9`). Repeating ones differ in the tail: Azure's `0.6666666666666666` is `0.666667`, and `0.05263157894736842` is `0.052632`.
