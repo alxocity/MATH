@@ -88,8 +88,10 @@ def main():
     svg = decode_data(got["image"], "image/svg+xml").decode("utf-8")
     errors = []
 
-    # viewBox is added so the SVG is self-contained. Azure's image_data has none.
-    svg_cmp = svg.replace(' viewBox="0 0 350 350"', "", 1)
+    # viewBox and crispEdges are display hints. Azure's image_data has neither.
+    svg_cmp = svg
+    for extra in (' viewBox="0 0 350 350"', ' shape-rendering="crispEdges"'):
+        svg_cmp = svg_cmp.replace(extra, "", 1)
     if svg_cmp != azure["image_data"]:
         n = min(len(svg_cmp), len(azure["image_data"]))
         i = next((k for k in range(n) if svg_cmp[k] != azure["image_data"][k]), n)

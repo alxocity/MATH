@@ -344,7 +344,7 @@ contract MATHRender is Render {
         uint n = digits.length;
         return string(
             abi.encodePacked(
-                '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 350 350" width="350" height="350"><text x="50%" y="50%" dominant-baseline="middle" text-anchor="middle" font-size="',
+                '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 350 350" shape-rendering="crispEdges" width="350" height="350"><text x="50%" y="50%" dominant-baseline="middle" text-anchor="middle" font-size="',
                 dec((349 + n) / n),
                 'px" fill="#',
                 hexPad(id % 0x1000000, 6),
@@ -442,7 +442,7 @@ contract RGBRender is Render {
         (uint r, uint g, uint b) = DATA.get(id);
         return string(
             abi.encodePacked(
-                '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 350 350" width="350" height="350">',
+                '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 350 350" shape-rendering="crispEdges" width="350" height="350">',
                 pixels(r, g, b, 47, 16),
                 "</svg>"
             )
@@ -485,7 +485,7 @@ contract TOONRender is Render {
         (uint r, uint g, uint b) = RGB.get(rgb);
         return string(
             abi.encodePacked(
-                '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 350 350" width="350" height="350"><rect x="47" y="235" width="256" height="72" fill="#',
+                '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 350 350" shape-rendering="crispEdges" width="350" height="350"><rect x="47" y="235" width="256" height="72" fill="#',
                 toneHex(FACE.getBackgroundColor(face)),
                 '"/>',
                 pixels(r, g, b, 79, 12),
