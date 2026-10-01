@@ -3,7 +3,6 @@
 
 import base64
 import json
-import math
 import sys
 
 
@@ -24,7 +23,8 @@ def utf_suffix(n):
         o = ord(ch)
         if ch in ['"', "\\", "\b", "\f", "\n", "\r", "\t"]:
             return True
-        if o < 0x20:
+        if o < 0x20 or 0xD800 <= o <= 0xDFFF:
+            # Controls and lone surrogates stringify as \uXXXX (length 8).
             return False
         units = 2 if o > 0xFFFF else 1
         return units + 2 < 8
@@ -46,11 +46,35 @@ def attrs(items):
     return [(a["trait_type"], a["value"]) for a in items]
 
 
-def close(a, b):
-    return math.isclose(float(a), float(b), rel_tol=0, abs_tol=1e-6)
+def six_dp(sum_, length):
+    """The renderer's digit_mean: 6 decimal places, half up, trailing zeros trimmed."""
+    ip, rem = divmod(sum_, length)
+    if rem == 0:
+        return str(ip)
+    scaled = (rem * 10_000_000) // length
+    frac = scaled // 10
+    if scaled % 10 >= 5:
+        frac += 1
+    if frac >= 1_000_000:
+        return str(ip + 1)
+    return f"{ip}.{frac:06d}".rstrip("0")
+
+
+def azure_mean(sum_, length):
+    """JSON number Azure emits for sum/length (IEEE division, not the 6-decimal rounding)."""
+    if sum_ % length == 0:
+        return sum_ // length
+    return json.loads(json.dumps(sum_ / length))
+
+
+def _check_surrogate():
+    # A utf-16 group of D800 is a lone surrogate. JSON.stringify is 8 chars, so Azure drops it.
+    suffix = utf_suffix(0xD800 << (256 - 16))
+    assert "\ud800" not in suffix, suffix
 
 
 def main():
+    _check_surrogate()
     uri, path = sys.argv[1], sys.argv[2]
     got = json.loads(decode_data(uri, "application/json"))
     azure = json.load(open(path))
@@ -92,8 +116,16 @@ def main():
         if gt != at:
             errors.append(f"trait {gt!r} != {at!r}")
         elif gt == "digit_mean":
-            if not close(gv, av):
-                errors.append(f"digit_mean {gv} != {av}")
+            digits = [int(c) for c in str(azure["name"])]
+            total, count = sum(digits), len(digits)
+            expect = json.loads(six_dp(total, count))
+            azure_expect = azure_mean(total, count)
+            if gv != expect:
+                errors.append(
+                    f"digit_mean {gv} != rounded {expect} ({total}/{count}); azure has {av}"
+                )
+            if av != azure_expect:
+                errors.append(f"azure digit_mean {av} != {total}/{count} -> {azure_expect}")
         elif gv != av:
             errors.append(f"{gt} {gv!r} != {av!r}")
 

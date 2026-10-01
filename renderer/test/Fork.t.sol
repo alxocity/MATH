@@ -8,7 +8,7 @@ import {MATHRender, RGBRender, TOONRender} from "../src/Render.sol";
 contract ForkTest is Test {
     using stdJson for string;
 
-    // Pinned so the fork matches the committed Azure snapshots.
+    // Used only with an archive MAINNET_RPC_URL. publicnode 403s on old blocks.
     uint constant BLOCK = 26098697;
 
     MATHRender math;
@@ -16,8 +16,11 @@ contract ForkTest is Test {
     TOONRender toon;
 
     function setUp() public {
-        string memory url = vm.envOr("MAINNET_RPC_URL", string("https://ethereum.publicnode.com"));
-        vm.createSelectFork(url, BLOCK);
+        if (vm.envExists("MAINNET_RPC_URL")) {
+            vm.createSelectFork(vm.envString("MAINNET_RPC_URL"), BLOCK);
+        } else {
+            vm.createSelectFork("https://ethereum.publicnode.com");
+        }
         math = new MATHRender();
         rgb = new RGBRender();
         toon = new TOONRender();
@@ -60,8 +63,9 @@ contract ForkTest is Test {
         math.tokenURI(0);
         vm.expectRevert(bytes("ERC721: owner query for nonexistent token"));
         rgb.tokenURI(0);
+        // 0 can never be minted. TOON 1 is only unminted today, so it is not asserted here.
         vm.expectRevert(bytes("ERC721: owner query for nonexistent token"));
-        toon.tokenURI(1);
+        toon.tokenURI(0);
     }
 
     function test_gas() public view {
@@ -71,16 +75,17 @@ contract ForkTest is Test {
         uint rgbGas = vm.lastFrameGas().gasTotalUsed;
         toon.tokenURI(1973);
         uint toonGas = vm.lastFrameGas().gasTotalUsed;
+        console2.log("block", block.number);
         console2.log("render MATH", mathGas);
         console2.log("render RGB", rgbGas);
         console2.log("render TOON", toonGas);
-        // Measured around 0.43M / 4.46M / 4.42M. Public eth_call caps are tens of millions.
-        assertLt(mathGas, 1_000_000);
-        assertLt(rgbGas, 6_000_000);
-        assertLt(toonGas, 6_000_000);
+        // Headroom over the measured figures in the README.
+        assertLt(mathGas, 450_000);
+        assertLt(rgbGas, 2_800_000);
+        assertLt(toonGas, 2_800_000);
     }
 
-    function test_azure_answers_for_unminted_ids() public {
+    function test_azure_answers_for_unminted_ids() public view {
         _azureHasImage("test/fixtures/math/0.json");
         _azureHasImage("test/fixtures/rgb/0.json");
         _azureHasImage("test/fixtures/rgb/188.json");
