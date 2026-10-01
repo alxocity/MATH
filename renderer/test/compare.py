@@ -88,11 +88,13 @@ def main():
     svg = decode_data(got["image"], "image/svg+xml").decode("utf-8")
     errors = []
 
-    if svg != azure["image_data"]:
-        n = min(len(svg), len(azure["image_data"]))
-        i = next((k for k in range(n) if svg[k] != azure["image_data"][k]), n)
+    # viewBox is added so the SVG is self-contained. Azure's image_data has none.
+    svg_cmp = svg.replace(' viewBox="0 0 350 350"', "", 1)
+    if svg_cmp != azure["image_data"]:
+        n = min(len(svg_cmp), len(azure["image_data"]))
+        i = next((k for k in range(n) if svg_cmp[k] != azure["image_data"][k]), n)
         errors.append(
-            f"svg mismatch at {i}: {svg[max(0,i-40):i+40]!r} vs {azure['image_data'][max(0,i-40):i+40]!r}"
+            f"svg mismatch at {i}: {svg_cmp[max(0,i-40):i+40]!r} vs {azure['image_data'][max(0,i-40):i+40]!r}"
         )
 
     if "external_url" in got or "image_data" in got:

@@ -110,18 +110,88 @@ contract ForkTest is Test {
         toon.tokenURI(0);
     }
 
+    function test_svg_is_self_contained() public view {
+        _svgOk(math.tokenSVG(1));
+        _svgOk(math.tokenSVG(650));
+        _svgOk(rgb.tokenSVG(1));
+        _svgOk(rgb.tokenSVG(100));
+        _svgOk(toon.tokenSVG(1973));
+        _svgOk(toon.tokenSVG(505));
+    }
+
+    // The XML namespace is an identifier, not a fetch. Anything else with a URL is rejected.
+    function _svgOk(string memory svg) internal pure {
+        bytes memory b = bytes(svg);
+        assertTrue(_has(b, bytes('viewBox="0 0 350 350"')));
+        assertTrue(_has(b, bytes('xmlns="http://www.w3.org/2000/svg"')));
+        assertEq(_count(b, bytes("http")), 1);
+        assertFalse(_has(b, bytes("https")));
+        assertFalse(_has(b, bytes("@import")));
+        assertFalse(_has(b, bytes("href")));
+        uint u = _find(b, bytes("url("), 0);
+        while (u != type(uint256).max) {
+            uint k = u + 4;
+            while (k < b.length && (b[k] == " " || b[k] == "'" || b[k] == '"')) k++;
+            assertTrue(k < b.length && b[k] == "#");
+            u = _find(b, bytes("url("), u + 4);
+        }
+    }
+
+    function _has(bytes memory b, bytes memory needle) internal pure returns (bool) {
+        return _find(b, needle, 0) != type(uint256).max;
+    }
+
+    function _count(bytes memory b, bytes memory needle) internal pure returns (uint n) {
+        uint i;
+        while (true) {
+            uint j = _find(b, needle, i);
+            if (j == type(uint256).max) break;
+            n++;
+            i = j + needle.length;
+        }
+    }
+
+    function _find(bytes memory b, bytes memory needle, uint start) internal pure returns (uint) {
+        if (needle.length == 0 || b.length < needle.length || start > b.length - needle.length) {
+            return type(uint256).max;
+        }
+        for (uint i = start; i <= b.length - needle.length; i++) {
+            bool ok = true;
+            for (uint j; j < needle.length; j++) {
+                if (b[i + j] != needle[j]) {
+                    ok = false;
+                    break;
+                }
+            }
+            if (ok) return i;
+        }
+        return type(uint256).max;
+    }
+
     function test_gas() public view {
+        math.tokenSVG(1);
+        uint mathSvg = vm.lastFrameGas().gasTotalUsed;
         math.tokenURI(1);
         uint mathGas = vm.lastFrameGas().gasTotalUsed;
+        rgb.tokenSVG(100);
+        uint rgbSvg = vm.lastFrameGas().gasTotalUsed;
         rgb.tokenURI(100);
         uint rgbGas = vm.lastFrameGas().gasTotalUsed;
+        toon.tokenSVG(1973);
+        uint toonSvg = vm.lastFrameGas().gasTotalUsed;
         toon.tokenURI(1973);
         uint toonGas = vm.lastFrameGas().gasTotalUsed;
         console2.log("block", block.number);
+        console2.log("svg MATH", mathSvg);
         console2.log("render MATH", mathGas);
+        console2.log("svg RGB", rgbSvg);
         console2.log("render RGB", rgbGas);
+        console2.log("svg TOON", toonSvg);
         console2.log("render TOON", toonGas);
-        // Headroom over the measured figures in the README.
+        // Generous eth_call ceiling, plus headroom over the measured figures in the README.
+        assertLt(mathGas, 10_000_000);
+        assertLt(rgbGas, 10_000_000);
+        assertLt(toonGas, 10_000_000);
         assertLt(mathGas, 450_000);
         assertLt(rgbGas, 2_800_000);
         assertLt(toonGas, 2_800_000);
