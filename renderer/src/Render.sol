@@ -338,9 +338,13 @@ abstract contract Render {
 contract MATHRender is Render {
     IERC721 constant NFT = IERC721(0x6B4fccdd888Bb6fD3934A9e49eF64dfd2c0D8e6D);
 
-    function tokenURI(uint id) external view returns (string memory) {
+    function tokenJSON(uint id) public view returns (string memory) {
         NFT.ownerOf(id);
-        return uri(_json(id));
+        return string(_json(id));
+    }
+
+    function tokenURI(uint id) external view returns (string memory) {
+        return uri(bytes(tokenJSON(id)));
     }
 
     function _json(uint id) internal pure returns (bytes memory) {
@@ -426,7 +430,7 @@ contract RGBRender is Render {
     IERC721 constant NFT = IERC721(0x9355Fb9693ffF9bB6f06721C82fe0B5F49E6c956);
     IRGB constant DATA = IRGB(0x9355Fb9693ffF9bB6f06721C82fe0B5F49E6c956);
 
-    function tokenURI(uint id) external view returns (string memory) {
+    function tokenJSON(uint id) public view returns (string memory) {
         NFT.ownerOf(id);
         (uint r, uint g, uint b) = DATA.get(id);
         bytes memory svg = abi.encodePacked(
@@ -434,7 +438,7 @@ contract RGBRender is Render {
             pixels(r, g, b, 47, 16),
             "</svg>"
         );
-        return uri(
+        return string(
             abi.encodePacked(
                 '{"image":"',
                 image(svg),
@@ -448,6 +452,10 @@ contract RGBRender is Render {
             )
         );
     }
+
+    function tokenURI(uint id) external view returns (string memory) {
+        return uri(bytes(tokenJSON(id)));
+    }
 }
 
 contract TOONRender is Render {
@@ -457,7 +465,7 @@ contract TOONRender is Render {
     IFACE constant FACE = IFACE(0x91047Abf3cAb8da5A9515c8750Ab33B4f1560a7A);
     IRGB constant RGB = IRGB(0x9355Fb9693ffF9bB6f06721C82fe0B5F49E6c956);
 
-    function tokenURI(uint id) external view returns (string memory) {
+    function tokenJSON(uint id) public view returns (string memory) {
         NFT.ownerOf(id);
         (uint word, uint face, uint rgb) = DATA.get(id);
         (uint r, uint g, uint b) = RGB.get(rgb);
@@ -473,7 +481,7 @@ contract TOONRender is Render {
             glyph,
             "</text></svg>"
         );
-        return uri(
+        return string(
             abi.encodePacked(
                 '{"name":"',
                 jesc(WORD.getWord(word)),
@@ -488,5 +496,9 @@ contract TOONRender is Render {
                 '"}]}'
             )
         );
+    }
+
+    function tokenURI(uint id) external view returns (string memory) {
+        return uri(bytes(tokenJSON(id)));
     }
 }
