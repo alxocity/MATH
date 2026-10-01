@@ -1,0 +1,117 @@
+// SPDX-License-Identifier: UNLICENSED
+pragma solidity 0.8.24;
+
+import {Test, console2} from "forge-std/Test.sol";
+import {stdJson} from "forge-std/StdJson.sol";
+import {MATHRender, RGBRender, TOONRender} from "../src/Render.sol";
+
+contract ForkTest is Test {
+    using stdJson for string;
+
+    // Pinned so the fork matches the committed Azure snapshots.
+    uint constant BLOCK = 26098697;
+
+    MATHRender math;
+    RGBRender rgb;
+    TOONRender toon;
+
+    function setUp() public {
+        string memory url = vm.envOr("MAINNET_RPC_URL", string("https://ethereum.publicnode.com"));
+        vm.createSelectFork(url, BLOCK);
+        math = new MATHRender();
+        rgb = new RGBRender();
+        toon = new TOONRender();
+    }
+
+    function _cmp(string memory uri, string memory fixture) internal {
+        string[] memory cmd = new string[](4);
+        cmd[0] = "python3";
+        cmd[1] = "test/compare.py";
+        cmd[2] = uri;
+        cmd[3] = fixture;
+        assertEq(string(vm.ffi(cmd)), "ok");
+    }
+
+    function test_math_on_chain() public {
+        _cmp(math.tokenURI(1), "test/fixtures/math/1.json");
+        _cmp(math.tokenURI(650), "test/fixtures/math/650.json");
+        _cmp(math.tokenURI(1000000000000000000), "test/fixtures/math/1000000000000000000.json");
+    }
+
+    function test_rgb_on_chain() public {
+        _cmp(rgb.tokenURI(1), "test/fixtures/rgb/1.json");
+        _cmp(rgb.tokenURI(2), "test/fixtures/rgb/2.json");
+        _cmp(rgb.tokenURI(50), "test/fixtures/rgb/50.json");
+        _cmp(rgb.tokenURI(100), "test/fixtures/rgb/100.json");
+        _cmp(rgb.tokenURI(187), "test/fixtures/rgb/187.json");
+    }
+
+    function test_toon_on_chain() public {
+        _cmp(toon.tokenURI(1973), "test/fixtures/toon/1973.json");
+        _cmp(toon.tokenURI(505), "test/fixtures/toon/505.json");
+        _cmp(toon.tokenURI(1993), "test/fixtures/toon/1993.json");
+        _cmp(toon.tokenURI(2502), "test/fixtures/toon/2502.json");
+        _cmp(toon.tokenURI(101010), "test/fixtures/toon/101010.json");
+        _cmp(toon.tokenURI(125467), "test/fixtures/toon/125467.json");
+    }
+
+    function test_missing_reverts_like_erc721() public {
+        vm.expectRevert(bytes("ERC721: owner query for nonexistent token"));
+        math.tokenURI(0);
+        vm.expectRevert(bytes("ERC721: owner query for nonexistent token"));
+        rgb.tokenURI(0);
+        vm.expectRevert(bytes("ERC721: owner query for nonexistent token"));
+        toon.tokenURI(1);
+    }
+
+    function test_gas() public view {
+        math.tokenURI(1);
+        uint mathGas = vm.lastFrameGas().gasTotalUsed;
+        rgb.tokenURI(100);
+        uint rgbGas = vm.lastFrameGas().gasTotalUsed;
+        toon.tokenURI(1973);
+        uint toonGas = vm.lastFrameGas().gasTotalUsed;
+        console2.log("render MATH", mathGas);
+        console2.log("render RGB", rgbGas);
+        console2.log("render TOON", toonGas);
+        // Measured around 0.43M / 4.46M / 4.42M. Public eth_call caps are tens of millions.
+        assertLt(mathGas, 1_000_000);
+        assertLt(rgbGas, 6_000_000);
+        assertLt(toonGas, 6_000_000);
+    }
+
+    function test_azure_answers_for_unminted_ids() public {
+        _azureHasImage("test/fixtures/math/0.json");
+        _azureHasImage("test/fixtures/rgb/0.json");
+        _azureHasImage("test/fixtures/rgb/188.json");
+        _azureHasImage("test/fixtures/toon/1.json");
+    }
+
+    function _azureHasImage(string memory path) internal view {
+        string memory body = vm.readFile(path);
+        assertGt(bytes(body.readString(".image_data")).length, 100);
+    }
+
+    function _txGas(bytes memory init, uint frame) internal pure returns (uint) {
+        uint zeros;
+        for (uint i; i < init.length; i++) if (init[i] == 0) zeros++;
+        // 21000 base + calldata (4 per zero byte, 16 otherwise) + the create frame.
+        return 21000 + zeros * 4 + (init.length - zeros) * 16 + frame;
+    }
+
+    function test_deploy_gas() public {
+        new MATHRender();
+        uint mathDeploy = _txGas(type(MATHRender).creationCode, vm.lastFrameGas().gasTotalUsed);
+        new RGBRender();
+        uint rgbDeploy = _txGas(type(RGBRender).creationCode, vm.lastFrameGas().gasTotalUsed);
+        new TOONRender();
+        uint toonDeploy = _txGas(type(TOONRender).creationCode, vm.lastFrameGas().gasTotalUsed);
+        console2.log("deploy MATH", mathDeploy);
+        console2.log("deploy RGB", rgbDeploy);
+        console2.log("deploy TOON", toonDeploy);
+        console2.log("deploy sum", mathDeploy + rgbDeploy + toonDeploy);
+        console2.log("runtime MATH", type(MATHRender).runtimeCode.length);
+        console2.log("runtime RGB", type(RGBRender).runtimeCode.length);
+        console2.log("runtime TOON", type(TOONRender).runtimeCode.length);
+    }
+}

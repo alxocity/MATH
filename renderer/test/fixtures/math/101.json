@@ -1,0 +1,73 @@
+{
+  "image_data": "<svg xmlns=\"http://www.w3.org/2000/svg\" width=\"350\" height=\"350\"><text x=\"50%\" y=\"50%\" dominant-baseline=\"middle\" text-anchor=\"middle\" font-size=\"117px\" fill=\"#000065\">101</text></svg>",
+  "external_url": "https://etherscan.io/token/0x6b4fccdd888bb6fd3934a9e49ef64dfd2c0d8e6d?a=101",
+  "description": "0x0000000000000000000000000000000000000000000000000000000000000065\n\n⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛\n⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛\n⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛\n⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛\n⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛\n⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛\n⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛\n⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛\n⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛\n⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛\n⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛\n⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛\n⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛\n⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛\n⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛\n⬛⬛⬛⬛⬛⬛⬛⬛⬛⬜⬜⬛⬛⬜⬛⬜\n\ne\n\ne\n\ne",
+  "name": "101",
+  "attributes": [
+    {
+      "trait_type": "0_count",
+      "value": 1
+    },
+    {
+      "trait_type": "1_count",
+      "value": 2
+    },
+    {
+      "trait_type": "2_count",
+      "value": 0
+    },
+    {
+      "trait_type": "3_count",
+      "value": 0
+    },
+    {
+      "trait_type": "4_count",
+      "value": 0
+    },
+    {
+      "trait_type": "5_count",
+      "value": 0
+    },
+    {
+      "trait_type": "6_count",
+      "value": 0
+    },
+    {
+      "trait_type": "7_count",
+      "value": 0
+    },
+    {
+      "trait_type": "8_count",
+      "value": 0
+    },
+    {
+      "trait_type": "9_count",
+      "value": 0
+    },
+    {
+      "trait_type": "digit_count",
+      "value": 3
+    },
+    {
+      "trait_type": "digit_mean",
+      "value": 0.6666666666666666
+    },
+    {
+      "trait_type": "digit_sum",
+      "value": 2
+    },
+    {
+      "trait_type": "parity",
+      "value": "odd"
+    },
+    {
+      "trait_type": "fancy",
+      "value": "palindromic"
+    },
+    {
+      "trait_type": "fancy",
+      "value": "strobogrammatic"
+    }
+  ],
+  "background_color": "ffff9a"
+}
