@@ -12,24 +12,29 @@ OnChainChecker calls `tokenURI` on an address. OpenSea stores a metadata URL and
 
 ## Gas
 
-Measured with `forge test --match-test test_gas -vv` on a latest-block fork of `https://ethereum.publicnode.com`, block 26,099,532. The figure is `tokenURI`'s frame gas, which is what `eth_call` spends. It does not depend on the fixture block: the picture is a function of the token id and mint-time storage.
+Measured with `forge test --match-test test_gas -vv` on a latest-block fork of `https://ethereum.publicnode.com`, block 26,099,551. The figure is the call's frame gas, which is what `eth_call` spends. It does not depend on the fixture block: the picture is a function of the token id and mint-time storage.
 
 | Call | Gas |
 | --- | ---: |
-| `MATHRender.tokenURI(1)` | 387,516 |
-| `RGBRender.tokenURI(100)` | 2,451,188 |
-| `TOONRender.tokenURI(1973)` | 2,390,983 |
+| `MATHRender.tokenSVG(1)` | 12,189 |
+| `MATHRender.tokenURI(1)` | 390,393 |
+| `RGBRender.tokenSVG(100)` | 237,285 |
+| `RGBRender.tokenURI(100)` | 2,454,162 |
+| `TOONRender.tokenSVG(1973)` | 269,163 |
+| `TOONRender.tokenURI(1973)` | 2,393,980 |
 
-The 16×16 bitmap is the same string of `<rect>` nodes as the Azure functions. The loop that writes it costs about 155k gas. Base64 keeps its alphabet in scratch space and stores each quartet with one `mstore`. A plain Solidity base64 loop was about 23M gas. These calls sit well under typical `eth_call` caps.
+These calls have to stay well under the `eth_call` gas cap of the RPC node that reads them. That cap is chosen by the node operator and is not part of the protocol, so this repo does not quote one. `test_gas` fails if a `tokenURI` exceeds 10,000,000 gas.
+
+The 16×16 bitmap is the same string of `<rect>` nodes as the Azure functions. The loop that writes it costs about 155k gas. Base64 keeps its alphabet in scratch space and stores each quartet with one `mstore`. A plain Solidity base64 loop was about 23M gas.
 
 Estimated deployment gas is one transaction per contract: 21,000 plus calldata plus the create frame (code deposit included). From `test_deploy_gas`:
 
 | Contract | Runtime bytes | Deploy gas |
 | --- | ---: | ---: |
-| `MATHRender` | 5,010 | 1,237,403 |
-| `RGBRender` | 2,976 | 765,307 |
-| `TOONRender` | 6,281 | 1,532,694 |
-| All three | | 3,535,404 |
+| `MATHRender` | 5,044 | 1,245,299 |
+| `RGBRender` | 3,004 | 771,596 |
+| `TOONRender` | 6,309 | 1,539,199 |
+| All three | | 3,556,094 |
 
 ## Usage
 
@@ -55,11 +60,26 @@ forge script script/Deploy.sol --rpc-url https://ethereum.publicnode.com --priva
 
 After deploy, call `tokenSVG`, `tokenJSON` or `tokenURI` on each renderer with a minted id. Write the three addresses into the root README at that point.
 
+Verify the source on Etherscan and Sourcify from this directory. The compiler settings are the ones in `foundry.toml`: solc 0.8.24, optimizer on, 200 runs. Constructors take no arguments. Repeat for `RGBRender` and `TOONRender`.
+
+```shell
+forge verify-contract --chain mainnet --watch \
+  --compiler-version 0.8.24 --num-of-optimizations 200 \
+  --etherscan-api-key $ETHERSCAN_API_KEY \
+  $MATH src/Render.sol:MATHRender
+
+forge verify-contract --chain mainnet --verifier sourcify \
+  --compiler-version 0.8.24 --num-of-optimizations 200 \
+  $MATH src/Render.sol:MATHRender
+```
+
+`forge script script/Deploy.sol --broadcast --verify` is the same deploy with verification attached. Neither command has been run here.
+
 ## Differences from Azure
 
 The snapshots are the live Azure bodies (`/api/math`, `/api/RGB`, `/api/TOON`). Parsed image, name and traits match, except:
 
-- The outer return is a base64 JSON data URI. Azure serves a JSON object whose picture is raw SVG in `image_data`. Here the picture is `image` = `data:image/svg+xml;base64,...`. The decoded SVG matches `image_data` byte for byte on the fixtures.
+- The outer return is a base64 JSON data URI. Azure serves a JSON object whose picture is raw SVG in `image_data`. Here the picture is `image` = `data:image/svg+xml;base64,...`. The decoded SVG matches `image_data` on the fixtures, aside from `viewBox="0 0 350 350"`. The namespace `http://www.w3.org/2000/svg` is the XML name, not a request. There is no stylesheet, web font, external image, or link.
 - `external_url` is left out. It is an Etherscan link, not part of the token.
 - MATH's description keeps the `0x` hex and the 16×16 ⬛/⬜ bitmap. The UTF-8, UTF-16 and UTF-32 readings of that hex are left out.
 - `digit_mean` is rounded to 6 decimal places. Terminating values match (`1`, `7.5`, `9`). Repeating ones differ in the tail: Azure's `0.6666666666666666` is `0.666667`, and `0.05263157894736842` is `0.052632`.
