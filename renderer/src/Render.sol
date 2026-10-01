@@ -35,45 +35,41 @@ abstract contract Render {
         return abi.encodePacked("data:image/svg+xml;base64,", b64(svg));
     }
 
-    // Assembly: a Solidity loop over a 15KB SVG is too slow for eth_call.
+    // Scratch table, one mstore per quartet. The table is shifted so mload(i)'s
+    // last byte is the alphabet character.
     function b64(bytes memory data) internal pure returns (bytes memory result) {
-        uint len = data.length;
-        if (len == 0) return "";
-        result = new bytes(4 * ((len + 2) / 3));
+        if (data.length == 0) return "";
         assembly {
-            let alpha := mload(0x40)
-            mstore(0x40, add(alpha, 64))
-            mstore(alpha, "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdef")
-            mstore(add(alpha, 32), "ghijklmnopqrstuvwxyz0123456789+/")
+            let len := mload(data)
+            let outLen := shl(2, div(add(len, 2), 3))
+            result := mload(0x40)
+            mstore(0x1f, "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdef")
+            mstore(0x3f, "ghijklmnopqrstuvwxyz0123456789+/")
 
-            let src := add(data, 32)
-            let dst := add(result, 32)
-            let end := add(src, sub(len, mod(len, 3)))
+            let ptr := add(result, 32)
+            let end := add(ptr, outLen)
+            let dataEnd := add(data, add(32, len))
+            let saved := mload(dataEnd)
+            mstore(dataEnd, 0)
 
-            for {} lt(src, end) { src := add(src, 3) } {
-                let n := shr(232, mload(src))
-                mstore8(dst, byte(0, mload(add(alpha, shr(18, n)))))
-                mstore8(add(dst, 1), byte(0, mload(add(alpha, and(shr(12, n), 63)))))
-                mstore8(add(dst, 2), byte(0, mload(add(alpha, and(shr(6, n), 63)))))
-                mstore8(add(dst, 3), byte(0, mload(add(alpha, and(n, 63)))))
-                dst := add(dst, 4)
+            for {} 1 {} {
+                data := add(data, 3)
+                let v := mload(data)
+                mstore8(0, mload(and(shr(18, v), 63)))
+                mstore8(1, mload(and(shr(12, v), 63)))
+                mstore8(2, mload(and(shr(6, v), 63)))
+                mstore8(3, mload(and(v, 63)))
+                mstore(ptr, mload(0))
+                ptr := add(ptr, 4)
+                if iszero(lt(ptr, end)) { break }
             }
 
-            let left := mod(len, 3)
-            if eq(left, 1) {
-                let n := byte(0, mload(src))
-                mstore8(dst, byte(0, mload(add(alpha, shr(2, n)))))
-                mstore8(add(dst, 1), byte(0, mload(add(alpha, shl(4, and(n, 3))))))
-                mstore8(add(dst, 2), 0x3d)
-                mstore8(add(dst, 3), 0x3d)
-            }
-            if eq(left, 2) {
-                let n := shr(240, mload(src))
-                mstore8(dst, byte(0, mload(add(alpha, shr(10, n)))))
-                mstore8(add(dst, 1), byte(0, mload(add(alpha, and(shr(4, n), 63)))))
-                mstore8(add(dst, 2), byte(0, mload(add(alpha, shl(2, and(n, 15))))))
-                mstore8(add(dst, 3), 0x3d)
-            }
+            mstore(dataEnd, saved)
+            // EVM div by zero is 0, which is the no-padding case.
+            mstore(sub(ptr, div(2, mod(len, 3))), shl(240, 0x3d3d))
+            mstore(result, outLen)
+            mstore(end, 0)
+            mstore(0x40, add(end, 32))
         }
     }
 
@@ -116,19 +112,69 @@ abstract contract Render {
         return b;
     }
 
-    // Azure: Number(n - 5).toString(16).padStart(6, "0").
-    // ChainFaces colors are either small or a uint underflow next to 2**256,
-    // and Number() of those underflows is 2**256.
+    // Azure: Number(n - 5).toString(16).padStart(6, "0"), for every uint256.
     function textHex(uint n) internal pure returns (bytes memory) {
         if (n < 5) {
             bytes memory s = "0000-0";
             s[5] = bytes1(uint8(53 - n));
             return s;
         }
-        if (n > 0xffffffff) {
-            return "10000000000000000000000000000000000000000000000000000000000000000";
+        if (n < 1 << 53) return hexPad(n - 5, 6);
+        (uint v, bool big) = round53(n);
+        if (!big) (v, big) = round53(v - 5);
+        if (big) return "10000000000000000000000000000000000000000000000000000000000000000";
+        return hexPad(v, 6);
+    }
+
+    // Nearest float64 (ties to even). `big` means the value is 2**256.
+    function round53(uint n) internal pure returns (uint v, bool big) {
+        uint bits = bitlen(n);
+        if (bits <= 53) return (n, false);
+        uint shift = bits - 53;
+        uint mant = n >> shift;
+        uint half = uint(1) << (shift - 1);
+        uint rest = n & ((uint(1) << shift) - 1);
+        if (rest > half || (rest == half && (mant & 1) == 1)) mant += 1;
+        if (mant == 1 << 53) {
+            if (bits == 256) return (0, true);
+            return (uint(1) << bits, false);
         }
-        return hexPad(n - 5, 6);
+        return (mant << shift, false);
+    }
+
+    function bitlen(uint n) internal pure returns (uint r) {
+        assembly {
+            if gt(shr(128, n), 0) {
+                n := shr(128, n)
+                r := 128
+            }
+            if gt(shr(64, n), 0) {
+                n := shr(64, n)
+                r := add(r, 64)
+            }
+            if gt(shr(32, n), 0) {
+                n := shr(32, n)
+                r := add(r, 32)
+            }
+            if gt(shr(16, n), 0) {
+                n := shr(16, n)
+                r := add(r, 16)
+            }
+            if gt(shr(8, n), 0) {
+                n := shr(8, n)
+                r := add(r, 8)
+            }
+            if gt(shr(4, n), 0) {
+                n := shr(4, n)
+                r := add(r, 4)
+            }
+            if gt(shr(2, n), 0) {
+                n := shr(2, n)
+                r := add(r, 2)
+            }
+            if gt(shr(1, n), 0) { r := add(r, 1) }
+            r := add(r, 1)
+        }
     }
 
     // Azure clamps a background above 0xd8b49f to white before formatting.
@@ -168,24 +214,21 @@ abstract contract Render {
         return p + n;
     }
 
-    function wDec(bytes memory o, uint p, uint n) internal pure returns (uint) {
-        if (n == 0) {
-            o[p] = "0";
-            return p + 1;
+    // Left-aligned ascii of n (at most 3 digits) with the length in the low byte.
+    function d32(uint n) internal pure returns (bytes32) {
+        uint c1 = 48 + (n / 10) % 10;
+        uint c2 = 48 + n % 10;
+        if (n > 99) return bytes32(((48 + n / 100) << 248) | (c1 << 240) | (c2 << 232) | 3);
+        if (n > 9) return bytes32((c1 << 248) | (c2 << 240) | 2);
+        return bytes32((c2 << 248) | 1);
+    }
+
+    function xyTable(uint x0, uint step) private pure returns (bytes32[32] memory xy) {
+        for (uint i; i < 16;) {
+            xy[i] = d32(x0 + step * i);
+            xy[i + 16] = d32(47 + step * i);
+            unchecked { ++i; }
         }
-        uint j = n;
-        uint len;
-        while (j != 0) {
-            len++;
-            j /= 10;
-        }
-        uint end = p + len;
-        while (n != 0) {
-            end--;
-            o[end] = bytes1(uint8(48 + (n % 10)));
-            n /= 10;
-        }
-        return p + len;
     }
 
     // 16x16, one bit per channel. Same rects as the Azure functions.
@@ -193,22 +236,32 @@ abstract contract Render {
         bytes32 tail = step == 16
             ? bytes32('" width="16" height="16" fill="#')
             : bytes32('" width="12" height="12" fill="#');
+        bytes32[32] memory xy = xyTable(x0, step);
         o = new bytes(256 * 58 + 64);
-        uint p;
-        for (uint i; i < 256; i++) {
-            uint shift = 255 - i;
-            p = w(o, p, '<rect x="', 9);
-            p = wDec(o, p, x0 + step * (i & 15));
-            p = w(o, p, '" y="', 5);
-            p = wDec(o, p, 47 + step * (i >> 4));
-            p = w(o, p, tail, 32);
-            o[p] = (r >> shift) & 1 == 1 ? bytes1("f") : bytes1("0");
-            o[p + 1] = (g >> shift) & 1 == 1 ? bytes1("f") : bytes1("0");
-            o[p + 2] = (b >> shift) & 1 == 1 ? bytes1("f") : bytes1("0");
-            p += 3;
-            p = w(o, p, '"/>', 3);
-        }
         assembly {
+            let data := add(o, 32)
+            let p := 0
+            for { let i := 0 } lt(i, 256) { i := add(i, 1) } {
+                let t := mload(add(xy, shl(5, and(i, 15))))
+                mstore(add(data, p), '<rect x="')
+                p := add(p, 9)
+                mstore(add(data, p), t)
+                p := add(p, and(t, 255))
+                mstore(add(data, p), '" y="')
+                p := add(p, 5)
+                t := mload(add(xy, add(512, shl(5, shr(4, i)))))
+                mstore(add(data, p), t)
+                p := add(p, and(t, 255))
+                mstore(add(data, p), tail)
+                p := add(p, 32)
+                t := sub(255, i)
+                t := shl(248, add(48, mul(and(shr(t, r), 1), 54)))
+                t := or(t, shl(240, add(48, mul(and(shr(sub(255, i), g), 1), 54))))
+                t := or(t, shl(232, add(48, mul(and(shr(sub(255, i), b), 1), 54))))
+                t := or(t, shl(208, 0x222f3e))
+                mstore(add(data, p), t)
+                p := add(p, 6)
+            }
             mstore(o, p)
         }
     }

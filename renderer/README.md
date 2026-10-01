@@ -2,34 +2,34 @@
 
 On-chain metadata for the frozen [MATH](https://etherscan.io/address/0x6B4fccdd888Bb6fD3934A9e49eF64dfd2c0D8e6D), [RGB](https://etherscan.io/address/0x9355Fb9693ffF9bB6f06721C82fe0B5F49E6c956) and [TOON](https://etherscan.io/address/0x026A7D72a448D0E44d441e55F746BF56B843aEDB) contracts. Those contracts stay as they are: `tokenURI` on each one returns `""`, and there is no setter, owner, or proxy to change that.
 
-This is the minimum viable way to put the art and metadata on chain as well. `tokenURI(uint256)` returns `data:application/json;base64,...` with an inline base64 SVG. A bug is fixed by deploying a new renderer and repointing, not by an admin key.
+This is the minimum viable way to put the art and metadata on chain as well. `tokenURI(uint256)` returns `data:application/json;base64,...` with an inline base64 SVG. The original contracts cannot point anywhere. A bug is fixed by deploying a new renderer and asking OpenSea to repoint the metadata URL it has stored, not by an admin key.
 
 ## Why three contracts
 
 `src/Render.sol` is one file. It deploys as three contracts, `MATHRender`, `RGBRender` and `TOONRender`, each with `tokenURI(uint256)`.
 
-OnChainChecker, wallets and a later OpenSea repoint all call `tokenURI` on an address. One contract cannot expose three different `tokenURI` functions. The shared encoder lives in a base contract so the source is not copied; each deployment only carries what it uses. Nothing here is owned, upgradeable, or proxied, and a render reads only the original contracts (plus WORD and ChainFaces, which TOON already reads).
+OnChainChecker calls `tokenURI` on an address. OpenSea does not: it has the Azure URL stored, and that stored URL is what would be repointed. One contract cannot expose three different `tokenURI` functions. The shared encoder lives in a base contract so the source is not copied; each deployment only carries what it uses. Nothing here is owned, upgradeable, or proxied, and a render reads only the original contracts (plus WORD and ChainFaces, which TOON already reads).
 
 ## Gas
 
-Measured with `forge test --match-test test_gas -vv` on a mainnet fork at block 26,098,697. The figure is `tokenURI`'s frame gas, which is what `eth_call` spends.
+Measured with `forge test --match-test test_gas -vv` on a latest-block fork of `https://ethereum.publicnode.com`, block 26,098,907. The figure is `tokenURI`'s frame gas, which is what `eth_call` spends. It does not depend on the fixture block: the picture is a function of the token id and mint-time storage.
 
 | Call | Gas |
 | --- | ---: |
-| `MATHRender.tokenURI(1)` | 431,349 |
-| `RGBRender.tokenURI(100)` | 4,457,056 |
-| `TOONRender.tokenURI(1973)` | 4,415,431 |
+| `MATHRender.tokenURI(1)` | 386,493 |
+| `RGBRender.tokenURI(100)` | 2,449,482 |
+| `TOONRender.tokenURI(1973)` | 2,389,328 |
 
-The 16×16 bitmap is the expensive part. It is the same string of `<rect>` nodes as the Azure functions, written into one buffer, then base64'd in assembly. A plain Solidity base64 loop was about 23M gas. These calls sit well under typical `eth_call` caps.
+The 16×16 bitmap is the same string of `<rect>` nodes as the Azure functions. The loop that writes it costs about 155k gas. Base64 keeps its alphabet in scratch space and stores each quartet with one `mstore`. A plain Solidity base64 loop was about 23M gas. These calls sit well under typical `eth_call` caps.
 
 Estimated deployment gas is one transaction per contract: 21,000 plus calldata plus the create frame (code deposit included). From `test_deploy_gas`:
 
 | Contract | Runtime bytes | Deploy gas |
 | --- | ---: | ---: |
-| `MATHRender` | 5,126 | 1,264,469 |
-| `RGBRender` | 3,122 | 799,437 |
-| `TOONRender` | 5,978 | 1,462,791 |
-| All three | | 3,526,697 |
+| `MATHRender` | 4,903 | 1,212,769 |
+| `RGBRender` | 2,756 | 714,385 |
+| `TOONRender` | 6,082 | 1,486,544 |
+| All three | | 3,413,698 |
 
 ## Usage
 
@@ -38,7 +38,9 @@ cd renderer
 forge test
 ```
 
-Fork tests use `MAINNET_RPC_URL`, or `https://ethereum.publicnode.com` if that is unset. No key is required. `ffi` is enabled in `foundry.toml` because the tests decode the data URI in Python and compare it to the Azure snapshots in `test/fixtures/`.
+Fork tests use the latest block on `https://ethereum.publicnode.com`. That node is not an archive, so the tests do not pin an old block unless `MAINNET_RPC_URL` is set to an archive endpoint, in which case the fork is block 26,098,697. No key is required. `ffi` is enabled in `foundry.toml` because the tests decode the data URI in Python and compare it to the Azure snapshots in `test/fixtures/`.
+
+Those snapshots still match at a later block. MATH's picture is the id. RGB's planes and TOON's word, face and rgb ids are written at mint and those contracts have no setter. ChainFaces' face and colours and the WORD string are the same kind of mint-time storage. A transfer changes `ownerOf`, which the renderer uses only to revert when the token is missing. `0` can never be minted. An id that is merely unminted today, such as TOON 1 or RGB 188, could be minted later; the tests do not treat those as permanently missing.
 
 ```shell
 forge test --match-contract MathTest
