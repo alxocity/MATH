@@ -2,23 +2,23 @@
 
 On-chain metadata for the frozen [MATH](https://etherscan.io/address/0x6B4fccdd888Bb6fD3934A9e49eF64dfd2c0D8e6D), [RGB](https://etherscan.io/address/0x9355Fb9693ffF9bB6f06721C82fe0B5F49E6c956) and [TOON](https://etherscan.io/address/0x026A7D72a448D0E44d441e55F746BF56B843aEDB) contracts. Those contracts stay as they are: `tokenURI` on each one returns `""`, and there is no setter, owner, or proxy to change that.
 
-This is the minimum viable way to put the art and metadata on chain as well. `tokenURI(uint256)` returns `data:application/json;base64,...` with an inline base64 SVG. The original contracts cannot point anywhere. A bug is fixed by deploying a new renderer and asking OpenSea to repoint the metadata URL it has stored, not by an admin key.
+This is the minimum viable way to put the art and metadata on chain as well. `tokenJSON(uint256)` returns the JSON metadata. `tokenURI(uint256)` returns that JSON as `data:application/json;base64,...` with an inline base64 SVG. The original contracts cannot point anywhere. A bad render is fixed by deploying a new renderer. There is no admin key. Whether a marketplace changes a URL it already stored is outside this repo.
 
 ## Why three contracts
 
-`src/Render.sol` is one file. It deploys as three contracts, `MATHRender`, `RGBRender` and `TOONRender`, each with `tokenURI(uint256)`.
+`src/Render.sol` is one file. It deploys as three contracts, `MATHRender`, `RGBRender` and `TOONRender`, each with `tokenJSON(uint256)` and `tokenURI(uint256)`.
 
-OnChainChecker calls `tokenURI` on an address. OpenSea does not: it has the Azure URL stored, and that stored URL is what would be repointed. One contract cannot expose three different `tokenURI` functions. The shared encoder lives in a base contract so the source is not copied; each deployment only carries what it uses. Nothing here is owned, upgradeable, or proxied, and a render reads only the original contracts (plus WORD and ChainFaces, which TOON already reads).
+OnChainChecker calls `tokenURI` on an address. OpenSea stores a metadata URL and does not call the contract. `tokenJSON` is the raw document, for a caller that wants to compose with the original or hand a marketplace its own URL. One contract cannot expose three different `tokenURI` functions. The shared encoder lives in a base contract so the source is not copied; each deployment only carries what it uses. Nothing here is owned, upgradeable, or proxied, and a render reads only the original contracts (plus WORD and ChainFaces, which TOON already reads).
 
 ## Gas
 
-Measured with `forge test --match-test test_gas -vv` on a latest-block fork of `https://ethereum.publicnode.com`, block 26,098,907. The figure is `tokenURI`'s frame gas, which is what `eth_call` spends. It does not depend on the fixture block: the picture is a function of the token id and mint-time storage.
+Measured with `forge test --match-test test_gas -vv` on a latest-block fork of `https://ethereum.publicnode.com`, block 26,099,477. The figure is `tokenURI`'s frame gas, which is what `eth_call` spends. It does not depend on the fixture block: the picture is a function of the token id and mint-time storage.
 
 | Call | Gas |
 | --- | ---: |
-| `MATHRender.tokenURI(1)` | 386,493 |
-| `RGBRender.tokenURI(100)` | 2,449,482 |
-| `TOONRender.tokenURI(1973)` | 2,389,328 |
+| `MATHRender.tokenURI(1)` | 386,555 |
+| `RGBRender.tokenURI(100)` | 2,449,547 |
+| `TOONRender.tokenURI(1973)` | 2,389,390 |
 
 The 16×16 bitmap is the same string of `<rect>` nodes as the Azure functions. The loop that writes it costs about 155k gas. Base64 keeps its alphabet in scratch space and stores each quartet with one `mstore`. A plain Solidity base64 loop was about 23M gas. These calls sit well under typical `eth_call` caps.
 
@@ -26,10 +26,10 @@ Estimated deployment gas is one transaction per contract: 21,000 plus calldata p
 
 | Contract | Runtime bytes | Deploy gas |
 | --- | ---: | ---: |
-| `MATHRender` | 4,903 | 1,212,769 |
-| `RGBRender` | 2,756 | 714,385 |
-| `TOONRender` | 6,082 | 1,486,544 |
-| All three | | 3,413,698 |
+| `MATHRender` | 4,944 | 1,222,241 |
+| `RGBRender` | 2,798 | 724,042 |
+| `TOONRender` | 6,123 | 1,496,067 |
+| All three | | 3,442,350 |
 
 ## Usage
 
@@ -53,7 +53,7 @@ Deploy, when you mean to, with your own key. This repo does not contain one, and
 forge script script/Deploy.sol --rpc-url https://ethereum.publicnode.com --private-key $KEY --broadcast
 ```
 
-After deploy, call `tokenURI` on each renderer with a minted id. Write the three addresses into the root README at that point.
+After deploy, call `tokenURI` or `tokenJSON` on each renderer with a minted id. Write the three addresses into the root README at that point.
 
 ## Differences from Azure
 
@@ -70,7 +70,7 @@ TOON's text colour follows the Azure expression `Number(color - 5).toString(16).
 
 ## Missing tokens
 
-`tokenURI` calls `ownerOf` on the collection. A missing id reverts with `ERC721: owner query for nonexistent token`, the same check the original contracts use. Their own `tokenURI` reverts with `ERC721Metadata: URI query for nonexistent token`.
+`tokenJSON` calls `ownerOf` on the collection, and `tokenURI` returns that JSON. A missing id reverts with `ERC721: owner query for nonexistent token`, the same check the original contracts use. Their own `tokenURI` reverts with `ERC721Metadata: URI query for nonexistent token`.
 
 The Azure functions do not check. They return HTTP 200: any MATH id renders, a missing RGB id is a black picture of `(0,0,0)`, and a missing TOON id has an empty name and zero traits. Those bodies are saved under `test/fixtures/{math/0,rgb/0,rgb/188,toon/1}.json`. The renderer does not return them.
 

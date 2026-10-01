@@ -58,6 +58,27 @@ contract ForkTest is Test {
         _cmp(toon.tokenURI(125467), "test/fixtures/toon/125467.json");
     }
 
+    function test_token_json() public {
+        assertEq(_jsonOf(math.tokenURI(1)), math.tokenJSON(1));
+        assertEq(_jsonOf(rgb.tokenURI(100)), rgb.tokenJSON(100));
+        assertEq(_jsonOf(toon.tokenURI(1973)), toon.tokenJSON(1973));
+        vm.expectRevert(bytes("ERC721: owner query for nonexistent token"));
+        math.tokenJSON(0);
+        vm.expectRevert(bytes("ERC721: owner query for nonexistent token"));
+        rgb.tokenJSON(0);
+        vm.expectRevert(bytes("ERC721: owner query for nonexistent token"));
+        toon.tokenJSON(0);
+    }
+
+    function _jsonOf(string memory uri) internal returns (string memory) {
+        string[] memory cmd = new string[](4);
+        cmd[0] = "python3";
+        cmd[1] = "-c";
+        cmd[2] = "import sys,base64; u=sys.argv[1]; p='data:application/json;base64,'; sys.stdout.write(base64.b64decode(u[len(p):]).decode())";
+        cmd[3] = uri;
+        return vm.ffiString(cmd);
+    }
+
     function test_missing_reverts_like_erc721() public {
         vm.expectRevert(bytes("ERC721: owner query for nonexistent token"));
         math.tokenURI(0);

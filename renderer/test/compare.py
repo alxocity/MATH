@@ -23,8 +23,8 @@ def utf_suffix(n):
         o = ord(ch)
         if ch in ['"', "\\", "\b", "\f", "\n", "\r", "\t"]:
             return True
-        if o < 0x20 or 0xD800 <= o <= 0xDFFF:
-            # Controls and lone surrogates stringify as \uXXXX (length 8).
+        if o < 0x20:
+            # Controls stringify as \uXXXX (length 8), so Azure drops them.
             return False
         units = 2 if o > 0xFFFF else 1
         return units + 2 < 8
@@ -34,6 +34,11 @@ def utf_suffix(n):
         out = []
         for i in range(0, 64, width):
             cp = int(hex64[i : i + width], 16)
+            if 0xD800 <= cp <= 0xDFFF:
+                # Azure's runtime keeps the lone surrogate, then the response
+                # bytes replace it with U+FFFD. MATH 10**62's utf-16 group is U+D969.
+                out.append("\ufffd")
+                continue
             ch = "" if cp > 0x10FFFF else chr(cp)
             if keep(ch):
                 out.append(ch)
@@ -68,9 +73,11 @@ def azure_mean(sum_, length):
 
 
 def _check_surrogate():
-    # A utf-16 group of D800 is a lone surrogate. JSON.stringify is 8 chars, so Azure drops it.
-    suffix = utf_suffix(0xD800 << (256 - 16))
-    assert "\ud800" not in suffix, suffix
+    # utf-16 of D800, and the D969 inside MATH 10**62. Both are U+FFFD in Azure's body.
+    for n, needle in ((0xD800 << (256 - 16), "\ufffd"), (10**62, "≡\ufffd")):
+        suffix = utf_suffix(n)
+        assert needle in suffix, suffix
+        assert "\ud800" not in suffix and "\ud969" not in suffix, suffix
 
 
 def main():

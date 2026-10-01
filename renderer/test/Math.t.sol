@@ -44,5 +44,7 @@ contract MathTest is Test {
     function test_math_reverts_without_owner() public {
         vm.expectRevert();
         math.tokenURI(1);
+        vm.expectRevert();
+        math.tokenJSON(1);
     }
 }
