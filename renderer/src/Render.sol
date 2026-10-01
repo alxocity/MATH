@@ -338,8 +338,24 @@ abstract contract Render {
 contract MATHRender is Render {
     IERC721 constant NFT = IERC721(0x6B4fccdd888Bb6fD3934A9e49eF64dfd2c0D8e6D);
 
-    function tokenJSON(uint id) public view returns (string memory) {
+    function tokenSVG(uint id) public view returns (string memory) {
         NFT.ownerOf(id);
+        bytes memory digits = dec(id);
+        uint n = digits.length;
+        return string(
+            abi.encodePacked(
+                '<svg xmlns="http://www.w3.org/2000/svg" width="350" height="350"><text x="50%" y="50%" dominant-baseline="middle" text-anchor="middle" font-size="',
+                dec((349 + n) / n),
+                'px" fill="#',
+                hexPad(id % 0x1000000, 6),
+                '">',
+                digits,
+                "</text></svg>"
+            )
+        );
+    }
+
+    function tokenJSON(uint id) public view returns (string memory) {
         return string(_json(id));
     }
 
@@ -347,7 +363,7 @@ contract MATHRender is Render {
         return uri(bytes(tokenJSON(id)));
     }
 
-    function _json(uint id) internal pure returns (bytes memory) {
+    function _json(uint id) internal view returns (bytes memory) {
         bytes memory digits = dec(id);
         uint n = digits.length;
         uint[10] memory c;
@@ -364,15 +380,6 @@ contract MATHRender is Render {
             if (rot != d || (e > 1 && e != 6 && e != 8 && e != 9)) stro = false;
         }
         uint color = id % 0x1000000;
-        bytes memory svg = abi.encodePacked(
-            '<svg xmlns="http://www.w3.org/2000/svg" width="350" height="350"><text x="50%" y="50%" dominant-baseline="middle" text-anchor="middle" font-size="',
-            dec((349 + n) / n),
-            'px" fill="#',
-            hexPad(color, 6),
-            '">',
-            digits,
-            "</text></svg>"
-        );
         bytes memory attrs = _attrs(c, n, sum, id, pal, stro);
         return abi.encodePacked(
             '{"name":"',
@@ -382,7 +389,7 @@ contract MATHRender is Render {
             "\\n\\n",
             bitmapJson(id),
             '","image":"',
-            image(svg),
+            image(bytes(tokenSVG(id))),
             '","attributes":',
             attrs,
             ',"background_color":"',
@@ -430,18 +437,25 @@ contract RGBRender is Render {
     IERC721 constant NFT = IERC721(0x9355Fb9693ffF9bB6f06721C82fe0B5F49E6c956);
     IRGB constant DATA = IRGB(0x9355Fb9693ffF9bB6f06721C82fe0B5F49E6c956);
 
-    function tokenJSON(uint id) public view returns (string memory) {
+    function tokenSVG(uint id) public view returns (string memory) {
         NFT.ownerOf(id);
         (uint r, uint g, uint b) = DATA.get(id);
-        bytes memory svg = abi.encodePacked(
-            '<svg xmlns="http://www.w3.org/2000/svg" width="350" height="350">',
-            pixels(r, g, b, 47, 16),
-            "</svg>"
+        return string(
+            abi.encodePacked(
+                '<svg xmlns="http://www.w3.org/2000/svg" width="350" height="350">',
+                pixels(r, g, b, 47, 16),
+                "</svg>"
+            )
         );
+    }
+
+    function tokenJSON(uint id) public view returns (string memory) {
+        string memory svg = tokenSVG(id);
+        (uint r, uint g, uint b) = DATA.get(id);
         return string(
             abi.encodePacked(
                 '{"image":"',
-                image(svg),
+                image(bytes(svg)),
                 '","attributes":[{"trait_type":"r","value":"',
                 dec(r),
                 '"},{"trait_type":"g","value":"',
@@ -465,28 +479,34 @@ contract TOONRender is Render {
     IFACE constant FACE = IFACE(0x91047Abf3cAb8da5A9515c8750Ab33B4f1560a7A);
     IRGB constant RGB = IRGB(0x9355Fb9693ffF9bB6f06721C82fe0B5F49E6c956);
 
-    function tokenJSON(uint id) public view returns (string memory) {
+    function tokenSVG(uint id) public view returns (string memory) {
         NFT.ownerOf(id);
-        (uint word, uint face, uint rgb) = DATA.get(id);
+        (, uint face, uint rgb) = DATA.get(id);
         (uint r, uint g, uint b) = RGB.get(rgb);
-        bytes memory glyph = xml(FACE.getFace(face));
-        bytes memory svg = abi.encodePacked(
-            '<svg xmlns="http://www.w3.org/2000/svg" width="350" height="350"><rect x="47" y="235" width="256" height="72" fill="#',
-            toneHex(FACE.getBackgroundColor(face)),
-            '"/>',
-            pixels(r, g, b, 79, 12),
-            '<text x="50%" y="271" dominant-baseline="middle" text-anchor="middle" font-size="72px" fill="#',
-            textHex(FACE.getTextColor(face)),
-            '">',
-            glyph,
-            "</text></svg>"
+        return string(
+            abi.encodePacked(
+                '<svg xmlns="http://www.w3.org/2000/svg" width="350" height="350"><rect x="47" y="235" width="256" height="72" fill="#',
+                toneHex(FACE.getBackgroundColor(face)),
+                '"/>',
+                pixels(r, g, b, 79, 12),
+                '<text x="50%" y="271" dominant-baseline="middle" text-anchor="middle" font-size="72px" fill="#',
+                textHex(FACE.getTextColor(face)),
+                '">',
+                xml(FACE.getFace(face)),
+                "</text></svg>"
+            )
         );
+    }
+
+    function tokenJSON(uint id) public view returns (string memory) {
+        string memory svg = tokenSVG(id);
+        (uint word, uint face, uint rgb) = DATA.get(id);
         return string(
             abi.encodePacked(
                 '{"name":"',
                 jesc(WORD.getWord(word)),
                 '","image":"',
-                image(svg),
+                image(bytes(svg)),
                 '","attributes":[{"trait_type":"word","value":"',
                 dec(word),
                 '"},{"trait_type":"face","value":"',

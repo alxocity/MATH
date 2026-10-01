@@ -70,6 +70,27 @@ contract ForkTest is Test {
         toon.tokenJSON(0);
     }
 
+    function test_token_svg() public {
+        assertEq(_svgOf(math.tokenJSON(1)), math.tokenSVG(1));
+        assertEq(_svgOf(rgb.tokenJSON(100)), rgb.tokenSVG(100));
+        assertEq(_svgOf(toon.tokenJSON(1973)), toon.tokenSVG(1973));
+        vm.expectRevert(bytes("ERC721: owner query for nonexistent token"));
+        math.tokenSVG(0);
+        vm.expectRevert(bytes("ERC721: owner query for nonexistent token"));
+        rgb.tokenSVG(0);
+        vm.expectRevert(bytes("ERC721: owner query for nonexistent token"));
+        toon.tokenSVG(0);
+    }
+
+    function _svgOf(string memory jsonStr) internal returns (string memory) {
+        string[] memory cmd = new string[](4);
+        cmd[0] = "python3";
+        cmd[1] = "-c";
+        cmd[2] = "import sys,json,base64; u=json.loads(sys.argv[1])['image']; p='data:image/svg+xml;base64,'; sys.stdout.write(base64.b64decode(u[len(p):]).decode())";
+        cmd[3] = jsonStr;
+        return vm.ffiString(cmd);
+    }
+
     function _jsonOf(string memory uri) internal returns (string memory) {
         string[] memory cmd = new string[](4);
         cmd[0] = "python3";
