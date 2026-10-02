@@ -7,12 +7,5 @@
   },
   "scripts": {
     "test": "node test/proxy.js"
-  },
-  "dependencies": {
-    "@openzeppelin/contracts": "^2.4.0",
-    "truffle-plugin-verify": "^0.3.6"
-  },
-  "devDependencies": {
-    "truffle-flattener": "^1.4.2"
   }
 }
