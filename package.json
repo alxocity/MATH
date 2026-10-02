@@ -8,7 +8,7 @@
   "scripts": {
     "test": "node test/proxy.js"
   },
-  "dependencies": {
+  "devDependencies": {
     "@openzeppelin/contracts": "2.4.0"
   }
 }
