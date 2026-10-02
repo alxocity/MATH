@@ -1,12 +1,10 @@
-const rpc = process.env.RPC_URL || 'https://ethereum.publicnode.com';
-
 const reply = (status, body, cache) => ({
   status,
   headers: {
     'Content-Type': 'application/json',
     'Cache-Control': cache || 'no-store'
   },
-  body
+  body: status == 200 ? body : JSON.stringify({ error: body })
 });
 
 const decode = hex => {
@@ -17,12 +15,12 @@ const decode = hex => {
 };
 
 async function tokenJSON(to, id) {
-  let n;
-  try { n = BigInt(id); } catch { return reply(400, ''); }
-  if (n < 0n || n >> 256n) return reply(400, '');
+  if (typeof id != 'string' || !/^[0-9]+$/.test(id) || /^0\d/.test(id)) return reply(400, 'bad id');
+  const n = BigInt(id);
+  if (n >> 256n) return reply(400, 'bad id');
   let out;
   try {
-    const res = await fetch(rpc, {
+    const res = await fetch(process.env.RPC_URL || 'https://ethereum.publicnode.com', {
       method: 'POST',
       headers: { 'content-type': 'application/json' },
       body: JSON.stringify({
@@ -30,21 +28,22 @@ async function tokenJSON(to, id) {
         id: 1,
         method: 'eth_call',
         params: [{ to, data: '0x8f7bb179' + n.toString(16).padStart(64, '0') }, 'latest']
-      })
+      }),
+      signal: AbortSignal.timeout(10000)
     });
     out = await res.json();
-  } catch {
-    return reply(502, '');
+  } catch (e) {
+    return reply(e.name == 'TimeoutError' ? 504 : 502, e.name == 'TimeoutError' ? 'timeout' : 'rpc');
   }
   if (out.error) {
     const data = out.error.data || '';
     const revert = out.error.code == 3 || /^0x08c379a0/i.test(data) || /revert/i.test(out.error.message || '');
-    return reply(revert ? 404 : 502, '');
+    return reply(revert ? 404 : 502, revert ? 'not found' : 'rpc');
   }
   try {
     return reply(200, decode(out.result), 'public, max-age=31536000, immutable');
   } catch {
-    return reply(502, '');
+    return reply(502, 'rpc');
   }
 }
 
