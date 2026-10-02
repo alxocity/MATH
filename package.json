@@ -3,12 +3,11 @@
   "version": "1.0.0",
   "description": "",
   "scripts": {
-    "test": "echo \"No tests yet...\""
+    "test": "node test/proxy.js"
   },
   "dependencies": {
     "@openzeppelin/contracts": "^2.4.0",
-    "truffle-plugin-verify": "^0.3.6",
-    "web3": "^1.2.5-rc.0"
+    "truffle-plugin-verify": "^0.3.6"
   },
   "devDependencies": {
     "truffle-flattener": "^1.4.2"
