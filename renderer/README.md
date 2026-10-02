@@ -60,16 +60,16 @@ forge script script/Deploy.sol --rpc-url https://ethereum.publicnode.com --priva
 
 After deploy, call `tokenSVG`, `tokenJSON` or `tokenURI` on each renderer with a minted id. Write the three addresses into the root README at that point.
 
-Verify the source on Etherscan and Sourcify from this directory. The compiler settings are the ones in `foundry.toml`: solc 0.8.24, optimizer on, 200 runs. Constructors take no arguments. Repeat for `RGBRender` and `TOONRender`.
+Verify the source on Etherscan and Sourcify from this directory. The compiler settings are the ones in `foundry.toml`: solc 0.8.24, optimizer on, 200 runs, EVM version Cancun. Constructors take no arguments. Repeat for `RGBRender` and `TOONRender`.
 
 ```shell
 forge verify-contract --chain mainnet --watch \
-  --compiler-version 0.8.24 --num-of-optimizations 200 \
+  --compiler-version 0.8.24 --num-of-optimizations 200 --evm-version cancun \
   --etherscan-api-key $ETHERSCAN_API_KEY \
   $MATH src/Render.sol:MATHRender
 
 forge verify-contract --chain mainnet --verifier sourcify \
-  --compiler-version 0.8.24 --num-of-optimizations 200 \
+  --compiler-version 0.8.24 --num-of-optimizations 200 --evm-version cancun \
   $MATH src/Render.sol:MATHRender
 ```
 
