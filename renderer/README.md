@@ -52,13 +52,19 @@ forge test --match-contract MathTest
 forge test --match-test test_gas -vv
 ```
 
-Deploy, when you mean to, with your own key. This repo does not contain one, and this script has not been broadcast:
+Deployed on mainnet at block 26,107,333 from `0xA096b47EbF7727d01Ff4F09c34Fc6591f2c375F0`. Sourcify reports `exact_match` for each renderer.
+
+| Contract | Address |
+| --- | --- |
+| `MATHRender` | `0xb3cA13A2722CAB48c8d9068bD67656efe2d5e376` |
+| `RGBRender` | `0x62FFe75cd9824A2e8855CbC055256De229B5b936` |
+| `TOONRender` | `0x1E1a576e4186551e4DEdE58Ccc2DCC34697159Cb` |
+
+A new deploy, when you mean to, uses your own key. This repo does not contain one:
 
 ```shell
 forge script script/Deploy.sol --rpc-url https://ethereum.publicnode.com --private-key $KEY --broadcast
 ```
-
-After deploy, call `tokenSVG`, `tokenJSON` or `tokenURI` on each renderer with a minted id. Write the three addresses into the root README at that point.
 
 Verify the source on Etherscan and Sourcify from this directory. The compiler settings are the ones in `foundry.toml`: solc 0.8.24, optimizer on, 200 runs, EVM version Cancun. Constructors take no arguments. Repeat for `RGBRender` and `TOONRender`.
 
@@ -73,13 +79,13 @@ forge verify-contract --chain mainnet --verifier sourcify \
   $MATH src/Render.sol:MATHRender
 ```
 
-`forge script script/Deploy.sol --broadcast --verify` is the same deploy with verification attached. Neither command has been run here.
+`forge script script/Deploy.sol --broadcast --verify` is the same deploy with verification attached. The deployment above is already verified on Sourcify.
 
 ## Differences from Azure
 
-The snapshots are the live Azure bodies (`/api/math`, `/api/RGB`, `/api/TOON`). Parsed image, name and traits match, except:
+The snapshots are the Azure bodies from before `/api/math`, `/api/RGB` and `/api/TOON` proxied `tokenJSON`. Parsed image, name and traits match, except:
 
-- The outer return is a base64 JSON data URI. Azure serves a JSON object whose picture is raw SVG in `image_data`. Here the picture is `image` = `data:image/svg+xml;base64,...`. The decoded SVG matches `image_data` on the fixtures, aside from `viewBox="0 0 350 350"` and `shape-rendering="crispEdges"`. Rects stay on whole viewBox units (`16` for RGB, `12` for TOON) so neighbours touch. The namespace `http://www.w3.org/2000/svg` is the XML name, not a request. There is no stylesheet, web font, external image, or link.
+- The outer return is a base64 JSON data URI. The old Azure body was a JSON object whose picture is raw SVG in `image_data`. Here the picture is `image` = `data:image/svg+xml;base64,...`. The decoded SVG matches `image_data` on the fixtures, aside from `viewBox="0 0 350 350"` and `shape-rendering="crispEdges"`. Rects stay on whole viewBox units (`16` for RGB, `12` for TOON) so neighbours touch. The namespace `http://www.w3.org/2000/svg` is the XML name, not a request. There is no stylesheet, web font, external image, or link.
 - `external_url` is left out. It is an Etherscan link, not part of the token.
 - MATH's description keeps the `0x` hex and the 16×16 ⬛/⬜ bitmap. The UTF-8, UTF-16 and UTF-32 readings of that hex are left out.
 - `digit_mean` is rounded to 6 decimal places. Terminating values match (`1`, `7.5`, `9`). Repeating ones differ in the tail: Azure's `0.6666666666666666` is `0.666667`, and `0.05263157894736842` is `0.052632`.
@@ -92,7 +98,7 @@ TOON's text colour follows the Azure expression `Number(color - 5).toString(16).
 
 `tokenSVG` calls `ownerOf` on the collection. `tokenJSON` reads that SVG, and `tokenURI` returns the JSON. A missing id reverts with `ERC721: owner query for nonexistent token`, the same check the original contracts use. Their own `tokenURI` reverts with `ERC721Metadata: URI query for nonexistent token`.
 
-The Azure functions do not check. They return HTTP 200: any MATH id renders, a missing RGB id is a black picture of `(0,0,0)`, and a missing TOON id has an empty name and zero traits. Those bodies are saved under `test/fixtures/{math/0,rgb/0,rgb/188,toon/1}.json`. The renderer does not return them.
+The Azure functions now return that JSON, and answer 404 when the call reverts. They used to skip the check and return HTTP 200: any MATH id rendered, a missing RGB id was a black picture of `(0,0,0)`, and a missing TOON id had an empty name and zero traits. Those bodies are saved under `test/fixtures/{math/0,rgb/0,rgb/188,toon/1}.json`. The renderer does not return them.
 
 ## Checking with OnChainChecker
 
