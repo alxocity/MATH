@@ -24,6 +24,7 @@
     channels: new Map(),
     blocked: new Set(),
     blockedDone: false,
+    indexState: 'loading',
     holdersReady: false,
     heartPick: null,
     block: '',
@@ -308,13 +309,11 @@
   let loadGen = 0;
 
   async function readSnapshot() {
-    try {
-      const res = await fetch('index.json', { signal: AbortSignal.timeout(8000) });
-      if (!res.ok) return null;
-      return ETH.unpack(await res.json());
-    } catch (e) {
-      return null;
-    }
+    const res = await fetch('index.json', { signal: AbortSignal.timeout(8000) });
+    if (!res.ok) throw new Error('index ' + res.status);
+    const inv = ETH.unpack(await res.json());
+    if (!inv) throw new Error('index');
+    return inv;
   }
 
   function paintIndex() {
@@ -377,16 +376,25 @@
     const gen = ++loadGen;
     state.holdersReady = false;
     let base = null;
+    let snapFailed = false;
     try {
       base = ETH.preferIndex(ETH.readCache(), await readSnapshot());
-    } catch (e) { /* snapshot miss falls through */ }
+    } catch (e) {
+      snapFailed = true;
+      base = ETH.readCache();
+    }
     if (gen !== loadGen) return;
     if (base) {
+      state.indexState = 'ready';
       indexInventory(base);
       paintIndex();
       MOLD.say('loaded', { block: state.block, math: state.math.length, rgb: state.rgb.length, toon: state.toon.length });
+    } else if (snapFailed) {
+      state.indexState = 'error';
+      setStatus('index not loaded. refresh.');
+      if (state.tab === 'browse') show('browse');
     } else {
-      setStatus('loading');
+      setStatus('loading index…');
     }
     try {
       const gp = await ETH.gasPrice();
@@ -399,6 +407,7 @@
       const before = base ? { math: base.math.length, rgb: base.rgb.length, toon: base.toon.length } : null;
       const inv = base ? await ETH.loadDelta(base, progress) : await ETH.loadInventory(progress);
       if (gen !== loadGen) return;
+      state.indexState = 'ready';
       indexInventory(inv);
       const grew = !before || inv.math.length !== before.math || inv.rgb.length !== before.rgb || inv.toon.length !== before.toon;
       if (grew) {
@@ -461,7 +470,11 @@
     const cached = ETH.readCache();
     if (cached) {
       indexInventory(cached);
+      state.indexState = 'ready';
       setStatus('cached block ' + state.block);
+    } else {
+      state.indexState = 'loading';
+      setStatus('loading index…');
     }
     const tab = (location.hash || '#browse').slice(1);
     show(['browse', 'mint', 'route', 'rgb', 'toon', 'about'].indexOf(tab) === -1 ? 'browse' : tab);
