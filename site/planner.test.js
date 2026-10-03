@@ -123,16 +123,19 @@ assert.strictEqual(owned.mints, 1);
 assert.strictEqual(owned.royalty, 0n);
 assert.strictEqual(owned.steps[0].exists, false);
 
-const snap = JSON.parse(fs.readFileSync(__dirname + '/index.json', 'utf8'));
+global.ABI = ABI;
+const ETH = require('./eth');
+const snap = ETH.unpack(JSON.parse(fs.readFileSync(__dirname + '/index.json', 'utf8')));
+assert.ok(snap);
 const supply = new Map();
 const usedR = new Set();
 const usedG = new Set();
 const usedB = new Set();
-snap.math.forEach(function (t) { supply.set(BigInt(t[0]), t[1]); });
+snap.math.forEach(function (t) { supply.set(t.id, t.owner); });
 snap.rgb.forEach(function (t) {
-  usedR.add(BigInt(t[2]));
-  usedG.add(BigInt(t[3]));
-  usedB.add(BigInt(t[4]));
+  usedR.add(t.r);
+  usedG.add(t.g);
+  usedB.add(t.b);
 });
 assert.strictEqual(supply.has(heart.R), false);
 assert.strictEqual(usedR.has(heart.R), false);

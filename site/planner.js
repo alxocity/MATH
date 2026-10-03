@@ -10,7 +10,7 @@
   const MSG_RGB = 30n * ROY_WEI;
   const RGB_ROY = 10n * ROY_WEI;
   const G_ADD = 175000n; // estimate, MATH.add
-  const G_RGB = 330000n; // estimate, RGB.add
+  const G_RGB = 340000n; // estimate, RGB.add, measured ~337k
   const MAX = (1n << 256n) - 1n;
   // Red heart. G is 256 and B is 512: both exist, sit on the last row, and are unused as channels.
   const HEART = [
