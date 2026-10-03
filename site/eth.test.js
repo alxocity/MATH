@@ -101,6 +101,23 @@ assert.strictEqual(ETH.unpack(packed), null);
 packed.math[0][1] = -1;
 assert.strictEqual(ETH.unpack(packed), null);
 packed.math[0][1] = index;
+assert.strictEqual(ETH.unpack(packed).words.size, 0);
+assert.strictEqual(ETH.unpack(packed).faces.size, 0);
+const named = ETH.pack({
+  block: 9,
+  math: [],
+  rgb: [],
+  toon: [{ id: 3n, owner: owner, word: 951n, face: 2131n, rgb: 2n }],
+  words: new Map([[951n, 'kaigani'], [4558n, 'golden'], [114n, 'coin']]),
+  faces: new Map([[2131n, '|x|']]),
+}, null);
+const namedInv = ETH.unpack(named);
+assert.strictEqual(namedInv.words.get(951n), 'kaigani');
+assert.strictEqual(namedInv.words.get(4558n), 'golden');
+assert.strictEqual(namedInv.words.get(114n), 'coin');
+assert.strictEqual(namedInv.faces.get(2131n), '|x|');
+named.words['951'] = 1;
+assert.strictEqual(ETH.unpack(named), null);
 
 const down = [
   '0x074068d4690c2ae7dfe5ffd9cb85575745b6c55c',
@@ -163,6 +180,16 @@ function jsonResponse(payload) {
   assert.strictEqual(cached.blocked.size, 0);
 
   global.fetch = realFetch;
+  const knownWords = [[951n, 'kaigani'], [4558n, 'golden'], [114n, 'coin']];
+  for (let i = 0; i < knownWords.length; i++) {
+    const id = knownWords[i][0];
+    const text = await ETH.readString(ETH.ADDR.WORD, ABI.SEL.getWord, id);
+    assert.strictEqual(text, knownWords[i][1]);
+    assert.strictEqual(snap.words.get(id), knownWords[i][1]);
+  }
+  const face = await ETH.readString(ETH.ADDR.FACE, ABI.SEL.getFace, 2131n);
+  assert.ok(face.length > 0);
+  assert.strictEqual(snap.faces.get(2131n), face);
   console.log('eth.test.js ok');
 })().catch(function (e) {
   console.error(e);

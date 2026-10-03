@@ -13,7 +13,12 @@
     if (f.q) {
       if (/^\d+$/.test(f.q)) {
         if (!id.toString().includes(f.q)) return false;
-      } else if (!tok.owner.includes(f.q.toLowerCase())) return false;
+      } else {
+        const word = tok.word != null && state.wordText.get(tok.word) || '';
+        const face = tok.face != null && state.faceText.get(tok.face) || '';
+        const blob = (tok.owner + ' ' + word + ' ' + face).toLowerCase();
+        if (!blob.includes(f.q.toLowerCase())) return false;
+      }
     }
     const pop = P.popcount(id > P.MAX ? id & P.MAX : id);
     if (f.popMin !== '' && pop < Number(f.popMin)) return false;
@@ -51,15 +56,29 @@
     if (!cards) return;
     cards.innerHTML = slice.map(function (t) {
       const ch = state.kind === 'math' ? state.channels.get(t.id) : null;
-      const tags = ch ? Array.from(ch).join('') : '';
+      const tags = [];
+      if (ch) tags.push(Array.from(ch).join(''));
+      if (state.kind === 'math') {
+        if (P.isPal(t.id)) tags.push('pal');
+        if (P.isStrobo(t.id)) tags.push('stro');
+      }
+      let title = String(t.id);
       let extra = '';
       let grid = S.bitHtml(t.id);
       if (state.kind === 'rgb') {
-        extra = '<div class="dim">r ' + t.r + '</div>';
+        extra = '<div class="dim">r ' + P.popcount(t.r) + ' · g ' + P.popcount(t.g) + ' · b ' + P.popcount(t.b) + '</div>';
         grid = S.cellsHtml(P.planesToRows(t.r, t.g, t.b)).replace(/<button/g, '<i').replace(/<\/button>/g, '</i>');
       }
-      if (state.kind === 'toon') extra = '<div class="dim">word ' + t.word + ' face ' + t.face + ' rgb ' + t.rgb + '</div>';
-      return '<article class="card"><div>' + t.id + (tags ? ' <span class="dim">' + S.esc(tags) + '</span>' : '') + '</div>' +
+      if (state.kind === 'toon') {
+        const word = state.wordText.get(t.word) || String(t.word);
+        const face = state.faceText.get(t.face) || String(t.face);
+        title = S.esc(word) + ' <span class="dim">' + t.id + '</span>';
+        extra = '<div class="face">' + S.esc(face) + '</div>';
+        const rgb = state.rgb.find(function (r) { return r.id === t.rgb; });
+        grid = rgb ? S.cellsHtml(P.planesToRows(rgb.r, rgb.g, rgb.b)).replace(/<button/g, '<i').replace(/<\/button>/g, '</i>') : '';
+      }
+      const tag = tags.filter(Boolean).join(' ');
+      return '<article class="card"><div>' + (state.kind === 'toon' ? title : t.id) + (tag ? ' <span class="dim">' + S.esc(tag) + '</span>' : '') + '</div>' +
         '<div class="dim">' + S.esc(S.short(t.owner)) + '</div>' + extra + grid +
         '<img alt="" data-svg="' + state.kind + ':' + t.id + '"></article>';
     }).join('') || '<p class="dim">' + (state.math.length || state.rgb.length || state.toon.length ? 'nothing in this filter.' : (state.indexState === 'error' ? 'index not loaded. refresh.' : 'loading index…')) + '</p>';

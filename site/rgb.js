@@ -160,6 +160,15 @@
     });
   }
 
+  function paintTraits() {
+    const traits = $('#rgbTraits');
+    if (!traits || !state.planes) return;
+    const r = P.popcount(state.planes.R);
+    const g = P.popcount(state.planes.G);
+    const b = P.popcount(state.planes.B);
+    traits.textContent = (r || g || b) ? 'r ' + r + ' · g ' + g + ' · b ' + b : '';
+  }
+
   function rgb(view) {
     syncPlanes();
     const p = state.planes || { R: 0n, G: 0n, B: 0n };
@@ -176,10 +185,11 @@
       '<div class="row"><label>R <input id="pR" spellcheck="false" value="' + p.R + '"></label></div>' +
       '<div class="row"><label>G <input id="pG" spellcheck="false" value="' + p.G + '"></label></div>' +
       '<div class="row"><label>B <input id="pB" spellcheck="false" value="' + p.B + '"></label></div>' +
-      '<p id="rgbMeta"></p><div id="queue"></div>' +
+      '<p id="rgbTraits" class="dim"></p><p id="rgbMeta"></p><div id="queue"></div>' +
       '<div class="row"><button type="button" id="planRgb">plan routes</button></div>' +
       '<div class="preview" id="preview">MATH mints, then RGB.add at 0.03 ETH. one click, one signature.</div>';
     $('#cells').innerHTML = S.cellsHtml(state.grid);
+    paintTraits();
     $('#cells').onclick = function (ev) {
       const btn = ev.target.closest('button');
       if (!btn) return;
@@ -194,6 +204,7 @@
       btn.className = next;
       syncPlanes();
       writePlaneInputs();
+      paintTraits();
       $('#rgbMeta').textContent = planeIssues(state.planes).join(', ');
     };
     $('#heart').onclick = function () { S.applyHeart(false); };
