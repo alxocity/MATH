@@ -17,7 +17,19 @@ assert.strictEqual(RULES.toonPart('face', 9n, faces), 'face already in TOON #812
 assert.strictEqual(RULES.toonPart('word', 1n, faces), '');
 assert.strictEqual(RULES.toonPart('math', 812n, new Map([[812n, 812n]])), 'this MATH already bases TOON #812');
 assert.strictEqual(RULES.payout(), "holder can't receive payout");
+assert.strictEqual(RULES.unchecked(), 'holder unchecked');
 assert.strictEqual(RULES.notYours(), "you don't own this");
+assert.strictEqual(RULES.connectWallet(), 'connect a wallet');
+const blocked = new Set(['0xabcabcabcabcabcabcabcabcabcabcabcabcabca']);
+const unknown = new Set(['0xdefdefdefdefdefdefdefdefdefdefdefdefdefd']);
+assert.strictEqual(RULES.holderNote(blocked.values().next().value, blocked, unknown), RULES.payout());
+assert.strictEqual(RULES.holderNote('0xDEFDEFDEFDEFDEFDEFDEFDEFDEFDEFDEFDEFDEFD', blocked, unknown), RULES.unchecked());
+assert.strictEqual(RULES.holderNote('0x1111111111111111111111111111111111111111', blocked, unknown), '');
+assert.strictEqual(RULES.holderNote('0xabcabcabcabcabcabcabcabcabcabcabcabcabca', blocked, unknown), RULES.payout());
+assert.strictEqual(RULES.preferNote(RULES.unchecked(), RULES.payout()), RULES.payout());
+assert.strictEqual(RULES.preferNote('', RULES.unchecked()), RULES.unchecked());
+assert.strictEqual(RULES.mold(RULES.unchecked()), null);
+assert.strictEqual(RULES.mold(RULES.connectWallet()).key, 'noWallet');
 
 assert.deepStrictEqual(RULES.mold('red already used by RGB #45'), { key: 'rgbTaken', vars: { color: 'red' } });
 assert.strictEqual(RULES.mold('this image is already RGB #45').key, 'rgbImage');
@@ -32,6 +44,7 @@ assert.strictEqual(RULES.mold(''), null);
 const copy = RULES.about();
 assert.strictEqual(copy.length, 3);
 assert.ok(copy[0].indexOf('0.03 ETH') !== -1 && copy[0].indexOf('0.01') !== -1);
+assert.ok(copy[0].indexOf('existing MATH tokens') !== -1);
 assert.ok(copy[1].indexOf('0.002 ETH') !== -1 && copy[1].indexOf('0.001') !== -1 && copy[1].indexOf('2300-gas') !== -1);
 assert.ok(copy[2].indexOf('No fee') !== -1 && copy[2].indexOf('TOON id is the MATH id') !== -1);
 

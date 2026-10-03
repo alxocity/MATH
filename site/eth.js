@@ -498,11 +498,13 @@
     return { blocked: blocked, unknown: unknown };
   }
 
-  // Unknown holders are blocked for routing, and the scan is not finished.
+  // Confirmed blocks and failed probes stay apart. Routing merges them; the page does not.
   function scanResult(scan) {
-    const blocked = new Set(scan.blocked);
-    scan.unknown.forEach(function (a) { blocked.add(a); });
-    return { blocked: blocked, blockedDone: scan.unknown.size === 0 };
+    const blocked = new Set();
+    const unknown = new Set();
+    (scan.blocked || []).forEach(function (a) { blocked.add(String(a).toLowerCase()); });
+    (scan.unknown || []).forEach(function (a) { unknown.add(String(a).toLowerCase()); });
+    return { blocked: blocked, unknown: unknown, blockedDone: unknown.size === 0 };
   }
 
   function cacheScan(inv, result) {

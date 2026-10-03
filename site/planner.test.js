@@ -83,6 +83,12 @@ assert.strictEqual(few15.mints, 4);
 assert.strictEqual(few15.royalty, P.ROY_WEI);
 assert.ok(few15.pieces.includes(8n));
 
+const viaUnknown = P.plan(15n, Object.assign(ctx('fewest'), {
+  blocked: new Set(),
+  unknown: new Set([blockedOwner]),
+}));
+leavesOk(viaUnknown);
+
 const cheap15 = P.plan(15n, ctx('cheapest'));
 leavesOk(cheap15);
 assert.strictEqual(cheap15.royalty, 0n);

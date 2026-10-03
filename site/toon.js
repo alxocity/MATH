@@ -8,11 +8,6 @@
   const ADDR = ETH.ADDR;
   const RULES = globalThis.RULES;
 
-  function holds(list, id) {
-    const s = id.toString();
-    return list.some(function (x) { return x.toString() === s; });
-  }
-
   function opt(ids, kind, label) {
     return ids.map(function (id) {
       const reason = RULES.toonPart(kind, id, state.toonBy[kind]);
@@ -32,20 +27,58 @@
     return '';
   }
 
+  function listed(rows, held) {
+    const m = S.me();
+    const ids = [];
+    const seen = new Set();
+    rows.forEach(function (t) {
+      if (t.owner !== m) return;
+      const s = t.id.toString();
+      if (seen.has(s)) return;
+      seen.add(s);
+      ids.push(t.id);
+    });
+    (held || []).forEach(function (id) {
+      const s = id.toString();
+      if (seen.has(s)) return;
+      seen.add(s);
+      ids.push(id);
+    });
+    return ids;
+  }
+
+  let ownGen = 0;
+
   function toonWhy(pick) {
     const spent = spentReason();
     if (spent) return spent;
-    if (!state.account) return RULES.notYours();
+    if (!state.account) return RULES.connectWallet();
     if (!pick) return '';
-    const m = S.me();
-    const math = state.math.find(function (t) { return t.id === pick.math; });
-    const rgb = state.rgb.find(function (t) { return t.id === pick.rgb; });
-    if (!math || math.owner !== m || !rgb || rgb.owner !== m) return RULES.notYours();
-    if (!holds(state.words, pick.word) || !holds(state.faces, pick.face)) return RULES.notYours();
+    if (state.toonOwn) return state.toonOwn;
     return RULES.toonPart('math', pick.math, state.toonBy.math) ||
       RULES.toonPart('word', pick.word, state.toonBy.word) ||
       RULES.toonPart('face', pick.face, state.toonBy.face) ||
       RULES.toonPart('rgb', pick.rgb, state.toonBy.rgb);
+  }
+
+  async function confirmOwn(pick) {
+    const gen = ++ownGen;
+    let owners;
+    try {
+      owners = await Promise.all([
+        ETH.ownerOf(ADDR.MATH, pick.math),
+        ETH.ownerOf(ADDR.WORD, pick.word),
+        ETH.ownerOf(ADDR.FACE, pick.face),
+        ETH.ownerOf(ADDR.RGB, pick.rgb),
+      ]);
+    } catch (e) {
+      return;
+    }
+    if (gen !== ownGen) return;
+    const who = S.me();
+    state.toonOwn = owners.every(function (o) { return o === who; }) ? '' : RULES.notYours();
+    paintToonWhy();
+    if (state.toonOwn) S.hit(state.toonOwn);
   }
 
   function paintToonWhy() {
@@ -57,9 +90,8 @@
   }
 
   function toon(view) {
-    const m = S.me();
-    const maths = state.math.filter(function (t) { return t.owner === m; }).map(function (t) { return t.id; });
-    const rgbs = state.rgb.filter(function (t) { return t.owner === m; }).map(function (t) { return t.id; });
+    const maths = listed(state.math, state.heldMath);
+    const rgbs = listed(state.rgb, state.heldRgb);
     view.innerHTML =
       '<div class="row"><label>MATH <select id="tm"><option value="">—</option>' + opt(maths, 'math', function (id) { return id; }) + '</select></label></div>' +
       '<div class="row"><label>WORD <select id="tw"><option value="">—</option>' + opt(state.words, 'word', function (id) { return state.wordText.get(BigInt(id)) || id; }) + '</select></label>' +
@@ -94,7 +126,10 @@
   }
 
   async function previewToon() {
-    const why = toonWhy(toonPick());
+    const pick = toonPick();
+    state.toonOwn = '';
+    if (pick && state.account && !spentReason()) confirmOwn(pick);
+    const why = toonWhy(pick);
     paintToonWhy();
     S.hit(why);
     if (why) return;
@@ -142,6 +177,7 @@
 
   async function sendToon(really) {
     const pick = toonPick();
+    if (pick && state.account && !spentReason()) await confirmOwn(pick);
     const why = toonWhy(pick);
     S.hit(why);
     const preview = pick
