@@ -35,6 +35,8 @@
     faces: [],
     wordText: new Map(),
     faceText: new Map(),
+    snapWords: new Map(),
+    snapFaces: new Map(),
     wordNote: '',
     faceNote: '',
     svgs: new Map(),
@@ -137,6 +139,8 @@
   }
 
   function persistTexts() {
+    state.snapWords.forEach(function (text, id) { state.wordText.set(id, text); });
+    state.snapFaces.forEach(function (text, id) { state.faceText.set(id, text); });
     const cached = ETH.readCache();
     if (!cached) return;
     state.wordText.forEach(function (text, id) { cached.words.set(id, text); });
@@ -306,24 +310,46 @@
 
   async function loadWallet() {
     if (!state.account) return;
+    let word;
+    let face;
     try {
-      const word = await ETH.owned(ADDR.WORD, state.account, 2500);
-      const face = await ETH.owned(ADDR.FACE, state.account, 2500);
+      word = await ETH.owned(ADDR.WORD, state.account, 2500);
+      face = await ETH.owned(ADDR.FACE, state.account, 2500);
       state.words = word.ids;
       state.faces = face.ids;
       state.wordNote = word.truncated ? word.ids.length + ' of ' + word.total : String(word.total);
       state.faceNote = face.truncated ? face.ids.length + ' of ' + face.total : String(face.total);
-      const missingW = word.ids.filter(function (id) { return !state.wordText.has(id); });
-      const missingF = face.ids.filter(function (id) { return !state.faceText.has(id); });
-      const gotW = await ETH.loadTexts(ADDR.WORD, ABI.SEL.getWord, missingW);
-      const gotF = await ETH.loadTexts(ADDR.FACE, ABI.SEL.getFace, missingF);
-      gotW.forEach(function (text, id) { state.wordText.set(id, text); });
-      gotF.forEach(function (text, id) { state.faceText.set(id, text); });
-      persistTexts();
-      if (state.tab === 'toon') show('toon');
     } catch (e) {
       state.wordNote = e.message;
+      if (state.tab === 'toon') show('toon');
+      return;
     }
+    try {
+      const missingW = word.ids.filter(function (id) {
+        return !state.snapWords.has(id) && !state.wordText.has(id);
+      });
+      const gotW = await ETH.loadTexts(ADDR.WORD, ABI.SEL.getWord, missingW);
+      gotW.forEach(function (text, id) {
+        if (!state.snapWords.has(id)) state.wordText.set(id, text);
+      });
+    } catch (e) {
+      state.wordNote += ' · text unavailable';
+    }
+    try {
+      const missingF = face.ids.filter(function (id) {
+        return !state.snapFaces.has(id) && !state.faceText.has(id);
+      });
+      const gotF = await ETH.loadTexts(ADDR.FACE, ABI.SEL.getFace, missingF);
+      gotF.forEach(function (text, id) {
+        if (!state.snapFaces.has(id)) state.faceText.set(id, text);
+      });
+    } catch (e) {
+      state.faceNote += ' · text unavailable';
+    }
+    state.snapWords.forEach(function (text, id) { state.wordText.set(id, text); });
+    state.snapFaces.forEach(function (text, id) { state.faceText.set(id, text); });
+    persistTexts();
+    if (state.tab === 'toon') show('toon');
   }
 
   let loadGen = 0;
@@ -396,12 +422,20 @@
     const gen = ++loadGen;
     state.holdersReady = false;
     let base = null;
+    let snap = null;
     let snapFailed = false;
     try {
-      base = ETH.preferIndex(ETH.readCache(), await readSnapshot());
+      snap = await readSnapshot();
+      base = ETH.preferIndex(ETH.readCache(), snap);
     } catch (e) {
       snapFailed = true;
       base = ETH.readCache();
+    }
+    state.snapWords = snap && snap.words ? snap.words : new Map();
+    state.snapFaces = snap && snap.faces ? snap.faces : new Map();
+    if (base) {
+      base.words = ETH.overlayTexts(base.words, state.snapWords);
+      base.faces = ETH.overlayTexts(base.faces, state.snapFaces);
     }
     if (gen !== loadGen) return;
     if (base) {
@@ -425,7 +459,7 @@
         if (gen === loadGen) setStatus(msg);
       };
       const before = base ? { math: base.math.length, rgb: base.rgb.length, toon: base.toon.length, texts: (base.words ? base.words.size : 0) + (base.faces ? base.faces.size : 0) } : null;
-      const inv = base ? await ETH.loadDelta(base, progress) : await ETH.loadInventory(progress);
+      const inv = base ? await ETH.loadDelta(base, progress, { words: state.snapWords, faces: state.snapFaces }) : await ETH.loadInventory(progress);
       if (gen !== loadGen) return;
       state.indexState = 'ready';
       indexInventory(inv);

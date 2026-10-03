@@ -118,6 +118,26 @@ assert.strictEqual(namedInv.words.get(114n), 'coin');
 assert.strictEqual(namedInv.faces.get(2131n), '|x|');
 named.words['951'] = 1;
 assert.strictEqual(ETH.unpack(named), null);
+const limited = ETH.pack({
+  block: 1,
+  math: [],
+  rgb: [],
+  toon: [],
+  words: new Map([[1n, 'a']]),
+  faces: new Map(),
+}, null);
+const fit = JSON.parse(JSON.stringify(limited));
+fit.words['1'] = 'x'.repeat(256);
+assert.strictEqual(ETH.unpack(fit).words.get(1n).length, 256);
+const id78 = '9'.repeat(78);
+fit.words[id78] = 'z';
+assert.strictEqual(ETH.unpack(fit).words.get(BigInt(id78)), 'z');
+const longText = JSON.parse(JSON.stringify(limited));
+longText.words['1'] = 'x'.repeat(257);
+assert.strictEqual(ETH.unpack(longText), null);
+const longKey = JSON.parse(JSON.stringify(limited));
+longKey.words['1' + '0'.repeat(78)] = 'z';
+assert.strictEqual(ETH.unpack(longKey), null);
 
 const down = [
   '0x074068d4690c2ae7dfe5ffd9cb85575745b6c55c',
@@ -130,6 +150,17 @@ function jsonResponse(payload) {
 
 (async function () {
   const realFetch = global.fetch;
+  const merged = await ETH.fillTexts(
+    new Map([[951n, 'poison'], [114n, 'coin']]),
+    [951n, 114n],
+    ETH.ADDR.WORD,
+    ABI.SEL.getWord,
+    null,
+    'WORD',
+    new Map([[951n, 'kaigani']])
+  );
+  assert.strictEqual(merged.get(951n), 'kaigani');
+  assert.strictEqual(merged.get(114n), 'coin');
 
   global.fetch = function () { return Promise.resolve(jsonResponse({ error: { code: -32000, message: 'header not found' } })); };
   const failed = await ETH.scanBlocked(down);

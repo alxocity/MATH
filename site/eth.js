@@ -257,7 +257,7 @@
   }
 
   // Newer enumeration indexes only. A shorter supply means the snapshot is stale, so reload.
-  async function loadDelta(base, progress) {
+  async function loadDelta(base, progress, trusted) {
     const block = await rpc('eth_blockNumber', []);
     if (block.error) throw new Error(block.error.message || 'block');
     const supplies = await multicall([
@@ -298,8 +298,8 @@
     const rgbOwners = await loadOwners(ADDR.RGB, rgbRows.map(function (t) { return t.id; }), progress, 'RGB');
     const toonOwners = await loadOwners(ADDR.TOON, toonRows.map(function (t) { return t.id; }), progress, 'TOON');
     const toon = toonRows.map(function (t, i) { return { id: t.id, owner: toonOwners[i], word: t.word, face: t.face, rgb: t.rgb }; });
-    const words = await fillTexts(base.words, toon.map(function (t) { return t.word; }), ADDR.WORD, ABI.SEL.getWord, progress, 'WORD');
-    const faces = await fillTexts(base.faces, toon.map(function (t) { return t.face; }), ADDR.FACE, ABI.SEL.getFace, progress, 'FACE');
+    const words = await fillTexts(base.words, toon.map(function (t) { return t.word; }), ADDR.WORD, ABI.SEL.getWord, progress, 'WORD', trusted && trusted.words);
+    const faces = await fillTexts(base.faces, toon.map(function (t) { return t.face; }), ADDR.FACE, ABI.SEL.getFace, progress, 'FACE', trusted && trusted.faces);
     return {
       block: blockNum(block.result),
       math: mathRows.map(function (t, i) { return { id: t.id, owner: mathOwners[i] }; }),
@@ -310,8 +310,15 @@
     };
   }
 
-  async function fillTexts(have, ids, address, sel, progress, label) {
-    const prev = have || new Map();
+  function overlayTexts(have, trusted) {
+    const out = new Map();
+    if (have) have.forEach(function (text, id) { out.set(BigInt(id), text); });
+    if (trusted) trusted.forEach(function (text, id) { out.set(BigInt(id), text); });
+    return out;
+  }
+
+  async function fillTexts(have, ids, address, sel, progress, label, trusted) {
+    const prev = overlayTexts(have, trusted);
     const missing = [];
     const seen = new Set();
     ids.forEach(function (id) {
@@ -321,9 +328,11 @@
       missing.push(x);
     });
     const more = await loadTexts(address, sel, missing, progress, label);
-    const out = new Map(prev);
-    more.forEach(function (text, id) { out.set(id, text); });
-    return out;
+    more.forEach(function (text, id) {
+      if (!trusted || !trusted.has(id)) prev.set(id, text);
+    });
+    if (trusted) trusted.forEach(function (text, id) { prev.set(BigInt(id), text); });
+    return prev;
   }
 
   function blockNum(block) {
@@ -429,8 +438,8 @@
     if (raw == null) return map;
     if (typeof raw !== 'object' || Array.isArray(raw)) throw new Error('texts');
     Object.keys(raw).forEach(function (k) {
-      if (!/^(0|[1-9]\d*)$/.test(k)) throw new Error('text id');
-      if (typeof raw[k] !== 'string') throw new Error('text');
+      if (!/^(0|[1-9]\d*)$/.test(k) || k.length > 78) throw new Error('text id');
+      if (typeof raw[k] !== 'string' || raw[k].length > 256) throw new Error('text');
       map.set(BigInt(k), raw[k]);
     });
     return map;
@@ -565,6 +574,8 @@
     loadInventory: loadInventory,
     loadDelta: loadDelta,
     loadTexts: loadTexts,
+    fillTexts: fillTexts,
+    overlayTexts: overlayTexts,
     pack: pack,
     unpack: unpack,
     preferIndex: preferIndex,
