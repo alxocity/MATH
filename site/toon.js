@@ -16,12 +16,25 @@
   function opt(ids, kind, label) {
     return ids.map(function (id) {
       const reason = RULES.toonPart(kind, id, state.toonBy[kind]);
-      return '<option value="' + id + '"' + (reason ? ' disabled title="' + S.esc(reason) + '"' : '') + '>' +
+      return '<option value="' + id + '"' + (reason ? ' class="spent"' : '') + '>' +
         S.esc(label(id)) + (reason ? ' — ' + S.esc(reason) : '') + '</option>';
     }).join('');
   }
 
+  function spentReason() {
+    const rows = [['tm', 'math'], ['tw', 'word'], ['tf', 'face'], ['tr', 'rgb']];
+    for (let i = 0; i < rows.length; i++) {
+      const el = $('#' + rows[i][0]);
+      if (!el || !el.value) continue;
+      const reason = RULES.toonPart(rows[i][1], el.value, state.toonBy[rows[i][1]]);
+      if (reason) return reason;
+    }
+    return '';
+  }
+
   function toonWhy(pick) {
+    const spent = spentReason();
+    if (spent) return spent;
     if (!state.account) return RULES.notYours();
     if (!pick) return '';
     const m = S.me();
