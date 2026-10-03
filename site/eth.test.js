@@ -10,7 +10,7 @@ eval(fs.readFileSync(__dirname + '/eth.js', 'utf8'));
 
 const owner = '0x' + 'ab'.repeat(20);
 const raw = {
-  block: '1',
+  block: 1,
   math: [['1', owner]],
   rgb: [['2', owner, '1', '1', '1']],
   toon: [['3', owner, '4', '5', '2']],
@@ -21,7 +21,14 @@ localStorage.setItem('math.site.v1', JSON.stringify(raw));
 const inv = ETH.readCache();
 assert.strictEqual(inv.math[0].owner, owner);
 assert.strictEqual(inv.math[0].id, 1n);
+assert.strictEqual(inv.block, 1);
 assert.ok(inv.blocked.has(owner));
+
+const stringBlock = JSON.parse(localStorage.getItem('math.site.v1'));
+stringBlock.block = '1';
+localStorage.setItem('math.site.v1', JSON.stringify(stringBlock));
+assert.strictEqual(ETH.readCache(), null);
+localStorage.setItem('math.site.v1', JSON.stringify(raw));
 
 raw.math[0][1] = '<img src=x>';
 localStorage.setItem('math.site.v1', JSON.stringify(raw));
@@ -52,7 +59,8 @@ assert.strictEqual(ETH.preferIndex(scanned, { math: [1], rgb: [], toon: [], bloc
 const rawSnap = JSON.parse(fs.readFileSync(__dirname + '/index.json', 'utf8'));
 assert.ok(Array.isArray(rawSnap.owners) && rawSnap.owners.length > 0 && rawSnap.owners.length < 200);
 assert.strictEqual(typeof rawSnap.math[0][1], 'number');
-assert.ok(/^\d+$/.test(rawSnap.block));
+assert.strictEqual(typeof rawSnap.block, 'number');
+assert.ok(Number.isSafeInteger(rawSnap.block) && rawSnap.block > 0);
 const snap = ETH.unpack(rawSnap);
 assert.ok(snap);
 assert.ok(snap.math.length > 8000);
@@ -70,12 +78,29 @@ const packed = ETH.pack({
   toon: [],
 }, null);
 assert.strictEqual(packed.owners.length, 2);
+assert.strictEqual(packed.block, 9);
 assert.strictEqual(typeof packed.math[0][1], 'number');
 assert.strictEqual(ETH.unpack(packed).math[1].owner, other);
-packed.block = 'nope';
+assert.strictEqual(ETH.unpack(packed).block, 9);
+packed.block = '9';
 assert.strictEqual(ETH.unpack(packed), null);
-packed.block = '';
+packed.block = 9.5;
 assert.strictEqual(ETH.unpack(packed), null);
+packed.block = -1;
+assert.strictEqual(ETH.unpack(packed), null);
+packed.block = NaN;
+assert.strictEqual(ETH.unpack(packed), null);
+packed.block = Infinity;
+assert.strictEqual(ETH.unpack(packed), null);
+packed.block = 9;
+const index = packed.math[0][1];
+packed.math[0][1] = String(index);
+assert.strictEqual(ETH.unpack(packed), null);
+packed.math[0][1] = 1.5;
+assert.strictEqual(ETH.unpack(packed), null);
+packed.math[0][1] = -1;
+assert.strictEqual(ETH.unpack(packed), null);
+packed.math[0][1] = index;
 
 const down = [
   '0x074068d4690c2ae7dfe5ffd9cb85575745b6c55c',

@@ -309,7 +309,7 @@
 
   async function readSnapshot() {
     try {
-      const res = await fetch('index.json');
+      const res = await fetch('index.json', { signal: AbortSignal.timeout(8000) });
       if (!res.ok) return null;
       return ETH.unpack(await res.json());
     } catch (e) {
@@ -400,8 +400,6 @@
       const inv = base ? await ETH.loadDelta(base, progress) : await ETH.loadInventory(progress);
       if (gen !== loadGen) return;
       indexInventory(inv);
-      ETH.writeCache(inv, null);
-      state.blockedDone = false;
       const grew = !before || inv.math.length !== before.math || inv.rgb.length !== before.rgb || inv.toon.length !== before.toon;
       if (grew) {
         paintIndex();

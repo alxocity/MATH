@@ -213,7 +213,7 @@
     const toon = toonIds.map(function (id, i) {
       return { id: id, owner: toonOwners[i], word: toonGets[i][0], face: toonGets[i][1], rgb: toonGets[i][2] };
     });
-    return { block: BigInt(block.result).toString(), math: math, rgb: rgb, toon: toon };
+    return { block: blockNum(block.result), math: math, rgb: rgb, toon: toon };
   }
 
   async function appendIds(address, n, have, progress, label, fill) {
@@ -271,14 +271,27 @@
     const rgbOwners = await loadOwners(ADDR.RGB, rgbRows.map(function (t) { return t.id; }), progress, 'RGB');
     const toonOwners = await loadOwners(ADDR.TOON, toonRows.map(function (t) { return t.id; }), progress, 'TOON');
     return {
-      block: BigInt(block.result).toString(),
+      block: blockNum(block.result),
       math: mathRows.map(function (t, i) { return { id: t.id, owner: mathOwners[i] }; }),
       rgb: rgbRows.map(function (t, i) { return { id: t.id, owner: rgbOwners[i], r: t.r, g: t.g, b: t.b }; }),
       toon: toonRows.map(function (t, i) { return { id: t.id, owner: toonOwners[i], word: t.word, face: t.face, rgb: t.rgb }; }),
     };
   }
 
+  function blockNum(block) {
+    let n;
+    if (typeof block === 'number') n = block;
+    else if (typeof block === 'bigint') n = Number(block);
+    else if (typeof block === 'string' && /^0x[0-9a-f]+$/i.test(block)) n = Number(BigInt(block));
+    else if (typeof block === 'string' && /^(0|[1-9]\d*)$/.test(block)) n = Number(block);
+    else return null;
+    if (!Number.isSafeInteger(n) || n < 0) return null;
+    return n;
+  }
+
   function pack(inv, blocked) {
+    const block = blockNum(inv.block);
+    if (block === null) throw new Error('block');
     const owners = [];
     const index = new Map();
     function ownerIndex(addr) {
@@ -290,7 +303,7 @@
       return index.get(a);
     }
     return {
-      block: inv.block,
+      block: block,
       owners: owners,
       math: inv.math.map(function (t) { return [t.id.toString(), ownerIndex(t.owner)]; }),
       rgb: inv.rgb.map(function (t) { return [t.id.toString(), ownerIndex(t.owner), t.r.toString(), t.g.toString(), t.b.toString()]; }),
@@ -302,21 +315,23 @@
 
   const OWNER = /^0x[0-9a-f]{40}$/;
 
+  function intIndex(n) {
+    return typeof n === 'number' && Number.isSafeInteger(n) && n >= 0;
+  }
+
   function unpack(raw) {
     if (!raw || !Array.isArray(raw.math) || !Array.isArray(raw.rgb) || !Array.isArray(raw.toon)) return null;
-    if (!/^\d+$/.test(String(raw.block == null ? '' : raw.block))) return null;
+    if (!intIndex(raw.block)) return null;
     try {
       const table = raw.owners == null ? null : raw.owners;
       if (table && !Array.isArray(table)) throw new Error('owners');
       function ownerAt(v) {
-        if (typeof v === 'number' || (typeof v === 'string' && /^\d+$/.test(v))) {
-          if (!table) throw new Error('owner');
-          const i = Number(v);
-          if (!Number.isInteger(i) || i < 0 || i >= table.length) throw new Error('owner');
-          if (!OWNER.test(table[i])) throw new Error('owner');
-          return table[i];
+        if (typeof v === 'number') {
+          if (!intIndex(v) || !table || v >= table.length) throw new Error('owner');
+          if (!OWNER.test(table[v])) throw new Error('owner');
+          return table[v];
         }
-        if (!OWNER.test(v)) throw new Error('owner');
+        if (typeof v !== 'string' || !OWNER.test(v)) throw new Error('owner');
         return v;
       }
       const math = raw.math.map(function (t) {
