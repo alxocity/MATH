@@ -45,6 +45,11 @@
     return list;
   }
 
+  function traitMark(glyph, label) {
+    const t = S.esc(label);
+    return '<span class="mark" role="img" title="' + t + '" aria-label="' + t + '">' + glyph + '</span>';
+  }
+
   function paintCards() {
     const list = currentList();
     const pages = Math.max(1, Math.ceil(list.length / PAGE));
@@ -57,10 +62,11 @@
     cards.innerHTML = slice.map(function (t) {
       const ch = state.kind === 'math' ? state.channels.get(t.id) : null;
       const tags = [];
+      const marks = [];
       if (ch) tags.push(Array.from(ch).join(''));
       if (state.kind === 'math') {
-        if (P.isPal(t.id)) tags.push('pal');
-        if (P.isStrobo(t.id)) tags.push('stro');
+        if (P.isPal(t.id)) marks.push(traitMark('⇌', 'palindrome, reads the same backwards'));
+        if (P.isStrobo(t.id)) marks.push(traitMark('↻', 'strobogrammatic, reads the same upside down'));
       }
       let title = String(t.id);
       let extra = '';
@@ -78,7 +84,7 @@
         grid = rgb ? S.cellsHtml(P.planesToRows(rgb.r, rgb.g, rgb.b)).replace(/<button/g, '<i').replace(/<\/button>/g, '</i>') : '';
       }
       const tag = tags.filter(Boolean).join(' ');
-      return '<article class="card"><div>' + (state.kind === 'toon' ? title : t.id) + (tag ? ' <span class="dim">' + S.esc(tag) + '</span>' : '') + '</div>' +
+      return '<article class="card"><div>' + (state.kind === 'toon' ? title : t.id) + (tag ? ' <span class="dim">' + S.esc(tag) + '</span>' : '') + marks.join('') + '</div>' +
         '<div class="dim">' + S.esc(S.short(t.owner)) + '</div>' + extra + grid +
         '<img alt="" data-svg="' + state.kind + ':' + t.id + '"></article>';
     }).join('') || '<p class="dim">' + (state.math.length || state.rgb.length || state.toon.length ? 'nothing in this filter.' : (state.indexState === 'error' ? 'index not loaded. refresh.' : 'loading index…')) + '</p>';

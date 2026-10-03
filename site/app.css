@@ -55,6 +55,7 @@ aside .who { margin: 0 0 8px; color: var(--dim); }
 .row { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin: 8px 0; }
 .eq { font-size: 22px; margin: 12px 0; }
 .dim { color: var(--dim); }
+.mark { color: var(--dim); font-size: 12px; margin-left: 5px; cursor: help; }
 .bad { color: var(--bad); }
 .preview {
   border: 1px solid var(--line);
