@@ -187,6 +187,31 @@
     });
   }
 
+  async function loadTexts(address, sel, ids, progress, label) {
+    const uniq = [];
+    const seen = new Set();
+    ids.forEach(function (id) {
+      const x = BigInt(id);
+      const k = x.toString();
+      if (seen.has(k)) return;
+      seen.add(k);
+      uniq.push(x);
+    });
+    const map = new Map();
+    if (!uniq.length) return map;
+    const calls = uniq.map(function (id) {
+      return { to: address, data: ABI.call(sel, [id]) };
+    });
+    const rows = await multicall(calls, function (d, t) {
+      if (progress) progress((label || 'text') + ' ' + d + '/' + t);
+    });
+    rows.forEach(function (row, i) {
+      if (!row || !row.success) throw new Error((label || 'text') + ' ' + uniq[i]);
+      map.set(uniq[i], ABI.decodeString(row.data));
+    });
+    return map;
+  }
+
   async function loadInventory(progress) {
     const block = await rpc('eth_blockNumber', []);
     if (block.error) throw new Error(block.error.message || 'block');
@@ -213,7 +238,9 @@
     const toon = toonIds.map(function (id, i) {
       return { id: id, owner: toonOwners[i], word: toonGets[i][0], face: toonGets[i][1], rgb: toonGets[i][2] };
     });
-    return { block: blockNum(block.result), math: math, rgb: rgb, toon: toon };
+    const words = await loadTexts(ADDR.WORD, ABI.SEL.getWord, toon.map(function (t) { return t.word; }), progress, 'WORD');
+    const faces = await loadTexts(ADDR.FACE, ABI.SEL.getFace, toon.map(function (t) { return t.face; }), progress, 'FACE');
+    return { block: blockNum(block.result), math: math, rgb: rgb, toon: toon, words: words, faces: faces };
   }
 
   async function appendIds(address, n, have, progress, label, fill) {
@@ -270,12 +297,33 @@
     const mathOwners = await loadOwners(ADDR.MATH, mathRows.map(function (t) { return t.id; }), progress, 'MATH');
     const rgbOwners = await loadOwners(ADDR.RGB, rgbRows.map(function (t) { return t.id; }), progress, 'RGB');
     const toonOwners = await loadOwners(ADDR.TOON, toonRows.map(function (t) { return t.id; }), progress, 'TOON');
+    const toon = toonRows.map(function (t, i) { return { id: t.id, owner: toonOwners[i], word: t.word, face: t.face, rgb: t.rgb }; });
+    const words = await fillTexts(base.words, toon.map(function (t) { return t.word; }), ADDR.WORD, ABI.SEL.getWord, progress, 'WORD');
+    const faces = await fillTexts(base.faces, toon.map(function (t) { return t.face; }), ADDR.FACE, ABI.SEL.getFace, progress, 'FACE');
     return {
       block: blockNum(block.result),
       math: mathRows.map(function (t, i) { return { id: t.id, owner: mathOwners[i] }; }),
       rgb: rgbRows.map(function (t, i) { return { id: t.id, owner: rgbOwners[i], r: t.r, g: t.g, b: t.b }; }),
-      toon: toonRows.map(function (t, i) { return { id: t.id, owner: toonOwners[i], word: t.word, face: t.face, rgb: t.rgb }; }),
+      toon: toon,
+      words: words,
+      faces: faces,
     };
+  }
+
+  async function fillTexts(have, ids, address, sel, progress, label) {
+    const prev = have || new Map();
+    const missing = [];
+    const seen = new Set();
+    ids.forEach(function (id) {
+      const x = BigInt(id);
+      if (prev.has(x) || seen.has(x.toString())) return;
+      seen.add(x.toString());
+      missing.push(x);
+    });
+    const more = await loadTexts(address, sel, missing, progress, label);
+    const out = new Map(prev);
+    more.forEach(function (text, id) { out.set(id, text); });
+    return out;
   }
 
   function blockNum(block) {
@@ -308,9 +356,20 @@
       math: inv.math.map(function (t) { return [t.id.toString(), ownerIndex(t.owner)]; }),
       rgb: inv.rgb.map(function (t) { return [t.id.toString(), ownerIndex(t.owner), t.r.toString(), t.g.toString(), t.b.toString()]; }),
       toon: inv.toon.map(function (t) { return [t.id.toString(), ownerIndex(t.owner), t.word.toString(), t.face.toString(), t.rgb.toString()]; }),
+      words: packTexts(inv.words),
+      faces: packTexts(inv.faces),
       blocked: blocked ? Array.from(blocked).map(function (a) { return String(a).toLowerCase(); }) : [],
       blockedDone: !!blocked,
     };
+  }
+
+  function packTexts(map) {
+    const o = {};
+    if (!map) return o;
+    Array.from(map.keys()).sort(function (a, b) { return a < b ? -1 : a > b ? 1 : 0; }).forEach(function (id) {
+      o[id.toString()] = map.get(id);
+    });
+    return o;
   }
 
   const OWNER = /^0x[0-9a-f]{40}$/;
@@ -343,6 +402,8 @@
       const toon = raw.toon.map(function (t) {
         return { id: BigInt(t[0]), owner: ownerAt(t[1]), word: BigInt(t[2]), face: BigInt(t[3]), rgb: BigInt(t[4]) };
       });
+      const words = unpackTexts(raw.words);
+      const faces = unpackTexts(raw.faces);
       const blocked = [];
       (raw.blocked || []).forEach(function (a) {
         if (!OWNER.test(a)) throw new Error('owner');
@@ -353,12 +414,26 @@
         math: math,
         rgb: rgb,
         toon: toon,
+        words: words,
+        faces: faces,
         blocked: new Set(blocked),
         blockedDone: !!raw.blockedDone,
       };
     } catch (e) {
       return null;
     }
+  }
+
+  function unpackTexts(raw) {
+    const map = new Map();
+    if (raw == null) return map;
+    if (typeof raw !== 'object' || Array.isArray(raw)) throw new Error('texts');
+    Object.keys(raw).forEach(function (k) {
+      if (!/^(0|[1-9]\d*)$/.test(k)) throw new Error('text id');
+      if (typeof raw[k] !== 'string') throw new Error('text');
+      map.set(BigInt(k), raw[k]);
+    });
+    return map;
   }
 
   function preferIndex(a, b) {
@@ -489,6 +564,7 @@
     gasPrice: gasPrice,
     loadInventory: loadInventory,
     loadDelta: loadDelta,
+    loadTexts: loadTexts,
     pack: pack,
     unpack: unpack,
     preferIndex: preferIndex,

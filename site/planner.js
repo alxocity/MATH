@@ -61,6 +61,18 @@
     return true;
   }
 
+  // Same rule as MATHRender: 0, 1 and 8 stay, 6 and 9 swap, anything else fails.
+  function isStrobo(n) {
+    const s = BigInt(n).toString();
+    for (let i = 0; i < s.length; i++) {
+      const d = s.charCodeAt(i) - 48;
+      const e = s.charCodeAt(s.length - 1 - i) - 48;
+      const rot = e === 6 ? 9 : e === 9 ? 6 : e;
+      if (rot !== d || (e > 1 && e !== 6 && e !== 8 && e !== 9)) return false;
+    }
+    return true;
+  }
+
   function bitLength(n) {
     const x = BigInt(n);
     return x === 0n ? 0 : x.toString(2).length;
@@ -555,6 +567,7 @@
     popcount: popcount,
     isPow2: isPow2,
     isPal: isPal,
+    isStrobo: isStrobo,
     gridToPlanes: gridToPlanes,
     planesToRows: planesToRows,
     fold: fold,

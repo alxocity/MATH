@@ -33,6 +33,8 @@
     filter: { q: '', popMin: '', popMax: '', pal: false, pow: false, used: 'any', sort: 'index' },
     words: [],
     faces: [],
+    wordText: new Map(),
+    faceText: new Map(),
     wordNote: '',
     faceNote: '',
     svgs: new Map(),
@@ -128,8 +130,18 @@
       state.usedRgb.add(t.rgb);
       state.usedMath.add(t.id);
     });
+    state.wordText = inv.words || new Map();
+    state.faceText = inv.faces || new Map();
     if (inv.blocked) state.blocked = inv.blocked;
     if (inv.blockedDone) state.blockedDone = true;
+  }
+
+  function persistTexts() {
+    const cached = ETH.readCache();
+    if (!cached) return;
+    state.wordText.forEach(function (text, id) { cached.words.set(id, text); });
+    state.faceText.forEach(function (text, id) { cached.faces.set(id, text); });
+    ETH.writeCache(cached, cached.blockedDone ? cached.blocked : null);
   }
 
   function mineCount() {
@@ -274,6 +286,7 @@
     noteSent: noteSent,
     sendStep: sendStep,
     show: show,
+    persistTexts: persistTexts,
   };
   globalThis.SITE = SITE;
 
@@ -300,6 +313,13 @@
       state.faces = face.ids;
       state.wordNote = word.truncated ? word.ids.length + ' of ' + word.total : String(word.total);
       state.faceNote = face.truncated ? face.ids.length + ' of ' + face.total : String(face.total);
+      const missingW = word.ids.filter(function (id) { return !state.wordText.has(id); });
+      const missingF = face.ids.filter(function (id) { return !state.faceText.has(id); });
+      const gotW = await ETH.loadTexts(ADDR.WORD, ABI.SEL.getWord, missingW);
+      const gotF = await ETH.loadTexts(ADDR.FACE, ABI.SEL.getFace, missingF);
+      gotW.forEach(function (text, id) { state.wordText.set(id, text); });
+      gotF.forEach(function (text, id) { state.faceText.set(id, text); });
+      persistTexts();
       if (state.tab === 'toon') show('toon');
     } catch (e) {
       state.wordNote = e.message;
@@ -404,16 +424,15 @@
       const progress = function (msg) {
         if (gen === loadGen) setStatus(msg);
       };
-      const before = base ? { math: base.math.length, rgb: base.rgb.length, toon: base.toon.length } : null;
+      const before = base ? { math: base.math.length, rgb: base.rgb.length, toon: base.toon.length, texts: (base.words ? base.words.size : 0) + (base.faces ? base.faces.size : 0) } : null;
       const inv = base ? await ETH.loadDelta(base, progress) : await ETH.loadInventory(progress);
       if (gen !== loadGen) return;
       state.indexState = 'ready';
       indexInventory(inv);
       const grew = !before || inv.math.length !== before.math || inv.rgb.length !== before.rgb || inv.toon.length !== before.toon;
-      if (grew) {
-        paintIndex();
-        MOLD.say('loaded', { block: state.block, math: state.math.length, rgb: state.rgb.length, toon: state.toon.length });
-      }
+      const texts = !before || inv.words.size + inv.faces.size !== before.texts;
+      if (grew || texts) paintIndex();
+      if (grew) MOLD.say('loaded', { block: state.block, math: state.math.length, rgb: state.rgb.length, toon: state.toon.length });
       if (state.account) MOLD.say('connect', { addr: short(state.account), mine: mineCount(), math: state.math.length });
       const owners = state.math.map(function (t) { return t.owner; });
       const scan = ETH.scanResult(await ETH.scanBlocked(owners, progress));
@@ -422,7 +441,14 @@
       state.blockedDone = scan.blockedDone;
       state.holdersReady = true;
       prepareHeart();
-      const saved = ETH.cacheScan({ block: state.block, math: state.math, rgb: state.rgb, toon: state.toon }, scan);
+      const saved = ETH.cacheScan({
+        block: state.block,
+        math: state.math,
+        rgb: state.rgb,
+        toon: state.toon,
+        words: state.wordText,
+        faces: state.faceText,
+      }, scan);
       if (saved) {
         MOLD.say('blocked', { n: scan.blocked.size });
         setStatus('block ' + state.block + ' · ' + scan.blocked.size + ' blocked');

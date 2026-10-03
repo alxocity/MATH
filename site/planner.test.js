@@ -28,6 +28,14 @@ assert.strictEqual(P.isPow2(8n), true);
 assert.strictEqual(P.isPow2(6n), false);
 assert.strictEqual(P.isPal(121n), true);
 assert.strictEqual(P.isPal(12n), false);
+assert.strictEqual(P.isStrobo(1n), true);
+assert.strictEqual(P.isStrobo(8n), true);
+assert.strictEqual(P.isStrobo(69n), true);
+assert.strictEqual(P.isStrobo(96n), true);
+assert.strictEqual(P.isStrobo(609n), true);
+assert.strictEqual(P.isStrobo(2n), false);
+assert.strictEqual(P.isStrobo(121n), false);
+assert.strictEqual(P.isStrobo(10n), false);
 assert.strictEqual(P.popcount(7n), 3);
 
 const user = '0xabcabcabcabcabcabcabcabcabcabcabcabcabca';

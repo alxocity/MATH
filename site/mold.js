@@ -50,6 +50,9 @@
     toon: [
       'four tokens you already hold. grey ones are spent.',
     ],
+    toonPick: [
+      '{word} on {face}.',
+    ],
     simOk: [
       'simulation held. the wallet is next, and only if you press send.',
     ],
