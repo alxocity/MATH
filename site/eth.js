@@ -10,16 +10,22 @@
     TOON_RENDER: '0x1E1a576e4186551e4DEdE58Ccc2DCC34697159Cb',
     MULTI: '0xcA11bde05977b3631167028862bE2a173976CA11',
   };
-  const DEFAULT_RPC = 'https://ethereum.publicnode.com';
+  const RPCS = [
+    'https://ethereum.publicnode.com',
+    'https://eth.drpc.org',
+    'https://mainnet.gateway.tenderly.co',
+  ];
   const CACHE = 'math.site.v1';
   const ABI = globalThis.ABI;
 
-  function rpcUrl() {
-    try {
-      const u = localStorage.getItem('math.site.rpc');
-      if (u && /^https:\/\//.test(u)) return u;
-    } catch (e) { /* private mode */ }
-    return DEFAULT_RPC;
+  // Reverts, including out-of-gas, are answers. Fail over only when the node itself failed.
+  function rpcRetryable(status, error) {
+    if (status === 429 || status >= 500) return true;
+    if (!error) return false;
+    const msg = String(error.message || '');
+    if (error.code === 3 || /execution reverted/i.test(msg)) return false;
+    if (error.code === -32603 || error.code === -32005) return true;
+    return /rate|limit|timeout|busy|temporarily|internal error|unauthorized|unavailable|overloaded/i.test(msg);
   }
 
   function sleep(ms) {
@@ -28,23 +34,22 @@
 
   async function rpc(method, params) {
     let last;
-    for (let attempt = 0; attempt < 4; attempt++) {
+    const tries = RPCS.length * 2;
+    for (let attempt = 0; attempt < tries; attempt++) {
+      const url = RPCS[attempt % RPCS.length];
       try {
-        const res = await fetch(rpcUrl(), {
+        const res = await fetch(url, {
           method: 'POST',
           headers: { 'content-type': 'application/json' },
           body: JSON.stringify({ jsonrpc: '2.0', id: 1, method: method, params: params }),
         });
         if (res.status === 429 || res.status >= 500) throw new Error('http ' + res.status);
         const j = await res.json();
-        if (j.error) {
-          const msg = j.error.message || '';
-          if (/rate|limit|timeout|busy|temporarily/i.test(msg) && attempt < 3) throw new Error(msg);
-        }
+        if (rpcRetryable(res.status, j.error)) throw new Error((j.error && j.error.message) || 'rpc');
         return j;
       } catch (e) {
         last = e;
-        await sleep(280 * (attempt + 1));
+        if (attempt % RPCS.length === RPCS.length - 1) await sleep(280 * (1 + Math.floor(attempt / RPCS.length)));
       }
     }
     throw last;
@@ -146,12 +151,14 @@
     return BigInt(j.result);
   }
 
-  async function loadIds(address, n, progress, label) {
+  async function loadIds(address, n, progress, label, start) {
+    const from = start || 0;
     const calls = [];
-    for (let i = 0; i < n; i++) calls.push({ to: address, data: ABI.call(ABI.SEL.tokenByIndex, [i]) });
-    const rows = await multicall(calls, function (d, t) { if (progress) progress(label + ' ' + d + '/' + t); });
+    for (let i = from; i < n; i++) calls.push({ to: address, data: ABI.call(ABI.SEL.tokenByIndex, [i]) });
+    if (!calls.length) return [];
+    const rows = await multicall(calls, function (d, t) { if (progress) progress(label + ' ' + (from + d) + '/' + n); });
     return rows.map(function (row, i) {
-      if (!row || !row.success) throw new Error(label + ' index ' + i);
+      if (!row || !row.success) throw new Error(label + ' index ' + (from + i));
       return ABI.decodeUint(row.data);
     });
   }
@@ -208,6 +215,62 @@
     return { block: BigInt(block.result).toString(), math: math, rgb: rgb, toon: toon };
   }
 
+  async function appendIds(address, n, have, progress, label, fill) {
+    if (n < have) return null;
+    if (n === have) return [];
+    const ids = await loadIds(address, n, progress, label, have);
+    const owners = await loadOwners(address, ids, progress, label);
+    const extra = fill ? await fill(ids) : null;
+    return ids.map(function (id, i) {
+      const row = { id: id, owner: owners[i] };
+      if (extra) extra(row, i);
+      return row;
+    });
+  }
+
+  // Newer enumeration indexes only. A shorter supply means the snapshot is stale, so reload.
+  async function loadDelta(base, progress) {
+    const block = await rpc('eth_blockNumber', []);
+    if (block.error) throw new Error(block.error.message || 'block');
+    const supplies = await multicall([
+      { to: ADDR.MATH, data: '0x' + ABI.SEL.totalSupply },
+      { to: ADDR.RGB, data: '0x' + ABI.SEL.totalSupply },
+      { to: ADDR.TOON, data: '0x' + ABI.SEL.totalSupply },
+    ]);
+    if (!supplies[0] || !supplies[0].success || !supplies[1] || !supplies[1].success || !supplies[2] || !supplies[2].success) {
+      throw new Error('supply');
+    }
+    const mathN = Number(ABI.decodeUint(supplies[0].data));
+    const rgbN = Number(ABI.decodeUint(supplies[1].data));
+    const toonN = Number(ABI.decodeUint(supplies[2].data));
+    if (mathN < base.math.length || rgbN < base.rgb.length || toonN < base.toon.length) {
+      return loadInventory(progress);
+    }
+    const mathMore = await appendIds(ADDR.MATH, mathN, base.math.length, progress, 'MATH');
+    const rgbMore = await appendIds(ADDR.RGB, rgbN, base.rgb.length, progress, 'RGB', async function (ids) {
+      const gets = await loadGets(ADDR.RGB, ids, progress, 'RGB');
+      return function (row, i) {
+        row.r = gets[i][0];
+        row.g = gets[i][1];
+        row.b = gets[i][2];
+      };
+    });
+    const toonMore = await appendIds(ADDR.TOON, toonN, base.toon.length, progress, 'TOON', async function (ids) {
+      const gets = await loadGets(ADDR.TOON, ids, progress, 'TOON');
+      return function (row, i) {
+        row.word = gets[i][0];
+        row.face = gets[i][1];
+        row.rgb = gets[i][2];
+      };
+    });
+    return {
+      block: BigInt(block.result).toString(),
+      math: base.math.concat(mathMore),
+      rgb: base.rgb.concat(rgbMore),
+      toon: base.toon.concat(toonMore),
+    };
+  }
+
   function pack(inv, blocked) {
     return {
       block: inv.block,
@@ -252,6 +315,16 @@
     } catch (e) {
       return null;
     }
+  }
+
+  function preferIndex(a, b) {
+    if (!a) return b || null;
+    if (!b) return a;
+    if (a.math.length !== b.math.length) return a.math.length > b.math.length ? a : b;
+    if (a.rgb.length !== b.rgb.length) return a.rgb.length > b.rgb.length ? a : b;
+    if (a.toon.length !== b.toon.length) return a.toon.length > b.toon.length ? a : b;
+    if (!!a.blockedDone !== !!b.blockedDone) return a.blockedDone ? a : b;
+    return a;
   }
 
   function readCache() {
@@ -347,12 +420,16 @@
 
   globalThis.ETH = {
     ADDR: ADDR,
-    DEFAULT_RPC: DEFAULT_RPC,
-    rpcUrl: rpcUrl,
+    RPCS: RPCS,
+    rpcRetryable: rpcRetryable,
     reason: reason,
     ownerOf: ownerOf,
     gasPrice: gasPrice,
     loadInventory: loadInventory,
+    loadDelta: loadDelta,
+    pack: pack,
+    unpack: unpack,
+    preferIndex: preferIndex,
     readCache: readCache,
     writeCache: writeCache,
     scanBlocked: scanBlocked,

@@ -35,6 +35,9 @@
     rgb: [
       'pixel i is bit 255-i. the first cell is the high bit. three planes, then one add.',
     ],
+    heart: [
+      'red heart. green 256 and blue 512 are already minted and unused. the red plane still needs a route.',
+    ],
     rgbBad: [
       '{why}. the channel is closed.',
     ],
@@ -63,7 +66,7 @@
 
   const SUGGEST = [
     { label: '1 + 1', key: 'mintReady', tab: 'mint', act: 'mint11', vars: { a: '1', b: '1', n: '2', roy: 'check the owners' } },
-    { label: 'heart', key: 'rgb', tab: 'rgb', act: 'heart' },
+    { label: 'heart', key: 'heart', tab: 'rgb', act: 'heart' },
     { label: 'route 15', key: 'route', tab: 'route', act: 'route15', vars: { mints: '?', net: '?' } },
     { label: 'palindromes', key: 'browse', tab: 'browse', act: 'pal' },
     { label: 'credits', key: 'boot', tab: 'about', act: 'about' },

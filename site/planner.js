@@ -12,6 +12,7 @@
   const G_ADD = 175000n; // estimate, MATH.add
   const G_RGB = 330000n; // estimate, RGB.add
   const MAX = (1n << 256n) - 1n;
+  // Red heart. G is 256 and B is 512: both exist, sit on the last row, and are unused as channels.
   const HEART = [
     'kkkkkkkkkkkkkkkk',
     'kkrrrkkkkkrrrkkk',
@@ -28,7 +29,7 @@
     'kkkkkkkrkkkkkkkk',
     'kkkkkkkkkkkkkkkk',
     'kkkkkkkkkkkkkkkk',
-    'kkkkkkkkkkkkkkkw',
+    'kkkkkkbgkkkkkkkk',
   ];
 
   function popcount(n) {

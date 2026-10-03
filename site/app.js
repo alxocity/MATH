@@ -239,7 +239,7 @@
     });
   }
 
-  function show(tab) {
+  function show(tab, quiet) {
     state.tab = tab;
     location.hash = tab;
     document.querySelectorAll('nav button').forEach(function (b) {
@@ -247,6 +247,7 @@
     });
     const view = $('#view');
     SITE[tab](view);
+    if (quiet) return;
     if (tab === 'browse') MOLD.say('browse');
     if (tab === 'rgb') MOLD.say('rgb');
     if (tab === 'toon') MOLD.say('toon');
@@ -304,34 +305,60 @@
 
   let loadGen = 0;
 
+  async function readSnapshot() {
+    try {
+      const res = await fetch('index.json');
+      if (!res.ok) return null;
+      return ETH.unpack(await res.json());
+    } catch (e) {
+      return null;
+    }
+  }
+
+  function paintIndex() {
+    setStatus('block ' + state.block);
+    if (state.tab === 'browse' || state.tab === 'toon') show(state.tab);
+    else if (state.tab === 'rgb' && $('#rgbMeta') && state.planes) {
+      $('#rgbMeta').textContent = SITE.planeIssues(state.planes).join(', ');
+    }
+  }
+
   async function refresh() {
     const gen = ++loadGen;
-    setStatus('loading');
+    let base = null;
+    try {
+      base = ETH.preferIndex(ETH.readCache(), await readSnapshot());
+    } catch (e) { /* snapshot miss falls through */ }
+    if (gen !== loadGen) return;
+    if (base) {
+      indexInventory(base);
+      paintIndex();
+      MOLD.say('loaded', { block: state.block, math: state.math.length, rgb: state.rgb.length, toon: state.toon.length });
+    } else {
+      setStatus('loading');
+    }
     try {
       const gp = await ETH.gasPrice();
-      state.gasPrice = gp;
+      if (gen === loadGen) state.gasPrice = gp;
     } catch (e) { /* keep last */ }
     try {
-      const inv = await ETH.loadInventory(function (msg) {
-        if (gen !== loadGen) return;
-        setStatus(msg);
-      });
+      const progress = function (msg) {
+        if (gen === loadGen) setStatus(msg);
+      };
+      const before = base ? { math: base.math.length, rgb: base.rgb.length, toon: base.toon.length } : null;
+      const inv = base ? await ETH.loadDelta(base, progress) : await ETH.loadInventory(progress);
       if (gen !== loadGen) return;
       indexInventory(inv);
       ETH.writeCache(inv, null);
       state.blockedDone = false;
-      setStatus('block ' + state.block);
-      MOLD.say('loaded', { block: state.block, math: state.math.length, rgb: state.rgb.length, toon: state.toon.length });
-      if (state.account) MOLD.say('connect', { addr: short(state.account), mine: mineCount(), math: state.math.length });
-      if (state.tab === 'browse' || state.tab === 'toon') show(state.tab);
-      else if (state.tab === 'rgb' && $('#rgbMeta') && state.planes) {
-        const issues = SITE.planeIssues(state.planes);
-        $('#rgbMeta').textContent = issues.join(', ');
+      const grew = !before || inv.math.length !== before.math || inv.rgb.length !== before.rgb || inv.toon.length !== before.toon;
+      if (grew) {
+        paintIndex();
+        MOLD.say('loaded', { block: state.block, math: state.math.length, rgb: state.rgb.length, toon: state.toon.length });
       }
+      if (state.account) MOLD.say('connect', { addr: short(state.account), mine: mineCount(), math: state.math.length });
       const owners = state.math.map(function (t) { return t.owner; });
-      const blocked = await ETH.scanBlocked(owners, function (msg) {
-        if (gen === loadGen) setStatus(msg);
-      });
+      const blocked = await ETH.scanBlocked(owners, progress);
       if (gen !== loadGen) return;
       state.blocked = blocked;
       state.blockedDone = true;
@@ -339,7 +366,7 @@
       MOLD.say('blocked', { n: blocked.size });
       setStatus('block ' + state.block + ' · ' + blocked.size + ' blocked');
     } catch (e) {
-      setStatus(e.message);
+      if (gen === loadGen) setStatus(e.message);
     }
   }
 
@@ -359,7 +386,8 @@
       }
       if (s.act === 'heart') {
         state.grid = P.HEART.slice();
-        show('rgb');
+        show('rgb', true);
+        MOLD.say('heart');
         return;
       }
       if (s.act === 'route15') {
@@ -403,7 +431,7 @@
         ethereum.on('chainChanged', onChain);
       }
     }
-    if (!cached) refresh();
+    refresh();
   }
 
   SITE.boot = boot;
