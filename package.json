@@ -6,7 +6,7 @@
     "node": ">=18"
   },
   "scripts": {
-    "test": "node test/proxy.js && node site/planner.test.js"
+    "test": "node test/proxy.js && node site/planner.test.js && node site/eth.test.js"
   },
   "devDependencies": {
     "@openzeppelin/contracts": "2.4.0"

@@ -174,7 +174,7 @@
     const rows = await multicall(calls, function (d, t) { if (progress) progress(label + ' get ' + d + '/' + t); });
     return rows.map(function (row, i) {
       if (!row || !row.success) throw new Error(label + ' get ' + ids[i]);
-      const w = ABI.decodeWords(row.data);
+      const w = ABI.wordsOf(row.data);
       return w;
     });
   }
@@ -219,16 +219,39 @@
     };
   }
 
+  const OWNER = /^0x[0-9a-f]{40}$/;
+
   function unpack(raw) {
-    if (!raw || !raw.math) return null;
-    return {
-      block: raw.block,
-      math: raw.math.map(function (t) { return { id: BigInt(t[0]), owner: t[1] }; }),
-      rgb: raw.rgb.map(function (t) { return { id: BigInt(t[0]), owner: t[1], r: BigInt(t[2]), g: BigInt(t[3]), b: BigInt(t[4]) }; }),
-      toon: raw.toon.map(function (t) { return { id: BigInt(t[0]), owner: t[1], word: BigInt(t[2]), face: BigInt(t[3]), rgb: BigInt(t[4]) }; }),
-      blocked: new Set(raw.blocked || []),
-      blockedDone: !!raw.blockedDone,
-    };
+    if (!raw || !Array.isArray(raw.math) || !Array.isArray(raw.rgb) || !Array.isArray(raw.toon)) return null;
+    try {
+      const math = raw.math.map(function (t) {
+        if (!OWNER.test(t[1])) throw new Error('owner');
+        return { id: BigInt(t[0]), owner: t[1] };
+      });
+      const rgb = raw.rgb.map(function (t) {
+        if (!OWNER.test(t[1])) throw new Error('owner');
+        return { id: BigInt(t[0]), owner: t[1], r: BigInt(t[2]), g: BigInt(t[3]), b: BigInt(t[4]) };
+      });
+      const toon = raw.toon.map(function (t) {
+        if (!OWNER.test(t[1])) throw new Error('owner');
+        return { id: BigInt(t[0]), owner: t[1], word: BigInt(t[2]), face: BigInt(t[3]), rgb: BigInt(t[4]) };
+      });
+      const blocked = [];
+      (raw.blocked || []).forEach(function (a) {
+        if (!OWNER.test(a)) throw new Error('owner');
+        blocked.push(a);
+      });
+      return {
+        block: raw.block,
+        math: math,
+        rgb: rgb,
+        toon: toon,
+        blocked: new Set(blocked),
+        blockedDone: !!raw.blockedDone,
+      };
+    } catch (e) {
+      return null;
+    }
   }
 
   function readCache() {
@@ -243,19 +266,14 @@
     } catch (e) { /* quota */ }
   }
 
-  // Empty call with 1 finney and a 23300 gas cap.
-  // Out-of-gas is not a revert: WETH dies that way and must stay usable until add() is simulated.
-  // A real revert (no receive, or receive that reverts) marks the holder blocked for MATH.transfer.
+  // 1 finney, 23300 gas. MATH.transfer forwards 2300, so out-of-gas here means add() reverts.
   async function probeHolder(holder) {
     const code = await rpc('eth_getCode', [holder, 'latest']);
     if (code.error) return false;
     const c = code.result || '0x';
     if (c === '0x' || c === '0x0') return false;
     const j = await rpc('eth_call', [{ to: holder, value: '0x38d7ea4c68000', gas: '0x5b04' }, 'latest']);
-    if (!j.error) return false;
-    const msg = String(j.error.message || '').toLowerCase();
-    if (j.error.code === -32003 || msg.includes('out of gas') || msg.includes('gas required exceeds')) return false;
-    return true;
+    return !!j.error;
   }
 
   async function scanBlocked(owners, progress) {
@@ -308,14 +326,18 @@
   // Wallet popup. Callers must simulate and re-check existence first.
   async function send(tx) {
     if (!globalThis.ethereum) throw new Error('no wallet');
+    tx.chainId = '0x1';
     return ethereum.request({ method: 'eth_sendTransaction', params: [tx] });
   }
 
   async function ensureChain() {
     if (!globalThis.ethereum) throw new Error('no wallet');
-    const id = await ethereum.request({ method: 'eth_chainId' });
-    if (id === '0x1') return;
-    await ethereum.request({ method: 'wallet_switchEthereumChain', params: [{ chainId: '0x1' }] });
+    let id = await ethereum.request({ method: 'eth_chainId' });
+    if (id !== '0x1') {
+      await ethereum.request({ method: 'wallet_switchEthereumChain', params: [{ chainId: '0x1' }] });
+      id = await ethereum.request({ method: 'eth_chainId' });
+    }
+    if (id !== '0x1') throw new Error('wrong network');
   }
 
   async function receipt(hash) {

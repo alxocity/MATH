@@ -9,8 +9,8 @@
   const MSG_MATH = 2n * ROY_WEI;
   const MSG_RGB = 30n * ROY_WEI;
   const RGB_ROY = 10n * ROY_WEI;
-  const G_ADD = 175000n;
-  const G_RGB = 330000n;
+  const G_ADD = 175000n; // estimate, MATH.add
+  const G_RGB = 330000n; // estimate, RGB.add
   const MAX = (1n << 256n) - 1n;
   const HEART = [
     'kkkkkkkkkkkkkkkk',
