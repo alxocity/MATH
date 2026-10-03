@@ -21,6 +21,8 @@
     usedFace: new Set(),
     usedRgb: new Set(),
     usedMath: new Set(),
+    rgbBy: { r: new Map(), g: new Map(), b: new Map() },
+    toonBy: { word: new Map(), face: new Map(), rgb: new Map(), math: new Map() },
     channels: new Map(),
     blocked: new Set(),
     blockedDone: false,
@@ -111,11 +113,15 @@
     state.usedR = new Set();
     state.usedG = new Set();
     state.usedB = new Set();
+    state.rgbBy = { r: new Map(), g: new Map(), b: new Map() };
     state.channels = new Map();
     state.rgb.forEach(function (t) {
       state.usedR.add(t.r);
       state.usedG.add(t.g);
       state.usedB.add(t.b);
+      state.rgbBy.r.set(t.r, t.id);
+      state.rgbBy.g.set(t.g, t.id);
+      state.rgbBy.b.set(t.b, t.id);
       ['r', 'g', 'b'].forEach(function (ch) {
         const id = t[ch];
         if (!state.channels.has(id)) state.channels.set(id, new Set());
@@ -126,11 +132,16 @@
     state.usedFace = new Set();
     state.usedRgb = new Set();
     state.usedMath = new Set();
+    state.toonBy = { word: new Map(), face: new Map(), rgb: new Map(), math: new Map() };
     state.toon.forEach(function (t) {
       state.usedWord.add(t.word);
       state.usedFace.add(t.face);
       state.usedRgb.add(t.rgb);
       state.usedMath.add(t.id);
+      state.toonBy.word.set(t.word, t.id);
+      state.toonBy.face.set(t.face, t.id);
+      state.toonBy.rgb.set(t.rgb, t.id);
+      state.toonBy.math.set(t.id, t.id);
     });
     state.wordText = inv.words || new Map();
     state.faceText = inv.faces || new Map();
@@ -258,6 +269,17 @@
     });
   }
 
+  let lastRule = '';
+
+  function hit(reason) {
+    const next = reason || '';
+    if (next === lastRule) return;
+    lastRule = next;
+    if (!next) return;
+    const said = globalThis.RULES.mold(next);
+    if (said) MOLD.say(said.key, said.vars);
+  }
+
   function show(tab, quiet) {
     state.tab = tab;
     location.hash = tab;
@@ -290,6 +312,7 @@
     noteSent: noteSent,
     sendStep: sendStep,
     show: show,
+    hit: hit,
     persistTexts: persistTexts,
   };
   globalThis.SITE = SITE;
@@ -365,6 +388,7 @@
   function paintIndex() {
     setStatus('block ' + state.block);
     if (state.tab === 'browse' || state.tab === 'toon') show(state.tab);
+    else if (state.tab === 'mint' && $('#send')) SITE.paintMint(false);
     else if (state.tab === 'rgb' && $('#rgbMeta') && state.planes) {
       $('#rgbMeta').textContent = SITE.planeIssues(state.planes).join(', ');
     }

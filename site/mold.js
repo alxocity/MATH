@@ -48,7 +48,25 @@
       '{why}. the channel is closed.',
     ],
     toon: [
-      'four tokens you already hold. grey ones are spent.',
+      'four tokens you already hold. grey picks say why.',
+    ],
+    rgbTaken: [
+      "that {color}'s taken. forever. pick another.",
+    ],
+    rgbImage: [
+      "that picture already exists. rgb doesn't do sequels.",
+    ],
+    payout: [
+      "that holder can't take the cut. the mint stays shut.",
+    ],
+    notYours: [
+      "you don't own that. toon only takes what you hold.",
+    ],
+    toonSpent: [
+      'that {kind} is already in a toon. one use. then never.',
+    ],
+    toonMath: [
+      'that math already grew a toon. the id is taken.',
     ],
     toonPick: [
       '{word} on {face}.',
