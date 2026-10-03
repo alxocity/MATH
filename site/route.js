@@ -3,6 +3,11 @@
   const state = S.state;
   const $ = S.$;
   const P = globalThis.PLAN;
+  const RULES = globalThis.RULES;
+
+  function stepBlocked(s) {
+    return state.blocked.has(s.payTo[0]) || state.blocked.has(s.payTo[1]);
+  }
 
   function paintRoute() {
     const host = $('#pieces');
@@ -54,12 +59,12 @@
       ', msg.value ' + S.fmt(built.msgValue) + ', net ~' + S.fmt(built.net) + warn;
     if (steps) {
       steps.innerHTML = built.steps.map(function (s, i) {
-        const blocked = state.blocked.has(s.payTo[0]) || state.blocked.has(s.payTo[1]);
+        const blocked = stepBlocked(s);
         return '<div class="step">' + s.a + ' + ' + s.b + ' = ' + s.result +
           (s.exists ? ' <span class="dim">exists</span>' : '') +
-          (blocked ? ' <span class="bad">blocked holder</span>' : '') +
+          (blocked ? ' <span class="bad">' + S.esc(RULES.payout()) + '</span>' : '') +
           '<div class="dim">pay ' + S.esc(S.short(s.payTo[0])) + ' ' + S.esc(S.short(s.payTo[1])) + ' royalty ' + S.fmt(s.royalty) + '</div>' +
-          (s.exists ? '' : '<button type="button" data-step="' + i + '">simulate + send</button>') +
+          (s.exists || blocked ? '' : '<button type="button" data-step="' + i + '">simulate + send</button>') +
           '</div>';
       }).join('') || '<p class="dim">already minted.</p>';
       steps.querySelectorAll('[data-step]').forEach(function (b) {
@@ -100,6 +105,7 @@
       state.routeBuilt = built;
       state.preview = '';
       MOLD.say('route', { mints: built.mints, net: S.fmt(built.net) });
+      if (built.steps.some(stepBlocked)) S.hit(RULES.payout());
     } catch (e) {
       state.routeBuilt = null;
       state.routePieces = [];

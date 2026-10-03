@@ -6,6 +6,17 @@
   const P = globalThis.PLAN;
   const ABI = globalThis.ABI;
   const ADDR = ETH.ADDR;
+  const RULES = globalThis.RULES;
+
+  function mintWhy(pair) {
+    if (!pair) return '';
+    const oa = state.supply.get(pair.a);
+    const ob = state.supply.get(pair.b);
+    if ((oa && state.blocked.has(oa)) || (ob && state.blocked.has(ob))) return RULES.payout();
+    if (pair.n > P.MAX) return 'overflow';
+    if (state.supply.has(pair.n)) return 'already minted';
+    return '';
+  }
 
   function readPair() {
     let a, b;
@@ -23,13 +34,18 @@
       (roy.join('\n') || 'owners unknown') + '\nwallet signs this. the page cannot.';
   }
 
-  function paintMint(doSim) {
+  function paintMint(doSim, speak) {
     const pair = readPair();
     const eq = $('#eq');
     const meta = $('#mintMeta');
     const grid = $('#grid');
+    const send = $('#send');
+    const whyEl = $('#sendWhy');
     if (!pair) {
       if (eq) eq.textContent = 'a + b = ?';
+      if (send) send.disabled = false;
+      if (whyEl) whyEl.textContent = '';
+      if (speak) S.hit('');
       return;
     }
     const overflow = pair.n > P.MAX;
@@ -38,12 +54,12 @@
     const oa = state.supply.get(pair.a);
     const ob = state.supply.get(pair.b);
     const exists = state.supply.has(pair.n);
+    const why = mintWhy(pair);
     const lines = [];
     if (!oa) lines.push('a is not in the loaded index');
     if (!ob) lines.push('b is not in the loaded index');
     if (exists) lines.push('exists, owner ' + state.supply.get(pair.n));
-    if (oa && state.blocked.has(oa)) lines.push('a holder blocked');
-    if (ob && state.blocked.has(ob)) lines.push('b holder blocked');
+    if (why === RULES.payout()) lines.push(why);
     const net = (oa && oa === S.me() ? 0n : P.ROY_WEI) + (ob && ob === S.me() ? 0n : P.ROY_WEI) + P.G_ADD * state.gasPrice;
     lines.push('pays ' + (oa ? S.short(oa) : '?') + ' and ' + (ob ? S.short(ob) : '?'));
     lines.push('msg.value 0.002, net about ' + S.fmt(net) + ' ETH after refunds and gas');
@@ -51,7 +67,10 @@
     const preview = mintPreview(pair.a, pair.b, pair.n, oa, ob);
     state.preview = preview;
     if ($('#preview')) $('#preview').textContent = preview;
-    if (doSim) runSim(pair, preview);
+    if (send) send.disabled = !!why;
+    if (whyEl) whyEl.textContent = why;
+    if (speak) S.hit(why);
+    if (doSim && !overflow && !(why && RULES.mold(why))) runSim(pair, preview);
   }
 
   async function runSim(pair, preview) {
@@ -105,12 +124,19 @@
       '<div id="grid"></div>' +
       '<p id="mintMeta"></p>' +
       '<div class="preview" id="preview">simulate, then send. this page does not sign.</div>' +
-      '<div class="row"><button type="button" id="sim">simulate</button><button type="button" id="send">send add</button></div>';
-    const draw = function () { paintMint(false); };
+      '<div class="row"><button type="button" id="sim">simulate</button><button type="button" id="send">send add</button>' +
+      '<span id="sendWhy" class="bad"></span></div>';
+    const draw = function () { paintMint(false, true); };
     $('#a').addEventListener('input', draw);
     $('#b').addEventListener('input', draw);
-    $('#sim').onclick = function () { paintMint(true); };
-    $('#send').onclick = function () { sendMath(); };
+    $('#sim').onclick = function () { paintMint(true, true); };
+    $('#send').onclick = function () {
+      const pair = readPair();
+      const why = mintWhy(pair);
+      S.hit(why);
+      if (why) return;
+      sendMath();
+    };
     paintMint(false);
   }
 

@@ -6,6 +6,7 @@
   const P = globalThis.PLAN;
   const ABI = globalThis.ABI;
   const ADDR = ETH.ADDR;
+  const RULES = globalThis.RULES;
 
   function syncPlanes() {
     try { state.planes = P.gridToPlanes(state.grid); } catch (e) { state.planes = null; }
@@ -13,12 +14,33 @@
 
   function planeIssues(p) {
     if (!p) return ['grid'];
+    const zero = [];
+    if (p.R === 0n) zero.push('R is 0');
+    if (p.G === 0n) zero.push('G is 0');
+    if (p.B === 0n) zero.push('B is 0');
+    if (zero.length) return zero;
+    const image = RULES.rgbImage(p.R, p.G, p.B, state.rgbBy.r, state.rgbBy.g, state.rgbBy.b);
+    if (image) return [image];
     const out = [];
-    [['R', p.R, state.usedR], ['G', p.G, state.usedG], ['B', p.B, state.usedB]].forEach(function (row) {
-      if (row[1] === 0n) out.push(row[0] + ' is 0');
-      else if (row[2].has(row[1])) out.push(row[0] + ' already used');
+    [['r', p.R, state.rgbBy.r], ['g', p.G, state.rgbBy.g], ['b', p.B, state.rgbBy.b]].forEach(function (row) {
+      const reason = RULES.rgbChannel(row[0], row[1], row[2]);
+      if (reason) out.push(reason);
     });
     return out;
+  }
+
+  function payBlocked(step) {
+    return state.blocked.has(step.payTo[0]) || state.blocked.has(step.payTo[1]);
+  }
+
+  function rgbQueueWhy(item) {
+    const image = RULES.rgbImage(item.r, item.g, item.b, state.rgbBy.r, state.rgbBy.g, state.rgbBy.b);
+    if (image) return image;
+    let why = '';
+    [['r', item.r, state.rgbBy.r], ['g', item.g, state.rgbBy.g], ['b', item.b, state.rgbBy.b]].forEach(function (row) {
+      if (!why) why = RULES.rgbChannel(row[0], row[1], row[2]);
+    });
+    return why;
   }
 
   function writePlaneInputs() {
@@ -69,11 +91,16 @@
     host.innerHTML = state.queue.map(function (tx, i) {
       if (tx.kind === 'math') {
         const step = tx.step;
+        const why = payBlocked(step) ? RULES.payout() : '';
         return '<div class="step">' + (i + 1) + '. ' + step.a + ' + ' + step.b + ' = ' + step.result +
-          ' <button type="button" data-q="' + i + '">simulate + send</button></div>';
+          (why ? ' <span class="bad">' + S.esc(why) + '</span>' : ' <button type="button" data-q="' + i + '">simulate + send</button>') +
+          '</div>';
       }
+      const why = rgbQueueWhy(tx);
       return '<div class="step">' + (i + 1) + '. RGB.add ' + tx.r + ', ' + tx.g + ', ' + tx.b +
-        ' value 0.03 <button type="button" data-q="' + i + '">simulate + send</button></div>';
+        ' value 0.03' +
+        (why ? ' <span class="bad">' + S.esc(why) + '</span>' : ' <button type="button" data-q="' + i + '">simulate + send</button>') +
+        '</div>';
     }).join('');
     host.querySelectorAll('[data-q]').forEach(function (b) {
       b.onclick = function () { sendQueue(Number(b.dataset.q)); };
@@ -86,9 +113,11 @@
     const meta = $('#rgbMeta');
     if (issues.length) {
       if (meta) meta.textContent = issues.join(', ');
-      MOLD.say('rgbBad', { why: issues[0] });
       state.queue = [];
       paintQueue();
+      const rule = issues.find(function (s) { return RULES.mold(s); });
+      if (rule) S.hit(rule);
+      else MOLD.say('rgbBad', { why: issues[0] });
       return;
     }
     const p = state.planes;
@@ -127,6 +156,13 @@
       if (meta) meta.textContent = e.message;
     }
     paintQueue();
+    let qWhy = '';
+    state.queue.forEach(function (item) {
+      if (qWhy) return;
+      if (item.kind === 'math' && payBlocked(item.step)) qWhy = RULES.payout();
+      else if (item.kind === 'rgb') qWhy = rgbQueueWhy(item);
+    });
+    if (qWhy) S.hit(qWhy);
   }
 
   async function sendQueue(i) {
@@ -205,7 +241,10 @@
       syncPlanes();
       writePlaneInputs();
       paintTraits();
-      $('#rgbMeta').textContent = planeIssues(state.planes).join(', ');
+      const issues = planeIssues(state.planes);
+      $('#rgbMeta').textContent = issues.join(', ');
+      const rule = issues.find(function (s) { return RULES.mold(s); });
+      S.hit(rule || '');
     };
     $('#heart').onclick = function () { S.applyHeart(false); };
     $('#shuffle').onclick = function () { S.applyHeart(true); };
@@ -258,7 +297,10 @@
           const B = BigInt($('#pB').value.trim());
           state.grid = P.planesToRows(R, G, B);
           state.planes = { R: R, G: G, B: B };
-          S.show('rgb');
+          const issues = planeIssues(state.planes);
+          const rule = issues.find(function (s) { return RULES.mold(s); });
+          S.show('rgb', true);
+          S.hit(rule || '');
         } catch (e) { /* keep grid */ }
       });
     });
