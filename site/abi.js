@@ -90,9 +90,17 @@
 
   function decodeString(data) {
     const h = String(data).replace(/^0x/, '');
-    if (h.length < 128) return '';
-    const len = Number(BigInt('0x' + h.slice(64, 128)));
-    const bytes = h.slice(128, 128 + len * 2);
+    if (!h) return '';
+    if (h.length < 64 || h.length % 2) throw new Error('string');
+    const offset = Number(BigInt('0x' + h.slice(0, 64)));
+    if (!Number.isSafeInteger(offset) || offset < 0) throw new Error('string');
+    const pos = offset * 2;
+    if (pos + 64 > h.length) throw new Error('string');
+    const len = Number(BigInt('0x' + h.slice(pos, pos + 64)));
+    if (!Number.isSafeInteger(len) || len < 0) throw new Error('string');
+    const end = pos + 64 + len * 2;
+    if (end > h.length) throw new Error('string');
+    const bytes = h.slice(pos + 64, end);
     const arr = new Uint8Array(len);
     for (let i = 0; i < len; i++) arr[i] = parseInt(bytes.slice(i * 2, i * 2 + 2), 16);
     return new TextDecoder().decode(arr);

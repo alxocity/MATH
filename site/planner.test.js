@@ -18,6 +18,15 @@ assert.strictEqual(decoded.length, 1);
 assert.strictEqual(decoded[0].success, true);
 assert.strictEqual(ABI.decodeUint(decoded[0].data), 8045n);
 
+function hexWord(n) {
+  return BigInt(n).toString(16).padStart(64, '0');
+}
+assert.strictEqual(ABI.decodeString('0x' + hexWord(32) + hexWord(2) + Buffer.from('hi').toString('hex').padEnd(64, '0')), 'hi');
+assert.strictEqual(ABI.decodeString('0x' + hexWord(64) + hexWord(0) + hexWord(3) + Buffer.from('yes').toString('hex').padEnd(64, '0')), 'yes');
+assert.strictEqual(ABI.decodeString('0x' + hexWord(32) + hexWord(0)), '');
+assert.strictEqual(ABI.decodeString('0x'), '');
+assert.throws(function () { ABI.decodeString('0x' + hexWord(32) + hexWord(10)); }, /string/);
+
 const shape = P.gridToPlanes(P.HEART_SHAPE);
 assert.strictEqual(shape.R, 388020662578203110061909499714095932521374137981715049621480747944640512n);
 assert.strictEqual(shape.G, 0n);
