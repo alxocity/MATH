@@ -4,11 +4,7 @@ const fs = require('fs');
 const path = require('path');
 
 global.ABI = require('../site/abi');
-global.localStorage = {
-  getItem: function () { return null; },
-  setItem: function () {},
-};
-eval(fs.readFileSync(path.join(__dirname, '../site/eth.js'), 'utf8'));
+const ETH = require('../site/eth');
 
 (async function () {
   const inv = await ETH.loadInventory(function (msg) { console.error(msg); });
@@ -17,7 +13,7 @@ eval(fs.readFileSync(path.join(__dirname, '../site/eth.js'), 'utf8'));
   delete packed.blockedDone;
   const out = path.join(__dirname, '../site/index.json');
   fs.writeFileSync(out, JSON.stringify(packed));
-  console.error('wrote ' + out + ' block ' + packed.block + ' MATH ' + packed.math.length + ' RGB ' + packed.rgb.length + ' TOON ' + packed.toon.length);
+  console.error('wrote ' + out + ' block ' + packed.block + ' MATH ' + packed.math.length + ' RGB ' + packed.rgb.length + ' TOON ' + packed.toon.length + ' owners ' + packed.owners.length);
 })().catch(function (e) {
   console.error(e);
   process.exit(1);

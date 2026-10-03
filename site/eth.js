@@ -42,6 +42,7 @@
           method: 'POST',
           headers: { 'content-type': 'application/json' },
           body: JSON.stringify({ jsonrpc: '2.0', id: 1, method: method, params: params }),
+          signal: AbortSignal.timeout(8000),
         });
         if (res.status === 429 || res.status >= 500) throw new Error('http ' + res.status);
         const j = await res.json();
@@ -263,21 +264,38 @@
         row.rgb = gets[i][2];
       };
     });
+    const mathRows = base.math.concat(mathMore);
+    const rgbRows = base.rgb.concat(rgbMore);
+    const toonRows = base.toon.concat(toonMore);
+    const mathOwners = await loadOwners(ADDR.MATH, mathRows.map(function (t) { return t.id; }), progress, 'MATH');
+    const rgbOwners = await loadOwners(ADDR.RGB, rgbRows.map(function (t) { return t.id; }), progress, 'RGB');
+    const toonOwners = await loadOwners(ADDR.TOON, toonRows.map(function (t) { return t.id; }), progress, 'TOON');
     return {
       block: BigInt(block.result).toString(),
-      math: base.math.concat(mathMore),
-      rgb: base.rgb.concat(rgbMore),
-      toon: base.toon.concat(toonMore),
+      math: mathRows.map(function (t, i) { return { id: t.id, owner: mathOwners[i] }; }),
+      rgb: rgbRows.map(function (t, i) { return { id: t.id, owner: rgbOwners[i], r: t.r, g: t.g, b: t.b }; }),
+      toon: toonRows.map(function (t, i) { return { id: t.id, owner: toonOwners[i], word: t.word, face: t.face, rgb: t.rgb }; }),
     };
   }
 
   function pack(inv, blocked) {
+    const owners = [];
+    const index = new Map();
+    function ownerIndex(addr) {
+      const a = String(addr).toLowerCase();
+      if (!index.has(a)) {
+        index.set(a, owners.length);
+        owners.push(a);
+      }
+      return index.get(a);
+    }
     return {
       block: inv.block,
-      math: inv.math.map(function (t) { return [t.id.toString(), t.owner]; }),
-      rgb: inv.rgb.map(function (t) { return [t.id.toString(), t.owner, t.r.toString(), t.g.toString(), t.b.toString()]; }),
-      toon: inv.toon.map(function (t) { return [t.id.toString(), t.owner, t.word.toString(), t.face.toString(), t.rgb.toString()]; }),
-      blocked: blocked ? Array.from(blocked) : [],
+      owners: owners,
+      math: inv.math.map(function (t) { return [t.id.toString(), ownerIndex(t.owner)]; }),
+      rgb: inv.rgb.map(function (t) { return [t.id.toString(), ownerIndex(t.owner), t.r.toString(), t.g.toString(), t.b.toString()]; }),
+      toon: inv.toon.map(function (t) { return [t.id.toString(), ownerIndex(t.owner), t.word.toString(), t.face.toString(), t.rgb.toString()]; }),
+      blocked: blocked ? Array.from(blocked).map(function (a) { return String(a).toLowerCase(); }) : [],
       blockedDone: !!blocked,
     };
   }
@@ -286,18 +304,29 @@
 
   function unpack(raw) {
     if (!raw || !Array.isArray(raw.math) || !Array.isArray(raw.rgb) || !Array.isArray(raw.toon)) return null;
+    if (!/^\d+$/.test(String(raw.block == null ? '' : raw.block))) return null;
     try {
+      const table = raw.owners == null ? null : raw.owners;
+      if (table && !Array.isArray(table)) throw new Error('owners');
+      function ownerAt(v) {
+        if (typeof v === 'number' || (typeof v === 'string' && /^\d+$/.test(v))) {
+          if (!table) throw new Error('owner');
+          const i = Number(v);
+          if (!Number.isInteger(i) || i < 0 || i >= table.length) throw new Error('owner');
+          if (!OWNER.test(table[i])) throw new Error('owner');
+          return table[i];
+        }
+        if (!OWNER.test(v)) throw new Error('owner');
+        return v;
+      }
       const math = raw.math.map(function (t) {
-        if (!OWNER.test(t[1])) throw new Error('owner');
-        return { id: BigInt(t[0]), owner: t[1] };
+        return { id: BigInt(t[0]), owner: ownerAt(t[1]) };
       });
       const rgb = raw.rgb.map(function (t) {
-        if (!OWNER.test(t[1])) throw new Error('owner');
-        return { id: BigInt(t[0]), owner: t[1], r: BigInt(t[2]), g: BigInt(t[3]), b: BigInt(t[4]) };
+        return { id: BigInt(t[0]), owner: ownerAt(t[1]), r: BigInt(t[2]), g: BigInt(t[3]), b: BigInt(t[4]) };
       });
       const toon = raw.toon.map(function (t) {
-        if (!OWNER.test(t[1])) throw new Error('owner');
-        return { id: BigInt(t[0]), owner: t[1], word: BigInt(t[2]), face: BigInt(t[3]), rgb: BigInt(t[4]) };
+        return { id: BigInt(t[0]), owner: ownerAt(t[1]), word: BigInt(t[2]), face: BigInt(t[3]), rgb: BigInt(t[4]) };
       });
       const blocked = [];
       (raw.blocked || []).forEach(function (a) {
@@ -340,10 +369,11 @@
   }
 
   // 1 finney, 23300 gas. MATH.transfer forwards 2300, so out-of-gas here means add() reverts.
+  // A node failure throws. Callers must not treat that as "not blocked".
   async function probeHolder(holder) {
     const code = await rpc('eth_getCode', [holder, 'latest']);
-    if (code.error) return false;
-    const c = code.result || '0x';
+    if (code.error || !code.result) throw new Error((code.error && code.error.message) || 'getCode');
+    const c = code.result;
     if (c === '0x' || c === '0x0') return false;
     const j = await rpc('eth_call', [{ to: holder, value: '0x38d7ea4c68000', gas: '0x5b04' }, 'latest']);
     return !!j.error;
@@ -353,16 +383,33 @@
     const list = Array.from(new Set(owners));
     let done = 0;
     const flags = await mapPool(list, 8, async function (owner) {
-      let blocked = false;
-      try { blocked = await probeHolder(owner); } catch (e) { blocked = false; }
+      let flag = 'unknown';
+      try { flag = (await probeHolder(owner)) ? 'blocked' : 'clear'; } catch (e) { flag = 'unknown'; }
       done++;
       if (progress && done % 10 === 0) progress('holders ' + done + '/' + list.length);
-      return blocked;
+      return flag;
     });
-    const set = new Set();
-    flags.forEach(function (flag, i) { if (flag) set.add(list[i]); });
+    const blocked = new Set();
+    const unknown = new Set();
+    flags.forEach(function (flag, i) {
+      if (flag === 'blocked') blocked.add(list[i]);
+      else if (flag === 'unknown') unknown.add(list[i]);
+    });
     if (progress) progress('holders ' + list.length + '/' + list.length);
-    return set;
+    return { blocked: blocked, unknown: unknown };
+  }
+
+  // Unknown holders are blocked for routing, and the scan is not finished.
+  function scanResult(scan) {
+    const blocked = new Set(scan.blocked);
+    scan.unknown.forEach(function (a) { blocked.add(a); });
+    return { blocked: blocked, blockedDone: scan.unknown.size === 0 };
+  }
+
+  function cacheScan(inv, result) {
+    if (!result || !result.blockedDone) return false;
+    writeCache(inv, result.blocked);
+    return true;
   }
 
   async function owned(contract, account, cap) {
@@ -432,7 +479,10 @@
     preferIndex: preferIndex,
     readCache: readCache,
     writeCache: writeCache,
+    probeHolder: probeHolder,
     scanBlocked: scanBlocked,
+    scanResult: scanResult,
+    cacheScan: cacheScan,
     owned: owned,
     tokenSVGs: tokenSVGs,
     readString: readString,
@@ -441,4 +491,5 @@
     ensureChain: ensureChain,
     receipt: receipt,
   };
+  if (typeof module === 'object' && module.exports) module.exports = globalThis.ETH;
 })();

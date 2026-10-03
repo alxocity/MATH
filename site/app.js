@@ -358,13 +358,17 @@
       }
       if (state.account) MOLD.say('connect', { addr: short(state.account), mine: mineCount(), math: state.math.length });
       const owners = state.math.map(function (t) { return t.owner; });
-      const blocked = await ETH.scanBlocked(owners, progress);
+      const scan = ETH.scanResult(await ETH.scanBlocked(owners, progress));
       if (gen !== loadGen) return;
-      state.blocked = blocked;
-      state.blockedDone = true;
-      ETH.writeCache({ block: state.block, math: state.math, rgb: state.rgb, toon: state.toon }, blocked);
-      MOLD.say('blocked', { n: blocked.size });
-      setStatus('block ' + state.block + ' · ' + blocked.size + ' blocked');
+      state.blocked = scan.blocked;
+      state.blockedDone = scan.blockedDone;
+      const saved = ETH.cacheScan({ block: state.block, math: state.math, rgb: state.rgb, toon: state.toon }, scan);
+      if (saved) {
+        MOLD.say('blocked', { n: scan.blocked.size });
+        setStatus('block ' + state.block + ' · ' + scan.blocked.size + ' blocked');
+      } else {
+        setStatus('block ' + state.block + ' · holder probe failed');
+      }
     } catch (e) {
       if (gen === loadGen) setStatus(e.message);
     }
