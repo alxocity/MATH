@@ -297,9 +297,11 @@
           const B = BigInt($('#pB').value.trim());
           state.grid = P.planesToRows(R, G, B);
           state.planes = { R: R, G: G, B: B };
+          $('#cells').innerHTML = S.cellsHtml(state.grid);
+          paintTraits();
           const issues = planeIssues(state.planes);
+          $('#rgbMeta').textContent = issues.join(', ');
           const rule = issues.find(function (s) { return RULES.mold(s); });
-          S.show('rgb', true);
           S.hit(rule || '');
         } catch (e) { /* keep grid */ }
       });
