@@ -62,7 +62,7 @@
       return '<article class="card"><div>' + t.id + (tags ? ' <span class="dim">' + S.esc(tags) + '</span>' : '') + '</div>' +
         '<div class="dim">' + S.esc(S.short(t.owner)) + '</div>' + extra + grid +
         '<img alt="" data-svg="' + state.kind + ':' + t.id + '"></article>';
-    }).join('') || '<p class="dim">' + (state.math.length || state.rgb.length || state.toon.length ? 'nothing in this filter.' : 'index not loaded. refresh.') + '</p>';
+    }).join('') || '<p class="dim">' + (state.math.length || state.rgb.length || state.toon.length ? 'nothing in this filter.' : (state.indexState === 'error' ? 'index not loaded. refresh.' : 'loading index…')) + '</p>';
     if (pager) {
       pager.innerHTML = '<button type="button" id="prev"' + (state.page ? '' : ' disabled') + '>prev</button> ' +
         (state.page + 1) + '/' + pages + ' <span class="dim">' + list.length + '</span> ' +
