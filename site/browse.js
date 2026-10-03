@@ -66,7 +66,7 @@
       let extra = '';
       let grid = S.bitHtml(t.id);
       if (state.kind === 'rgb') {
-        extra = '<div class="dim">r ' + P.popcount(t.r) + ' · g ' + P.popcount(t.g) + ' · b ' + P.popcount(t.b) + '</div>';
+        extra = '<div class="dim">r ' + P.channelTag(t.r) + ' · g ' + P.channelTag(t.g) + ' · b ' + P.channelTag(t.b) + '</div>';
         grid = S.cellsHtml(P.planesToRows(t.r, t.g, t.b)).replace(/<button/g, '<i').replace(/<\/button>/g, '</i>');
       }
       if (state.kind === 'toon') {

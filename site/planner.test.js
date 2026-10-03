@@ -46,6 +46,17 @@ assert.strictEqual(P.isStrobo(2n), false);
 assert.strictEqual(P.isStrobo(121n), false);
 assert.strictEqual(P.isStrobo(10n), false);
 assert.strictEqual(P.popcount(7n), 3);
+assert.strictEqual(P.popcount(2n), 1);
+assert.strictEqual(P.popcount(4n), 1);
+assert.strictEqual(P.popcount(8n), 1);
+assert.strictEqual(P.channelTag(1n), '1');
+assert.strictEqual(P.channelTag(2n), '2');
+assert.strictEqual(P.channelTag(4n), '4');
+assert.strictEqual(P.channelTag(8n), '8');
+const nearA = 101331771248505046160055760990721661926188008979951677663145697618389970780160n;
+const nearB = 101331771248505046160055760990721661926188010277708979948948604697532247900160n;
+assert.notStrictEqual(P.channelTag(nearA), P.channelTag(nearB));
+assert.ok(P.channelTag(nearA).charAt(0) === '#');
 
 const user = '0xabcabcabcabcabcabcabcabcabcabcabcabcabca';
 const stranger = '0xdefdefdefdefdefdefdefdefdefdefdefdefdefd';

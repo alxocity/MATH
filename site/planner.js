@@ -44,6 +44,15 @@
     return c;
   }
 
+  // Short ids stay whole. A long MATH id is a 6-hex hash, so two nearby values do not share a label.
+  function channelTag(n) {
+    const s = BigInt(n).toString();
+    if (s.length <= 8) return s;
+    let x = 2166136261;
+    for (let i = 0; i < s.length; i++) x = Math.imul(x ^ s.charCodeAt(i), 16777619);
+    return '#' + (x >>> 0).toString(16).padStart(8, '0').slice(0, 6);
+  }
+
   function isPow2(n) {
     const x = BigInt(n);
     return x > 0n && (x & (x - 1n)) === 0n;
@@ -565,6 +574,7 @@
     G_RGB: G_RGB,
     MAX: MAX,
     popcount: popcount,
+    channelTag: channelTag,
     isPow2: isPow2,
     isPal: isPal,
     isStrobo: isStrobo,
