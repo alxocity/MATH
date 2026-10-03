@@ -1,10 +1,20 @@
 # MATH
 
-Metadata is on chain. The originals return an empty `tokenURI`. OpenSea still requests the Azure URLs, which read `tokenJSON` from the renderers.
+The 2019 contracts keep the data on chain. Their `tokenURI` is empty. The renderers read that state and draw it. `tokenURI` returns base64 JSON with an SVG image.
 
-- MATH `0x6B4fccdd888Bb6fD3934A9e49eF64dfd2c0D8e6D`, renderer `0xb3cA13A2722CAB48c8d9068bD67656efe2d5e376`
-- RGB `0x9355Fb9693ffF9bB6f06721C82fe0B5F49E6c956`, renderer `0x62FFe75cd9824A2e8855CbC055256De229B5b936`
-- TOON `0x026A7D72a448D0E44d441e55F746BF56B843aEDB`, renderer `0x1E1a576e4186551e4DEdE58Ccc2DCC34697159Cb`
+Deployed 2026-10-02 in block [26107333](https://etherscan.io/block/26107333). Sourcify exact match, same as the originals.
+
+- [MATH](https://etherscan.io/address/0x6B4fccdd888Bb6fD3934A9e49eF64dfd2c0D8e6D), [MATHRender](https://etherscan.io/address/0xb3cA13A2722CAB48c8d9068bD67656efe2d5e376)
+- [RGB](https://etherscan.io/address/0x9355Fb9693ffF9bB6f06721C82fe0B5F49E6c956), [RGBRender](https://etherscan.io/address/0x62FFe75cd9824A2e8855CbC055256De229B5b936)
+- [TOON](https://etherscan.io/address/0x026A7D72a448D0E44d441e55F746BF56B843aEDB), [TOONRender](https://etherscan.io/address/0x1E1a576e4186551e4DEdE58Ccc2DCC34697159Cb)
+
+```shell
+cast call 0xb3cA13A2722CAB48c8d9068bD67656efe2d5e376 "tokenURI(uint256)(string)" 1 --rpc-url https://ethereum.publicnode.com
+```
+
+`web3://0xb3cA13A2722CAB48c8d9068bD67656efe2d5e376:1/tokenURI/1?returns=(string)`
+
+OpenSea still requests the Azure URLs. The Function app only relays `tokenJSON` from the renderers.
 
 The Function app has to be Azure Functions v4 on Node >= 18. `package.json` sets that engine because the proxy uses global `fetch`. `.vscode/settings.json` sets `azureFunctions.projectRuntime` to `~4`.
 
