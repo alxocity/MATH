@@ -121,7 +121,12 @@
       supply.set(BigInt(id), String(owner).toLowerCase());
     });
     const blocked = new Set();
-    ctx.blocked.forEach(function (a) { blocked.add(String(a).toLowerCase()); });
+    function take(set) {
+      if (!set) return;
+      set.forEach(function (a) { blocked.add(String(a).toLowerCase()); });
+    }
+    take(ctx.blocked);
+    take(ctx.unknown);
     return {
       supply: supply,
       user: String(ctx.user || '0x0000000000000000000000000000000000000000').toLowerCase(),

@@ -8,14 +8,21 @@
   const ADDR = ETH.ADDR;
   const RULES = globalThis.RULES;
 
-  function mintWhy(pair) {
+  function mintNote(pair) {
     if (!pair) return '';
     const oa = state.supply.get(pair.a);
     const ob = state.supply.get(pair.b);
-    if ((oa && state.blocked.has(oa)) || (ob && state.blocked.has(ob))) return RULES.payout();
+    const aNote = RULES.holderNote(oa, state.blocked, state.unknown);
+    const bNote = RULES.holderNote(ob, state.blocked, state.unknown);
+    const hold = RULES.preferNote(aNote, bNote);
+    if (hold === RULES.payout()) return hold;
     if (pair.n > P.MAX) return 'overflow';
     if (state.supply.has(pair.n)) return 'already minted';
-    return '';
+    return hold;
+  }
+
+  function mintClosed(note) {
+    return note === RULES.payout() || note === 'overflow' || note === 'already minted';
   }
 
   function readPair() {
@@ -54,12 +61,12 @@
     const oa = state.supply.get(pair.a);
     const ob = state.supply.get(pair.b);
     const exists = state.supply.has(pair.n);
-    const why = mintWhy(pair);
+    const note = mintNote(pair);
     const lines = [];
     if (!oa) lines.push('a is not in the loaded index');
     if (!ob) lines.push('b is not in the loaded index');
     if (exists) lines.push('exists, owner ' + state.supply.get(pair.n));
-    if (why === RULES.payout()) lines.push(why);
+    if (note === RULES.payout() || note === RULES.unchecked()) lines.push(note);
     const net = (oa && oa === S.me() ? 0n : P.ROY_WEI) + (ob && ob === S.me() ? 0n : P.ROY_WEI) + P.G_ADD * state.gasPrice;
     lines.push('pays ' + (oa ? S.short(oa) : '?') + ' and ' + (ob ? S.short(ob) : '?'));
     lines.push('msg.value 0.002, net about ' + S.fmt(net) + ' ETH after refunds and gas');
@@ -67,10 +74,10 @@
     const preview = mintPreview(pair.a, pair.b, pair.n, oa, ob);
     state.preview = preview;
     if ($('#preview')) $('#preview').textContent = preview;
-    if (send) send.disabled = !!why;
-    if (whyEl) whyEl.textContent = why;
-    if (speak) S.hit(why);
-    if (doSim && !overflow && !(why && RULES.mold(why))) runSim(pair, preview);
+    if (send) send.disabled = mintClosed(note);
+    if (whyEl) whyEl.textContent = note;
+    if (speak) S.hit(note);
+    if (doSim && !overflow) runSim(pair, preview);
   }
 
   async function runSim(pair, preview) {
@@ -132,9 +139,9 @@
     $('#sim').onclick = function () { paintMint(true, true); };
     $('#send').onclick = function () {
       const pair = readPair();
-      const why = mintWhy(pair);
-      S.hit(why);
-      if (why) return;
+      const note = mintNote(pair);
+      S.hit(note);
+      if (mintClosed(note)) return;
       sendMath();
     };
     paintMint(false);

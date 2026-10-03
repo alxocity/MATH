@@ -41,7 +41,26 @@
   }
 
   function payout() { return "holder can't receive payout"; }
+  function unchecked() { return 'holder unchecked'; }
   function notYours() { return "you don't own this"; }
+  function connectWallet() { return 'connect a wallet'; }
+
+  function hasAddr(set, owner) {
+    if (!set || owner == null || owner === '') return false;
+    const a = String(owner).toLowerCase();
+    return set.has(a) || set.has(owner);
+  }
+
+  function holderNote(owner, blocked, unknown) {
+    if (hasAddr(blocked, owner)) return payout();
+    if (hasAddr(unknown, owner)) return unchecked();
+    return '';
+  }
+
+  function preferNote(a, b) {
+    if (a === payout() || b === payout()) return payout();
+    return a || b || '';
+  }
 
   function mold(reason) {
     if (!reason) return null;
@@ -51,6 +70,7 @@
     if (reason.indexOf('this image is already RGB') === 0) return { key: 'rgbImage', vars: {} };
     if (reason === payout()) return { key: 'payout', vars: {} };
     if (reason === notYours()) return { key: 'notYours', vars: {} };
+    if (reason === connectWallet()) return { key: 'noWallet', vars: {} };
     if (reason.indexOf('already bases TOON') !== -1) return { key: 'toonMath', vars: {} };
     if (reason.indexOf('already in TOON') !== -1) return { key: 'toonSpent', vars: { kind: reason.split(' ')[0] } };
     return null;
@@ -58,7 +78,7 @@
 
   function about() {
     return [
-      'RGB. Each MATH id is used once per channel. R, G and B are separate, so an identical image is never minted twice. You don\'t need to own the MATH. It costs 0.03 ETH, and each channel\'s owner gets 0.01.',
+      'RGB. Each MATH id is used once per channel. R, G and B are separate existing MATH tokens, so an identical image is never minted twice. You don\'t need to own the MATH. It costs 0.03 ETH, and each channel\'s owner gets 0.01.',
       'MATH add. 0.002 ETH, with 0.001 to each input owner. A holder who reverts the 2300-gas payout is blocked.',
       'TOON. You must own the MATH, WORD, FACE and RGB. Each WORD, FACE and RGB can go into one TOON. The TOON id is the MATH id, so each MATH bases one TOON. No fee.',
     ];
@@ -69,7 +89,11 @@
     rgbImage: rgbImage,
     toonPart: toonPart,
     payout: payout,
+    unchecked: unchecked,
     notYours: notYours,
+    connectWallet: connectWallet,
+    holderNote: holderNote,
+    preferNote: preferNote,
     mold: mold,
     about: about,
   };

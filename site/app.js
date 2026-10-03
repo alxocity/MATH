@@ -25,7 +25,11 @@
     toonBy: { word: new Map(), face: new Map(), rgb: new Map(), math: new Map() },
     channels: new Map(),
     blocked: new Set(),
+    unknown: new Set(),
     blockedDone: false,
+    heldMath: [],
+    heldRgb: [],
+    toonOwn: '',
     indexState: 'loading',
     holdersReady: false,
     heartPick: null,
@@ -86,6 +90,7 @@
       supply: state.supply,
       user: me(),
       blocked: state.blocked,
+      unknown: state.unknown,
       gasWei: P.G_ADD * state.gasPrice,
       mode: state.routeMode,
     };
@@ -145,6 +150,7 @@
     });
     state.wordText = inv.words || new Map();
     state.faceText = inv.faces || new Map();
+    state.unknown = new Set();
     if (inv.blocked) state.blocked = inv.blocked;
     if (inv.blockedDone) state.blockedDone = true;
   }
@@ -248,11 +254,37 @@
     if (state.txLock === hash) state.txLock = null;
   }
 
-  async function sendStep(step) {
+  async function sendStep(step, really) {
     const preview = 'MATH.add(' + step.a + ', ' + step.b + ')\nto ' + ADDR.MATH + '\nvalue 0.002 ETH\nmint ' + step.result +
       '\npay ' + step.payTo[0] + '\npay ' + step.payTo[1];
     state.preview = preview;
     const box = $('#preview');
+    const note = globalThis.RULES.preferNote(
+      globalThis.RULES.holderNote(step.payTo[0], state.blocked, state.unknown),
+      globalThis.RULES.holderNote(step.payTo[1], state.blocked, state.unknown)
+    );
+    if (!really) {
+      try {
+        const tx = mathTx(step.a, step.b);
+        if (!state.account) tx.from = '0x0000000000000000000000000000000000000001';
+        const sim = await ETH.simulate(tx);
+        if (sim.error) {
+          if (box) box.textContent = preview + '\nsimulation reverted: ' + ETH.reason(sim.error);
+          MOLD.say('simFail', { err: ETH.reason(sim.error) });
+          return;
+        }
+        if (box) box.textContent = preview + '\nsimulation ok.';
+        MOLD.say('simOk');
+      } catch (e) {
+        if (box) box.textContent = preview + '\n' + e.message;
+      }
+      return;
+    }
+    if (note === globalThis.RULES.payout()) {
+      hit(note);
+      if (box) box.textContent = preview + '\n' + note;
+      return;
+    }
     if (box) box.textContent = preview + '\nre-checking owners and existence.';
     await guardSend(async function () {
       const oa = await ETH.ownerOf(ADDR.MATH, step.a);
@@ -331,6 +363,15 @@
     if (state.tab === 'toon' || state.tab === 'mint') show(state.tab);
   }
 
+  async function loadHeld() {
+    try {
+      const mathHeld = await ETH.owned(ADDR.MATH, state.account, 2500);
+      const rgbHeld = await ETH.owned(ADDR.RGB, state.account, 2500);
+      state.heldMath = mathHeld.ids;
+      state.heldRgb = rgbHeld.ids;
+    } catch (e) { /* index list still stands */ }
+  }
+
   async function loadWallet() {
     if (!state.account) return;
     let word;
@@ -344,6 +385,7 @@
       state.faceNote = face.truncated ? face.ids.length + ' of ' + face.total : String(face.total);
     } catch (e) {
       state.wordNote = e.message;
+      await loadHeld();
       if (state.tab === 'toon') show('toon');
       return;
     }
@@ -372,6 +414,7 @@
     state.snapWords.forEach(function (text, id) { state.wordText.set(id, text); });
     state.snapFaces.forEach(function (text, id) { state.faceText.set(id, text); });
     persistTexts();
+    await loadHeld();
     if (state.tab === 'toon') show('toon');
   }
 
@@ -401,6 +444,7 @@
       usedG: state.usedG,
       usedB: state.usedB,
       blocked: state.blocked,
+      unknown: state.unknown,
       user: me(),
       gasWei: 0n,
       mode: 'fewest',
@@ -496,6 +540,7 @@
       const scan = ETH.scanResult(await ETH.scanBlocked(owners, progress));
       if (gen !== loadGen) return;
       state.blocked = scan.blocked;
+      state.unknown = scan.unknown;
       state.blockedDone = scan.blockedDone;
       state.holdersReady = true;
       prepareHeart();

@@ -29,8 +29,11 @@
     return out;
   }
 
-  function payBlocked(step) {
-    return state.blocked.has(step.payTo[0]) || state.blocked.has(step.payTo[1]);
+  function payNote(step) {
+    return RULES.preferNote(
+      RULES.holderNote(step.payTo[0], state.blocked, state.unknown),
+      RULES.holderNote(step.payTo[1], state.blocked, state.unknown)
+    );
   }
 
   function rgbQueueWhy(item) {
@@ -91,19 +94,25 @@
     host.innerHTML = state.queue.map(function (tx, i) {
       if (tx.kind === 'math') {
         const step = tx.step;
-        const why = payBlocked(step) ? RULES.payout() : '';
+        const note = payNote(step);
+        const sendOff = note === RULES.payout() ? ' disabled' : '';
         return '<div class="step">' + (i + 1) + '. ' + step.a + ' + ' + step.b + ' = ' + step.result +
-          (why ? ' <span class="bad">' + S.esc(why) + '</span>' : ' <button type="button" data-q="' + i + '">simulate + send</button>') +
-          '</div>';
+          (note ? ' <span class="' + (note === RULES.unchecked() ? 'dim' : 'bad') + '">' + S.esc(note) + '</span>' : '') +
+          ' <button type="button" data-sim="' + i + '">simulate</button>' +
+          '<button type="button" data-send="' + i + '"' + sendOff + '>send</button></div>';
       }
       const why = rgbQueueWhy(tx);
       return '<div class="step">' + (i + 1) + '. RGB.add ' + tx.r + ', ' + tx.g + ', ' + tx.b +
         ' value 0.03' +
-        (why ? ' <span class="bad">' + S.esc(why) + '</span>' : ' <button type="button" data-q="' + i + '">simulate + send</button>') +
+        (why ? ' <span class="bad">' + S.esc(why) + '</span>' :
+          ' <button type="button" data-sim="' + i + '">simulate</button><button type="button" data-send="' + i + '">send</button>') +
         '</div>';
     }).join('');
-    host.querySelectorAll('[data-q]').forEach(function (b) {
-      b.onclick = function () { sendQueue(Number(b.dataset.q)); };
+    host.querySelectorAll('[data-sim]').forEach(function (b) {
+      b.onclick = function () { sendQueue(Number(b.dataset.sim), false); };
+    });
+    host.querySelectorAll('[data-send]').forEach(function (b) {
+      b.onclick = function () { sendQueue(Number(b.dataset.send), true); };
     });
   }
 
@@ -159,17 +168,40 @@
     let qWhy = '';
     state.queue.forEach(function (item) {
       if (qWhy) return;
-      if (item.kind === 'math' && payBlocked(item.step)) qWhy = RULES.payout();
+      if (item.kind === 'math' && payNote(item.step) === RULES.payout()) qWhy = RULES.payout();
       else if (item.kind === 'rgb') qWhy = rgbQueueWhy(item);
     });
     if (qWhy) S.hit(qWhy);
   }
 
-  async function sendQueue(i) {
+  async function sendQueue(i, really) {
     const item = state.queue[i];
     if (!item) return;
     if (item.kind === 'math') {
-      await S.sendStep(item.step);
+      await S.sendStep(item.step, really);
+      return;
+    }
+    if (!really) {
+      const preview = 'RGB.add(' + item.r + ', ' + item.g + ', ' + item.b + ')\nto ' + ADDR.RGB + '\nvalue 0.03 ETH';
+      state.preview = preview;
+      try {
+        const tx = {
+          from: state.account || '0x0000000000000000000000000000000000000001',
+          to: ADDR.RGB,
+          data: ABI.call(ABI.SEL.add3, [item.r, item.g, item.b]),
+          value: S.hex(P.MSG_RGB),
+        };
+        const sim = await ETH.simulate(tx);
+        if (sim.error) {
+          if ($('#preview')) $('#preview').textContent = preview + '\nsimulation reverted: ' + ETH.reason(sim.error);
+          MOLD.say('simFail', { err: ETH.reason(sim.error) });
+          return;
+        }
+        if ($('#preview')) $('#preview').textContent = preview + '\nsimulation ok.';
+        MOLD.say('simOk');
+      } catch (e) {
+        if ($('#preview')) $('#preview').textContent = preview + '\n' + e.message;
+      }
       return;
     }
     const preview = 'RGB.add(' + item.r + ', ' + item.g + ', ' + item.b + ')\nto ' + ADDR.RGB + '\nvalue 0.03 ETH';
