@@ -1,4 +1,5 @@
 const assert = require('assert');
+const fs = require('fs');
 const ABI = require('./abi');
 const P = require('./planner');
 
@@ -18,9 +19,9 @@ assert.strictEqual(decoded[0].success, true);
 assert.strictEqual(ABI.decodeUint(decoded[0].data), 8045n);
 
 const heart = P.gridToPlanes(P.HEART);
-assert.strictEqual(heart.R, 388020662578203110061909499714095932521374137981715049621480747944640513n);
-assert.strictEqual(heart.G, 1n);
-assert.strictEqual(heart.B, 1n);
+assert.strictEqual(heart.R, 388020662578203110061909499714095932521374137981715049621480747944640512n);
+assert.strictEqual(heart.G, 256n);
+assert.strictEqual(heart.B, 512n);
 assert.deepStrictEqual(P.planesToRows(heart.R, heart.G, heart.B), P.HEART);
 assert.strictEqual(P.popcount(heart.R), P.HEART.join('').split('').filter(function (c) { return 'rymw'.includes(c); }).length);
 assert.strictEqual(P.isPow2(8n), true);
@@ -121,5 +122,36 @@ assert.strictEqual(owned.target, 3n);
 assert.strictEqual(owned.mints, 1);
 assert.strictEqual(owned.royalty, 0n);
 assert.strictEqual(owned.steps[0].exists, false);
+
+const snap = JSON.parse(fs.readFileSync(__dirname + '/index.json', 'utf8'));
+const supply = new Map();
+const usedR = new Set();
+const usedG = new Set();
+const usedB = new Set();
+snap.math.forEach(function (t) { supply.set(BigInt(t[0]), t[1]); });
+snap.rgb.forEach(function (t) {
+  usedR.add(BigInt(t[2]));
+  usedG.add(BigInt(t[3]));
+  usedB.add(BigInt(t[4]));
+});
+assert.strictEqual(supply.has(heart.R), false);
+assert.strictEqual(usedR.has(heart.R), false);
+assert.strictEqual(supply.has(heart.G), true);
+assert.strictEqual(supply.has(heart.B), true);
+assert.strictEqual(usedR.has(heart.G) || usedG.has(heart.G) || usedB.has(heart.G), false);
+assert.strictEqual(usedR.has(heart.B) || usedG.has(heart.B) || usedB.has(heart.B), false);
+const heartCtx = {
+  mode: 'fewest',
+  user: '0x0000000000000000000000000000000000000001',
+  gasWei: 0n,
+  blocked: new Set(),
+  supply: supply,
+};
+const heartRoute = P.plan(heart.R, heartCtx);
+assert.strictEqual(heartRoute.exists, false);
+assert.strictEqual(heartRoute.pieces.reduce(function (s, n) { return s + n; }, 0n), heart.R);
+assert.ok(heartRoute.mints > 0);
+assert.strictEqual(P.plan(heart.G, heartCtx).exists, true);
+assert.strictEqual(P.plan(heart.B, heartCtx).exists, true);
 
 console.log('planner.test.js ok');

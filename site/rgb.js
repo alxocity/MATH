@@ -197,7 +197,8 @@
     };
     $('#heart').onclick = function () {
       state.grid = P.HEART.slice();
-      S.show('rgb');
+      S.show('rgb', true);
+      MOLD.say('heart');
     };
     $('#file').onchange = function () {
       const file = $('#file').files && $('#file').files[0];
