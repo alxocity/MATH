@@ -12,8 +12,8 @@
   const G_ADD = 175000n; // estimate, MATH.add
   const G_RGB = 340000n; // estimate, RGB.add, measured ~337k
   const MAX = (1n << 256n) - 1n;
-  // Red heart. G is 256 and B is 512: both exist, sit on the last row, and are unused as channels.
-  const HEART = [
+  // Red silhouette only. R, G, and B ids are chosen by pickHeart, never fixed.
+  const HEART_SHAPE = [
     'kkkkkkkkkkkkkkkk',
     'kkrrrkkkkkrrrkkk',
     'krrrrrkkkrrrrrkk',
@@ -29,8 +29,10 @@
     'kkkkkkkrkkkkkkkk',
     'kkkkkkkkkkkkkkkk',
     'kkkkkkkkkkkkkkkk',
-    'kkkkkkbgkkkkkkkk',
+    'kkkkkkkkkkkkkkkk',
   ];
+  const HEART_MAX_MINTS = 40;
+  const HEART_SLACK = 1;
 
   function popcount(n) {
     let c = 0;
@@ -398,10 +400,151 @@
     return route;
   }
 
+  let heartMask = null;
+  function maskOfHeart() {
+    if (heartMask === null) heartMask = gridToPlanes(HEART_SHAPE).R;
+    return heartMask;
+  }
+
+  function blockedAddrs(ctx) {
+    const out = new Set();
+    function add(set) {
+      if (!set) return;
+      set.forEach(function (a) { out.add(String(a).toLowerCase()); });
+    }
+    add(ctx.blocked);
+    add(ctx.unknown);
+    return out;
+  }
+
+  function hasClearSubmask(mask, supply, blocked) {
+    let ok = false;
+    supply.forEach(function (owner, id) {
+      if (ok) return;
+      const n = BigInt(id);
+      if (n > 0n && (n & ~mask) === 0n && !blocked.has(String(owner).toLowerCase())) ok = true;
+    });
+    return ok;
+  }
+
+  function routeClear(route, blocked) {
+    if (!route) return false;
+    if (route.mints > HEART_MAX_MINTS) return false;
+    if (!route.steps.length) {
+      return !route.owner || !blocked.has(String(route.owner).toLowerCase());
+    }
+    for (let i = 0; i < route.steps.length; i++) {
+      const pay = route.steps[i].payTo;
+      if (blocked.has(String(pay[0]).toLowerCase()) || blocked.has(String(pay[1]).toLowerCase())) return false;
+    }
+    return true;
+  }
+
+  function pickBand(cands, rand, slack) {
+    if (!cands.length) return null;
+    cands.sort(function (a, b) {
+      if (a.mints !== b.mints) return a.mints - b.mints;
+      return a.id < b.id ? -1 : a.id > b.id ? 1 : 0;
+    });
+    const best = cands[0].mints;
+    const band = [];
+    for (let i = 0; i < cands.length; i++) {
+      if (cands[i].mints <= best + slack) band.push(cands[i]);
+    }
+    const i = Math.min(band.length - 1, Math.floor(rand() * band.length));
+    return band[i];
+  }
+
+  // A heart keeps every silhouette pixel red. Margin bits vary R, G, and B
+  // so the minted triple is not a fixed id. Short red routes win, then a
+  // random pick among that top band.
+  function pickHeart(ctx, rand) {
+    if (!ctx || !ctx.supply || !ctx.supply.size) return null;
+    const rng = rand || Math.random;
+    const mask = maskOfHeart();
+    const blocked = blockedAddrs(ctx);
+    const usedR = ctx.usedR || new Set();
+    const usedG = ctx.usedG || new Set();
+    const usedB = ctx.usedB || new Set();
+    const planCtx = {
+      supply: ctx.supply,
+      user: ctx.user,
+      blocked: blocked,
+      gasWei: ctx.gasWei == null ? 0n : ctx.gasWei,
+      mode: 'fewest',
+    };
+    let base = null;
+    if (hasClearSubmask(mask, ctx.supply, blocked)) {
+      try { base = plan(mask, planCtx); } catch (e) { base = null; }
+      if (!routeClear(base, blocked)) base = null;
+    }
+    const reds = [];
+    if (base && !usedR.has(mask)) reds.push({ id: mask, mints: base.mints });
+    for (let k = 0; k < 256; k++) {
+      const bit = 1n << BigInt(k);
+      if ((bit & mask) !== 0n) continue;
+      const owner = ctx.supply.get(bit);
+      if (owner === undefined || blocked.has(String(owner).toLowerCase())) continue;
+      const id = mask | bit;
+      if (usedR.has(id)) continue;
+      if (ctx.supply.has(id)) {
+        const whole = String(ctx.supply.get(id)).toLowerCase();
+        if (!blocked.has(whole)) reds.push({ id: id, mints: 0 });
+        continue;
+      }
+      if (!base) continue;
+      // The extra bit does not overlap the silhouette, so the route is the
+      // base pieces plus that one token: one more mint than the silhouette.
+      reds.push({ id: id, mints: base.mints + 1 });
+    }
+    let red = null;
+    while (reds.length) {
+      red = pickBand(reds, rng, HEART_SLACK);
+      if (!red) break;
+      if (red.id === mask || ctx.supply.has(red.id)) break;
+      let route = null;
+      try { route = fold(base.pieces.concat([red.id ^ mask]), planCtx); } catch (e) { route = null; }
+      if (route && route.target === red.id && routeClear(route, blocked)) {
+        red.mints = route.mints;
+        break;
+      }
+      const drop = red.id;
+      for (let i = reds.length - 1; i >= 0; i--) if (reds[i].id === drop) reds.splice(i, 1);
+      red = null;
+    }
+    if (!red) return null;
+    const salt = red.id ^ mask;
+    function channel(used, skip) {
+      const cands = [];
+      for (let k = 0; k < 256; k++) {
+        const bit = 1n << BigInt(k);
+        if ((bit & mask) !== 0n || (salt !== 0n && bit === salt)) continue;
+        if (skip && skip.has(bit)) continue;
+        if (used.has(bit)) continue;
+        const owner = ctx.supply.get(bit);
+        if (owner !== undefined) {
+          if (!blocked.has(String(owner).toLowerCase())) cands.push({ id: bit, mints: 0 });
+          continue;
+        }
+        if (k === 0) continue;
+        const half = bit >> 1n;
+        const ho = ctx.supply.get(half);
+        if (ho !== undefined && !blocked.has(String(ho).toLowerCase())) cands.push({ id: bit, mints: 1 });
+      }
+      return pickBand(cands, rng, 0);
+    }
+    const g = channel(usedG, null);
+    if (!g) return null;
+    const b = channel(usedB, new Set([g.id]));
+    if (!b) return null;
+    const rows = planesToRows(red.id, g.id, b.id);
+    return { R: red.id, G: g.id, B: b.id, rows: rows, mints: red.mints };
+  }
+
   return {
     PAL: PAL,
     COL: COL,
-    HEART: HEART,
+    HEART_SHAPE: HEART_SHAPE,
     ROY_WEI: ROY_WEI,
     MSG_MATH: MSG_MATH,
     MSG_RGB: MSG_RGB,
@@ -417,5 +560,6 @@
     fold: fold,
     plan: plan,
     planWithPins: planWithPins,
+    pickHeart: pickHeart,
   };
 });

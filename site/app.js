@@ -24,6 +24,8 @@
     channels: new Map(),
     blocked: new Set(),
     blockedDone: false,
+    holdersReady: false,
+    heartPick: null,
     block: '',
     gasPrice: 1000000000n,
     page: 0,
@@ -323,8 +325,57 @@
     }
   }
 
+  function heartCtx() {
+    return {
+      supply: state.supply,
+      usedR: state.usedR,
+      usedG: state.usedG,
+      usedB: state.usedB,
+      blocked: state.blocked,
+      user: me(),
+      gasWei: 0n,
+      mode: 'fewest',
+    };
+  }
+
+  function heartFresh(pick) {
+    return pick && !state.usedR.has(pick.R) && !state.usedG.has(pick.G) && !state.usedB.has(pick.B);
+  }
+
+  function prepareHeart() {
+    if (!state.holdersReady || !state.supply.size) {
+      state.heartPick = null;
+      return;
+    }
+    state.heartPick = P.pickHeart(heartCtx(), Math.random);
+  }
+
+  function applyHeart(reshuffle) {
+    if (!state.holdersReady) {
+      show('rgb', true);
+      MOLD.say('heartWait');
+      return;
+    }
+    if (reshuffle || !heartFresh(state.heartPick)) state.heartPick = P.pickHeart(heartCtx(), Math.random);
+    if (!state.heartPick) {
+      show('rgb', true);
+      MOLD.say('heartNone');
+      return;
+    }
+    state.grid = state.heartPick.rows.slice();
+    show('rgb', true);
+    const p = state.heartPick;
+    MOLD.say('heart', {
+      r: p.R.toString(),
+      g: p.G.toString(),
+      b: p.B.toString(),
+      mints: String(p.mints),
+    });
+  }
+
   async function refresh() {
     const gen = ++loadGen;
+    state.holdersReady = false;
     let base = null;
     try {
       base = ETH.preferIndex(ETH.readCache(), await readSnapshot());
@@ -362,6 +413,8 @@
       if (gen !== loadGen) return;
       state.blocked = scan.blocked;
       state.blockedDone = scan.blockedDone;
+      state.holdersReady = true;
+      prepareHeart();
       const saved = ETH.cacheScan({ block: state.block, math: state.math, rgb: state.rgb, toon: state.toon }, scan);
       if (saved) {
         MOLD.say('blocked', { n: scan.blocked.size });
@@ -389,9 +442,7 @@
         return;
       }
       if (s.act === 'heart') {
-        state.grid = P.HEART.slice();
-        show('rgb', true);
-        MOLD.say('heart');
+        applyHeart(false);
         return;
       }
       if (s.act === 'route15') {
@@ -438,5 +489,6 @@
     refresh();
   }
 
+  SITE.applyHeart = applyHeart;
   SITE.boot = boot;
 })();

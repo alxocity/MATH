@@ -36,7 +36,13 @@
       'pixel i is bit 255-i. the first cell is the high bit. three planes, then one add.',
     ],
     heart: [
-      'red heart. green 256 and blue 512 are already minted and unused. the red plane still needs a route.',
+      'red heart. R {r}, {mints} mints. green {g}, blue {b}. a fresh triple, still the same shape.',
+    ],
+    heartNone: [
+      'no fresh heart. every short red route is spent, or green and blue have nowhere clean to sit.',
+    ],
+    heartWait: [
+      'holders are still unknown. no heart until that count finishes.',
     ],
     rgbBad: [
       '{why}. the channel is closed.',
@@ -66,7 +72,7 @@
 
   const SUGGEST = [
     { label: '1 + 1', key: 'mintReady', tab: 'mint', act: 'mint11', vars: { a: '1', b: '1', n: '2', roy: 'check the owners' } },
-    { label: 'heart', key: 'heart', tab: 'rgb', act: 'heart' },
+    { label: 'heart', key: 'heart', tab: 'rgb', act: 'heart', quiet: true },
     { label: 'route 15', key: 'route', tab: 'route', act: 'route15', vars: { mints: '?', net: '?' } },
     { label: 'palindromes', key: 'browse', tab: 'browse', act: 'pal' },
     { label: 'credits', key: 'boot', tab: 'about', act: 'about' },
@@ -98,7 +104,7 @@
       b.type = 'button';
       b.textContent = s.label;
       b.addEventListener('click', function () {
-        say(s.key, s.vars);
+        if (!s.quiet) say(s.key, s.vars);
         onPick(s);
       });
       box.appendChild(b);

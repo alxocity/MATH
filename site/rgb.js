@@ -165,6 +165,7 @@
     const p = state.planes || { R: 0n, G: 0n, B: 0n };
     view.innerHTML =
       '<div class="row"><button type="button" id="heart">heart</button>' +
+      '<button type="button" id="shuffle">shuffle</button>' +
       '<input type="file" id="file" accept="image/*">' +
       '<label><input type="checkbox" id="dither"> dither</label>' +
       '<button type="button" id="apply">apply image</button></div>' +
@@ -195,11 +196,8 @@
       writePlaneInputs();
       $('#rgbMeta').textContent = planeIssues(state.planes).join(', ');
     };
-    $('#heart').onclick = function () {
-      state.grid = P.HEART.slice();
-      S.show('rgb', true);
-      MOLD.say('heart');
-    };
+    $('#heart').onclick = function () { S.applyHeart(false); };
+    $('#shuffle').onclick = function () { S.applyHeart(true); };
     $('#file').onchange = function () {
       const file = $('#file').files && $('#file').files[0];
       if (!file) return;
