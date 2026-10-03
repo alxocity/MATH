@@ -83,10 +83,6 @@
     return BigInt('0x' + h.slice(0, 64));
   }
 
-  function decodeWords(data) {
-    return wordsOf(data);
-  }
-
   function decodeAddr(data) {
     const h = String(data).replace(/^0x/, '').padStart(64, '0');
     return '0x' + h.slice(-40).toLowerCase();
@@ -110,7 +106,7 @@
     encodeAggregate: encodeAggregate,
     decodeAggregate: decodeAggregate,
     decodeUint: decodeUint,
-    decodeWords: decodeWords,
+    wordsOf: wordsOf,
     decodeAddr: decodeAddr,
     decodeString: decodeString,
   };
