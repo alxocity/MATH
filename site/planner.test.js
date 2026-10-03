@@ -18,12 +18,12 @@ assert.strictEqual(decoded.length, 1);
 assert.strictEqual(decoded[0].success, true);
 assert.strictEqual(ABI.decodeUint(decoded[0].data), 8045n);
 
-const heart = P.gridToPlanes(P.HEART);
-assert.strictEqual(heart.R, 388020662578203110061909499714095932521374137981715049621480747944640512n);
-assert.strictEqual(heart.G, 256n);
-assert.strictEqual(heart.B, 512n);
-assert.deepStrictEqual(P.planesToRows(heart.R, heart.G, heart.B), P.HEART);
-assert.strictEqual(P.popcount(heart.R), P.HEART.join('').split('').filter(function (c) { return 'rymw'.includes(c); }).length);
+const shape = P.gridToPlanes(P.HEART_SHAPE);
+assert.strictEqual(shape.R, 388020662578203110061909499714095932521374137981715049621480747944640512n);
+assert.strictEqual(shape.G, 0n);
+assert.strictEqual(shape.B, 0n);
+assert.deepStrictEqual(P.planesToRows(shape.R, 0n, 0n), P.HEART_SHAPE);
+assert.strictEqual(P.popcount(shape.R), P.HEART_SHAPE.join('').split('').filter(function (c) { return c === 'r'; }).length);
 assert.strictEqual(P.isPow2(8n), true);
 assert.strictEqual(P.isPow2(6n), false);
 assert.strictEqual(P.isPal(121n), true);
@@ -137,24 +137,63 @@ snap.rgb.forEach(function (t) {
   usedG.add(t.g);
   usedB.add(t.b);
 });
-assert.strictEqual(supply.has(heart.R), false);
-assert.strictEqual(usedR.has(heart.R), false);
-assert.strictEqual(supply.has(heart.G), true);
-assert.strictEqual(supply.has(heart.B), true);
-assert.strictEqual(usedR.has(heart.G) || usedG.has(heart.G) || usedB.has(heart.G), false);
-assert.strictEqual(usedR.has(heart.B) || usedG.has(heart.B) || usedB.has(heart.B), false);
-const heartCtx = {
-  mode: 'fewest',
-  user: '0x0000000000000000000000000000000000000001',
-  gasWei: 0n,
-  blocked: new Set(),
-  supply: supply,
-};
-const heartRoute = P.plan(heart.R, heartCtx);
-assert.strictEqual(heartRoute.exists, false);
-assert.strictEqual(heartRoute.pieces.reduce(function (s, n) { return s + n; }, 0n), heart.R);
-assert.ok(heartRoute.mints > 0);
-assert.strictEqual(P.plan(heart.G, heartCtx).exists, true);
-assert.strictEqual(P.plan(heart.B, heartCtx).exists, true);
+function heartCtx(extra) {
+  return Object.assign({
+    mode: 'fewest',
+    user: '0x0000000000000000000000000000000000000001',
+    gasWei: 0n,
+    blocked: new Set(),
+    unknown: new Set(),
+    supply: supply,
+    usedR: usedR,
+    usedG: usedG,
+    usedB: usedB,
+  }, extra || {});
+}
+
+function assertHeart(pick) {
+  assert.ok(pick);
+  assert.strictEqual(pick.R & shape.R, shape.R);
+  assert.strictEqual(pick.G & shape.R, 0n);
+  assert.strictEqual(pick.B & shape.R, 0n);
+  assert.notStrictEqual(pick.G, pick.B);
+  assert.strictEqual(P.popcount(pick.G), 1);
+  assert.strictEqual(P.popcount(pick.B), 1);
+  assert.strictEqual(usedR.has(pick.R), false);
+  assert.strictEqual(usedG.has(pick.G), false);
+  assert.strictEqual(usedB.has(pick.B), false);
+  assert.ok(pick.mints <= 40);
+  for (let y = 0; y < 16; y++) {
+    for (let x = 0; x < 16; x++) {
+      if (P.HEART_SHAPE[y][x] === 'r') assert.strictEqual(pick.rows[y][x], 'r');
+    }
+  }
+}
+
+const low = P.pickHeart(heartCtx(), function () { return 0; });
+const high = P.pickHeart(heartCtx(), function () { return 0.999; });
+assertHeart(low);
+assertHeart(high);
+assert.ok(low.R !== high.R || low.G !== high.G || low.B !== high.B);
+
+const blockedBit = 256n;
+const blockedHolder = supply.get(blockedBit);
+assert.ok(blockedHolder);
+const avoided = P.pickHeart(heartCtx({
+  blocked: new Set([blockedHolder]),
+  unknown: new Set([String(supply.get(512n)).toLowerCase()]),
+}), function () { return 0.4; });
+assertHeart(avoided);
+assert.strictEqual(avoided.G === blockedBit || avoided.B === blockedBit, false);
+assert.strictEqual((avoided.R & blockedBit) === 0n, true);
+assert.strictEqual(avoided.G === 512n || avoided.B === 512n, false);
+assert.strictEqual((avoided.R & 512n) === 0n, true);
+
+assert.strictEqual(P.pickHeart(heartCtx({ usedR: { has: function () { return true; } } }), Math.random), null);
+assert.strictEqual(P.pickHeart(heartCtx({ usedG: { has: function () { return true; } } }), Math.random), null);
+
+const everyone = new Set();
+supply.forEach(function (owner) { everyone.add(owner); });
+assert.strictEqual(P.pickHeart(heartCtx({ blocked: everyone }), Math.random), null);
 
 console.log('planner.test.js ok');
