@@ -21,6 +21,11 @@
     return out;
   }
 
+  function issuesHtml(issues) {
+    const used = issues.some(function (s) { return s.indexOf('already used') !== -1; });
+    return S.esc(issues.join(', ')) + (used ? S.mark('ⓘ', S.TIPS.used) : '');
+  }
+
   function writePlaneInputs() {
     if (!state.planes || !$('#pR')) return;
     $('#pR').value = state.planes.R.toString();
@@ -70,10 +75,10 @@
       if (tx.kind === 'math') {
         const step = tx.step;
         return '<div class="step">' + (i + 1) + '. ' + step.a + ' + ' + step.b + ' = ' + step.result +
-          ' <button type="button" data-q="' + i + '">simulate + send</button></div>';
+          ' <button type="button" data-q="' + i + '">simulate + send</button>' + S.mark('ⓘ', S.TIPS.simulate) + '</div>';
       }
       return '<div class="step">' + (i + 1) + '. RGB.add ' + tx.r + ', ' + tx.g + ', ' + tx.b +
-        ' value 0.03 <button type="button" data-q="' + i + '">simulate + send</button></div>';
+        ' value 0.03' + S.mark('ⓘ', S.TIPS.fees) + ' <button type="button" data-q="' + i + '">simulate + send</button>' + S.mark('ⓘ', S.TIPS.simulate) + '</div>';
     }).join('');
     host.querySelectorAll('[data-q]').forEach(function (b) {
       b.onclick = function () { sendQueue(Number(b.dataset.q)); };
@@ -85,7 +90,7 @@
     const issues = planeIssues(state.planes);
     const meta = $('#rgbMeta');
     if (issues.length) {
-      if (meta) meta.textContent = issues.join(', ');
+      if (meta) meta.innerHTML = issuesHtml(issues);
       MOLD.say('rgbBad', { why: issues[0] });
       state.queue = [];
       paintQueue();
@@ -166,7 +171,7 @@
     const r = P.popcount(state.planes.R);
     const g = P.popcount(state.planes.G);
     const b = P.popcount(state.planes.B);
-    traits.textContent = (r || g || b) ? 'r ' + r + ' · g ' + g + ' · b ' + b : '';
+    traits.innerHTML = (r || g || b) ? 'r ' + r + ' · g ' + g + ' · b ' + b + S.mark('ⓘ', S.TIPS.planes) : '';
   }
 
   function rgb(view) {
@@ -187,7 +192,7 @@
       '<div class="row"><label>B <input id="pB" spellcheck="false" value="' + p.B + '"></label></div>' +
       '<p id="rgbTraits" class="dim"></p><p id="rgbMeta"></p><div id="queue"></div>' +
       '<div class="row"><button type="button" id="planRgb">plan routes</button></div>' +
-      '<div class="preview" id="preview">MATH mints, then RGB.add at 0.03 ETH. one click, one signature.</div>';
+      '<div class="preview" id="preview">MATH mints, then RGB.add at 0.03 ETH. one click, one signature.' + S.mark('ⓘ', S.TIPS.fees) + '</div>';
     $('#cells').innerHTML = S.cellsHtml(state.grid);
     paintTraits();
     $('#cells').onclick = function (ev) {
@@ -205,7 +210,7 @@
       syncPlanes();
       writePlaneInputs();
       paintTraits();
-      $('#rgbMeta').textContent = planeIssues(state.planes).join(', ');
+      $('#rgbMeta').innerHTML = issuesHtml(planeIssues(state.planes));
     };
     $('#heart').onclick = function () { S.applyHeart(false); };
     $('#shuffle').onclick = function () { S.applyHeart(true); };
@@ -264,10 +269,11 @@
     });
     $('#planRgb').onclick = planRgb;
     const issues = planeIssues(state.planes);
-    $('#rgbMeta').textContent = issues.join(', ');
+    $('#rgbMeta').innerHTML = issuesHtml(issues);
     paintQueue();
   }
 
   S.rgb = rgb;
   S.planeIssues = planeIssues;
+  S.issuesHtml = issuesHtml;
 })();

@@ -47,7 +47,7 @@
     const net = (oa && oa === S.me() ? 0n : P.ROY_WEI) + (ob && ob === S.me() ? 0n : P.ROY_WEI) + P.G_ADD * state.gasPrice;
     lines.push('pays ' + (oa ? S.short(oa) : '?') + ' and ' + (ob ? S.short(ob) : '?'));
     lines.push('msg.value 0.002, net about ' + S.fmt(net) + ' ETH after refunds and gas');
-    if (meta) meta.innerHTML = lines.map(function (l) { return S.esc(l); }).join('<br>');
+    if (meta) meta.innerHTML = lines.map(function (l) { return S.esc(l); }).join('<br>') + S.mark('ⓘ', S.TIPS.fees);
     const preview = mintPreview(pair.a, pair.b, pair.n, oa, ob);
     state.preview = preview;
     if ($('#preview')) $('#preview').textContent = preview;
@@ -105,7 +105,7 @@
       '<div id="grid"></div>' +
       '<p id="mintMeta"></p>' +
       '<div class="preview" id="preview">simulate, then send. this page does not sign.</div>' +
-      '<div class="row"><button type="button" id="sim">simulate</button><button type="button" id="send">send add</button></div>';
+      '<div class="row"><button type="button" id="sim">simulate</button>' + S.mark('ⓘ', S.TIPS.simulate) + '<button type="button" id="send">send add</button></div>';
     const draw = function () { paintMint(false); };
     $('#a').addEventListener('input', draw);
     $('#b').addEventListener('input', draw);

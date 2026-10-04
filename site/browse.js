@@ -45,11 +45,6 @@
     return list;
   }
 
-  function traitMark(glyph, label) {
-    const t = S.esc(label);
-    return '<span class="mark" role="img" title="' + t + '" aria-label="' + t + '">' + glyph + '</span>';
-  }
-
   function paintCards() {
     const list = currentList();
     const pages = Math.max(1, Math.ceil(list.length / PAGE));
@@ -63,10 +58,13 @@
       const ch = state.kind === 'math' ? state.channels.get(t.id) : null;
       const tags = [];
       const marks = [];
-      if (ch) tags.push(Array.from(ch).join(''));
+      if (ch && ch.size) {
+        tags.push(Array.from(ch).join(''));
+        marks.push(S.mark('ⓘ', S.TIPS.used));
+      }
       if (state.kind === 'math') {
-        if (P.isPal(t.id)) marks.push(traitMark('⇌', 'palindrome, reads the same backwards'));
-        if (P.isStrobo(t.id)) marks.push(traitMark('↻', 'strobogrammatic, reads the same upside down'));
+        if (P.isPal(t.id)) marks.push(S.mark('⇌', 'palindrome, reads the same backwards'));
+        if (P.isStrobo(t.id)) marks.push(S.mark('↻', 'strobogrammatic, reads the same upside down'));
       }
       let title = String(t.id);
       let extra = '';
@@ -147,7 +145,7 @@
       '<label>..<input id="popMax" size="4" value="' + S.esc(f.popMax) + '"></label>' +
       '<label><input type="checkbox" id="pal"' + (f.pal ? ' checked' : '') + '> pal</label>' +
       '<label><input type="checkbox" id="pow"' + (f.pow ? ' checked' : '') + '> 2^k</label>' +
-      '<label>used <select id="used">' +
+      '<label>used ' + S.mark('ⓘ', S.TIPS.used) + ' <select id="used">' +
       ['any', 'r', 'g', 'b', 'free'].map(function (u) {
         return '<option' + (f.used === u ? ' selected' : '') + '>' + u + '</option>';
       }).join('') + '</select></label>' +

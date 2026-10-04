@@ -60,6 +60,21 @@
     });
   }
 
+  const TIPS = {
+    blocked: "can't receive the 0.001 ETH payout. MATH (2019) pays with transfer's 2300 gas. a contract wallet needs more, so its MATH is not an input and the plan routes around it.",
+    unchecked: "the payout check couldn't reach a node. holder not confirmed. simulate before sending.",
+    planes: 'lit pixels per channel. a bit count, not the token id.',
+    fees: 'MATH add is 0.002 ETH, 0.001 to each input owner. RGB is 0.03 ETH, 0.01 to each channel owner. TOON is free.',
+    used: 'used as R, G, or B. each MATH id once per channel, ever.',
+    simulate: 'dry run via eth_call. no gas, nothing signed. with no wallet it runs from a placeholder address.',
+    mints: 'fewest MATH.add steps to build the target from existing tokens. cheapest mode may take more.',
+  };
+
+  function mark(glyph, label) {
+    const t = esc(label);
+    return '<span class="mark" role="img" title="' + t + '" aria-label="' + t + '">' + glyph + '</span>';
+  }
+
   function fmt(wei) {
     const neg = wei < 0n;
     const v = neg ? -wei : wei;
@@ -89,9 +104,12 @@
     };
   }
 
-  function setStatus(t) {
+  function setStatus(t, hint) {
     const el = $('#status');
-    if (el) el.textContent = t || '';
+    if (!el) return;
+    if (!t) { el.textContent = ''; return; }
+    if (!hint) { el.textContent = t; return; }
+    el.innerHTML = esc(t) + mark('ⓘ', hint);
   }
 
   function onChain(id) {
@@ -276,6 +294,8 @@
     state: state,
     $: $,
     esc: esc,
+    mark: mark,
+    TIPS: TIPS,
     fmt: fmt,
     hex: hex,
     short: short,
@@ -366,7 +386,7 @@
     setStatus('block ' + state.block);
     if (state.tab === 'browse' || state.tab === 'toon') show(state.tab);
     else if (state.tab === 'rgb' && $('#rgbMeta') && state.planes) {
-      $('#rgbMeta').textContent = SITE.planeIssues(state.planes).join(', ');
+      $('#rgbMeta').innerHTML = SITE.issuesHtml(SITE.planeIssues(state.planes));
     }
   }
 
@@ -485,9 +505,9 @@
       }, scan);
       if (saved) {
         MOLD.say('blocked', { n: scan.blocked.size });
-        setStatus('block ' + state.block + ' · ' + scan.blocked.size + ' blocked');
+        setStatus('block ' + state.block + ' · ' + scan.blocked.size + ' blocked', TIPS.blocked);
       } else {
-        setStatus('block ' + state.block + ' · holder probe failed');
+        setStatus('block ' + state.block + ' · holder unchecked', TIPS.unchecked);
       }
     } catch (e) {
       if (gen === loadGen) setStatus(e.message);

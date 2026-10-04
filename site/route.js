@@ -45,21 +45,25 @@
       };
     });
     if (!built) {
-      if (meta) meta.textContent = state.blockedDone ? state.blocked.size + ' blocked holders' : 'holder scan still running';
+      if (meta) {
+        if (state.blockedDone) meta.innerHTML = state.blocked.size + ' blocked' + S.mark('ⓘ', S.TIPS.blocked);
+        else if (state.holdersReady) meta.innerHTML = 'holder unchecked' + S.mark('ⓘ', S.TIPS.unchecked);
+        else meta.textContent = 'holder scan still running';
+      }
       if (steps) steps.innerHTML = '';
       return;
     }
     const warn = built.target.toString() === state.routeTarget ? '' : ' sums to ' + built.target + ', not the target.';
-    if (meta) meta.textContent = built.mints + ' mints, royalty ' + S.fmt(built.royalty) + ' ETH, gas ~' + S.fmt(built.gas) +
-      ', msg.value ' + S.fmt(built.msgValue) + ', net ~' + S.fmt(built.net) + warn;
+    if (meta) meta.innerHTML = built.mints + ' mints' + S.mark('ⓘ', S.TIPS.mints) + S.esc(', royalty ' + S.fmt(built.royalty) + ' ETH, gas ~' + S.fmt(built.gas) +
+      ', msg.value ' + S.fmt(built.msgValue) + ', net ~' + S.fmt(built.net) + warn);
     if (steps) {
       steps.innerHTML = built.steps.map(function (s, i) {
         const blocked = state.blocked.has(s.payTo[0]) || state.blocked.has(s.payTo[1]);
         return '<div class="step">' + s.a + ' + ' + s.b + ' = ' + s.result +
           (s.exists ? ' <span class="dim">exists</span>' : '') +
-          (blocked ? ' <span class="bad">blocked holder</span>' : '') +
+          (blocked ? ' <span class="bad">blocked holder</span>' + S.mark('ⓘ', S.TIPS.blocked) : '') +
           '<div class="dim">pay ' + S.esc(S.short(s.payTo[0])) + ' ' + S.esc(S.short(s.payTo[1])) + ' royalty ' + S.fmt(s.royalty) + '</div>' +
-          (s.exists ? '' : '<button type="button" data-step="' + i + '">simulate + send</button>') +
+          (s.exists ? '' : '<button type="button" data-step="' + i + '">simulate + send</button>' + S.mark('ⓘ', S.TIPS.simulate)) +
           '</div>';
       }).join('') || '<p class="dim">already minted.</p>';
       steps.querySelectorAll('[data-step]').forEach(function (b) {
