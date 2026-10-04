@@ -57,8 +57,8 @@
     }).join(' ') + '</p>';
   }
 
-  function shareBtn(kind, id) {
-    return '<button type="button" class="share" data-share="' + T.path(kind, id) + '" aria-label="share">share</button>';
+  function shareBtn(kind, id, title) {
+    return '<button type="button" class="share" data-share="' + T.path(kind, id) + '" data-share-title="' + S.esc(title) + '" aria-label="share">share</button>';
   }
 
   function cells(r, g, b) {
@@ -74,7 +74,7 @@
     const tok = lookup(kind, id);
     document.title = (tok ? nameOf(kind, tok) : spec.id) + ' · ' + label;
     if (!tok) {
-      view.innerHTML = '<h2>' + S.esc(spec.id) + ' ' + shareBtn(kind, id) + '</h2><p>' + missing() + '</p>';
+      view.innerHTML = '<h2>' + S.esc(spec.id) + ' ' + shareBtn(kind, id, document.title) + '</h2><p>' + missing() + '</p>';
       return;
     }
     let extra = '';
@@ -106,7 +106,7 @@
       ? S.esc(nameOf(kind, tok)) + ' <span class="dim">' + id + '</span>'
       : S.esc(id.toString());
     view.innerHTML =
-      '<h2>' + head + ' ' + shareBtn(kind, id) + '</h2>' +
+      '<h2>' + head + ' ' + shareBtn(kind, id, document.title) + '</h2>' +
       '<p class="dim">' + S.addr(tok.owner) + '</p>' +
       '<img class="token" alt="" data-svg="' + kind + ':' + id + '">' +
       extra + grid + traitsHtml(traitsOf(kind, tok)) +

@@ -83,6 +83,7 @@ assert.ok(rgbHtml.includes('href="#math/200"'));
 assert.ok(rgbHtml.includes('href="#math/300"'));
 assert.ok(rgbHtml.includes('href="#rgb/92"'));
 assert.ok(rgbHtml.includes('data-share="rgb/92"'));
+assert.ok(rgbHtml.includes('data-share-title="92 · RGB"'));
 assert.ok(rgbHtml.includes('class="cells"'));
 assert.ok(!/r \d+ g \d+ b \d+/.test(rgbHtml));
 assert.ok(rgbHtml.includes('opensea'));
@@ -97,11 +98,13 @@ const mathHtml = LIST.cardHtml('math', { id: 1500n, owner: '0x' }, helpers());
 assert.ok(mathHtml.includes('class="bits"'));
 assert.ok(mathHtml.includes('href="#math/1500"'));
 assert.ok(mathHtml.includes('data-share="math/1500"'));
+assert.ok(mathHtml.includes('data-share-title="1500 · MATH"'));
 const palHtml = LIST.cardHtml('math', { id: 121n, owner: '0x' }, helpers());
 assert.ok(palHtml.includes('⇌'));
 
 const toonHtml = LIST.cardHtml('toon', toon, helpers());
 assert.ok(toonHtml.includes('nftcryptonews'));
+assert.ok(toonHtml.includes('data-share-title="nftcryptonews · TOON"'));
 assert.ok(toonHtml.includes('{ಥ.ಠ}'));
 assert.ok(toonHtml.includes('class="cells"'));
 
