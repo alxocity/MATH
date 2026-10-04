@@ -246,6 +246,14 @@
   }
 
   function rgb(view) {
+    if (state.arm && state.arm.kind === 'rgb') {
+      syncPlanes();
+      const next = state.planes || { R: 0n, G: 0n, B: 0n };
+      next[state.arm.ch] = state.arm.id;
+      state.planes = next;
+      state.grid = P.planesToRows(next.R, next.G, next.B);
+      state.arm = null;
+    }
     syncPlanes();
     const p = state.planes || { R: 0n, G: 0n, B: 0n };
     view.innerHTML =

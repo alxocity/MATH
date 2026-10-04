@@ -75,7 +75,7 @@
         return '<div class="step">' + s.a + ' + ' + s.b + ' = ' + s.result +
           (s.exists ? ' <span class="dim">exists</span>' : '') +
           (note ? ' <span class="' + (note === RULES.unchecked() ? 'dim' : 'bad') + '">' + S.esc(note) + '</span>' + noteMark : '') +
-          '<div class="dim">pay ' + S.esc(S.short(s.payTo[0])) + ' ' + S.esc(S.short(s.payTo[1])) + ' royalty ' + S.fmt(s.royalty) + '</div>' +
+          '<div class="dim">pay ' + S.addr(s.payTo[0]) + ' ' + S.addr(s.payTo[1]) + ' royalty ' + S.fmt(s.royalty) + '</div>' +
           buttons +
           '</div>';
       }).join('') || '<p class="dim">already minted.</p>';
@@ -88,6 +88,10 @@
     }
     const box = $('#preview');
     if (box && state.preview) box.textContent = state.preview;
+    if (built) {
+      built.steps.forEach(function (s) { ENS.want(s.payTo[0]); ENS.want(s.payTo[1]); });
+      ENS.flush(function () { if (state.tab === 'route' && $('#steps')) paintRoute(); });
+    }
   }
 
   function movePiece(i, d) {

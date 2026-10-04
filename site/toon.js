@@ -107,6 +107,23 @@
     $('#simToon').onclick = function () { sendToon(false); };
     $('#sendToon').onclick = function () { sendToon(true); };
     paintToonWhy();
+    if (state.arm && state.arm.kind === 'toon') {
+      const el = $('#' + state.arm.slot);
+      const v = String(state.arm.id);
+      state.arm = null;
+      if (el) {
+        let has = false;
+        for (let i = 0; i < el.options.length; i++) if (el.options[i].value === v) has = true;
+        if (!has) {
+          const o = document.createElement('option');
+          o.value = v;
+          o.textContent = v;
+          el.appendChild(o);
+        }
+        el.value = v;
+        previewToon();
+      }
+    }
     if (!state.account) MOLD.say('noWallet');
   }
 

@@ -164,6 +164,9 @@ a { color: var(--y); }
   align-items: center;
   justify-content: center;
 }
+.mine { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; border-top: 1px solid var(--line); padding: 8px 0; min-width: 0; }
+.addr { color: var(--dim); text-align: left; max-width: 100%; }
+.addr.open { color: var(--fg); word-break: break-all; }
 @media (max-width: 860px) {
   body { grid-template-columns: minmax(0, 1fr); }
   aside { border-left: 0; border-top: 1px solid var(--line); }
