@@ -71,8 +71,8 @@
   function links(kind, id) {
     const c = kind === 'rgb' ? ADDR.RGB : kind === 'toon' ? ADDR.TOON : ADDR.MATH;
     const n = id.toString();
-    return '<a class="out" href="https://opensea.io/assets/ethereum/' + c + '/' + n + '" target="_blank" rel="noopener">opensea</a>' +
-      '<a class="out" href="https://etherscan.io/nft/' + c + '/' + n + '" target="_blank" rel="noopener">etherscan</a>';
+    return '<a class="out" href="https://opensea.io/item/ethereum/' + c + '/' + n + '" target="_blank" rel="noopener noreferrer">opensea</a>' +
+      '<a class="out" href="https://etherscan.io/nft/' + c + '/' + n + '" target="_blank" rel="noopener noreferrer">etherscan</a>';
   }
 
   const TIPS = {
@@ -702,10 +702,10 @@
       if (b.classList.contains('open')) {
         b.classList.remove('open');
         b.textContent = b.dataset.label;
-      } else {
-        b.classList.add('open');
-        b.textContent = full;
+        return;
       }
+      b.classList.add('open');
+      b.textContent = full;
       if (navigator.clipboard && navigator.clipboard.writeText) {
         navigator.clipboard.writeText(full).catch(function () {});
       }

@@ -165,21 +165,45 @@
   }
 
   const names = new Map();
+  const namedAt = new Map();
   const forward = new Map();
+  const forwardAt = new Map();
   const wait = new Set();
   let flight = null;
+  const TTL = 7 * 24 * 60 * 60 * 1000;
+
+  function showName(name) {
+    const n = String(name || '').trim().toLowerCase();
+    if (!n || n.length > 64 || !isName(n)) return '';
+    return n;
+  }
+
+  function fresh(at, now) {
+    return typeof at === 'number' && now - at >= 0 && now - at < TTL;
+  }
 
   function readStore() {
     try {
       if (typeof localStorage === 'undefined') return;
       const raw = JSON.parse(localStorage.getItem(KEY) || 'null');
       if (!raw) return;
+      const now = Date.now();
       Object.keys(raw.names || {}).forEach(function (a) {
-        if (normAddr(a) && typeof raw.names[a] === 'string') names.set(normAddr(a), raw.names[a]);
+        const addr = normAddr(a);
+        const rec = raw.names[a];
+        const text = typeof rec === 'string' ? rec : rec && rec.n;
+        const name = showName(text);
+        if (!addr || !name || !fresh(rec && rec.at, now)) return;
+        names.set(addr, name);
+        namedAt.set(addr, rec.at);
       });
       Object.keys(raw.forward || {}).forEach(function (n) {
-        const a = normAddr(raw.forward[n]);
-        if (a) forward.set(String(n).toLowerCase(), a);
+        const rec = raw.forward[n];
+        const addr = normAddr(typeof rec === 'string' ? rec : rec && rec.a);
+        const name = showName(n);
+        if (!name || !addr || !fresh(rec && rec.at, now)) return;
+        forward.set(name, addr);
+        forwardAt.set(name, rec.at);
       });
     } catch (e) { /* ignore */ }
   }
@@ -188,8 +212,12 @@
     try {
       if (typeof localStorage === 'undefined') return;
       const pack = { names: {}, forward: {} };
-      names.forEach(function (n, a) { if (n) pack.names[a] = n; });
-      forward.forEach(function (a, n) { if (a) pack.forward[n] = a; });
+      names.forEach(function (n, a) {
+        if (n) pack.names[a] = { n: n, at: namedAt.get(a) || Date.now() };
+      });
+      forward.forEach(function (a, n) {
+        if (a) pack.forward[n] = { a: a, at: forwardAt.get(n) || Date.now() };
+      });
       localStorage.setItem(KEY, JSON.stringify(pack));
     } catch (e) { /* ignore */ }
   }
@@ -261,22 +289,30 @@
         names.set(addr, '');
         return;
       }
-      const name = decodeName(row.data);
+      const name = showName(decodeName(row.data));
       if (!name) {
         names.set(addr, '');
         return;
       }
-      found.push({ addr: addr, name: name });
+      let data;
+      try { data = resolveData(name); } catch (e) {
+        names.set(addr, '');
+        return;
+      }
+      found.push({ addr: addr, name: name, data: data });
     });
     if (found.length) {
       let checks;
-      try { checks = await callMany(found.map(function (f) { return resolveData(f.name); })); } catch (e) { checks = []; }
+      try { checks = await callMany(found.map(function (f) { return f.data; })); } catch (e) { checks = []; }
       found.forEach(function (f, i) {
         const row = checks[i];
         const got = row && row.success ? decodeAddr(row.data) : '';
         if (got && got === f.addr) {
+          const at = Date.now();
           names.set(f.addr, f.name);
-          forward.set(f.name.toLowerCase(), f.addr);
+          namedAt.set(f.addr, at);
+          forward.set(f.name, f.addr);
+          forwardAt.set(f.name, at);
           changed = true;
         } else {
           names.set(f.addr, '');
@@ -308,11 +344,15 @@
     const name = String(q || '').trim().toLowerCase();
     if (!isName(name)) return Promise.resolve('');
     if (forward.has(name)) return Promise.resolve(forward.get(name));
-    return callMany([resolveData(name)]).then(function (rows) {
+    let data;
+    try { data = resolveData(name); } catch (e) { return Promise.resolve(''); }
+    return callMany([data]).then(function (rows) {
       const got = rows[0] && rows[0].success ? decodeAddr(rows[0].data) : '';
       forward.set(name, got || '');
-      if (got && !names.has(got)) names.set(got, name);
-      if (got) writeStore();
+      if (got) {
+        forwardAt.set(name, Date.now());
+        writeStore();
+      }
       return got || '';
     }, function () { return ''; });
   }
