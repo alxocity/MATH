@@ -705,7 +705,7 @@
       if (gen !== state.runGen) return;
       const step = live[i];
       let again;
-      try { again = await preflight(step, live.slice(i)); }
+      try { again = await preflight(step, live); }
       catch (e) {
         fail(step, clip(e && e.message ? e.message : e));
         return;
