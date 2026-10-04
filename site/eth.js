@@ -590,6 +590,7 @@
     owned: owned,
     tokenSVGs: tokenSVGs,
     readString: readString,
+    ethCall: ethCall,
     simulate: simulate,
     send: send,
     ensureChain: ensureChain,

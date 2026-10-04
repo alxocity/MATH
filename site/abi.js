@@ -12,6 +12,8 @@
     get: '9507d39a',
     getWord: '43503fac',
     getFace: '6275e9f2',
+    getBackgroundColor: '4671059f',
+    getTextColor: '81fcb66a',
     tokenSVG: '9bac5f7a',
     add2: '771602f7',
     add3: '505fb46c',
