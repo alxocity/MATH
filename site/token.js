@@ -3,11 +3,16 @@
   if (typeof module === 'object' && module.exports) module.exports = api;
   g.TOKEN = api;
 })(typeof globalThis !== 'undefined' ? globalThis : this, function () {
+  const UINT256 = 2n ** 256n;
+
   function parse(hash) {
     const m = /^#?(math|rgb|toon)\/(\d+)$/.exec(String(hash || ''));
-    if (!m) return null;
-    try { return { kind: m[1], id: BigInt(m[2]) }; }
-    catch (e) { return null; }
+    if (!m || m[2].length > 78) return null;
+    try {
+      const id = BigInt(m[2]);
+      if (id >= UINT256) return null;
+      return { kind: m[1], id: id };
+    } catch (e) { return null; }
   }
 
   function path(kind, id) {

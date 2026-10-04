@@ -73,8 +73,11 @@
     return '<a href="' + href(kind, id) + '">' + text + '</a>';
   }
 
-  function shareBtn(kind, id) {
-    return '<button type="button" class="share" data-share="' + kind + '/' + BigInt(id).toString() + '" aria-label="share">↗</button>';
+  function shareBtn(kind, id, name, esc) {
+    const label = kind === 'rgb' ? 'RGB' : kind === 'toon' ? 'TOON' : 'MATH';
+    const title = (name || BigInt(id).toString()) + ' · ' + label;
+    return '<button type="button" class="share" data-share="' + kind + '/' + BigInt(id).toString() +
+      '" data-share-title="' + (esc ? esc(title) : title) + '" aria-label="share">↗</button>';
   }
 
   function cardHtml(kind, tok, h, actions) {
@@ -89,7 +92,8 @@
       if (h.isPal(tok.id)) marks.push(h.mark('⇌', 'palindrome, reads the same backwards'));
       if (h.isStrobo(tok.id)) marks.push(h.mark('↻', 'strobogrammatic, reads the same upside down'));
     }
-    let title = link(kind, tok.id, String(tok.id));
+    let name = String(tok.id);
+    let title = link(kind, tok.id, name);
     let extra = '';
     let grid = '';
     if (kind === 'rgb') {
@@ -100,6 +104,7 @@
     } else if (kind === 'toon') {
       if (tok.word != null) {
         const word = h.word(tok.word) || String(tok.word);
+        name = word;
         const face = h.face(tok.face) || String(tok.face);
         title = link('toon', tok.id, h.esc(word)) + ' <span class="dim">' + link('toon', tok.id, String(tok.id)) + '</span>';
         extra = '<div class="face">' + h.esc(face) + '</div>';
@@ -113,7 +118,7 @@
     const head = title + (tag ? ' <span class="dim">' + h.esc(tag) + '</span>' : '') + marks.join('');
     return '<article class="card"><div>' + head + '</div>' +
       '<div class="dim">' + h.addr(tok.owner) + '</div>' +
-      '<div class="outs">' + h.links(kind, tok.id) + shareBtn(kind, tok.id) + '</div>' +
+      '<div class="outs">' + h.links(kind, tok.id) + shareBtn(kind, tok.id, name, h.esc) + '</div>' +
       (actions || '') + extra + grid +
       '<img alt="" data-svg="' + kind + ':' + tok.id + '"></article>';
   }

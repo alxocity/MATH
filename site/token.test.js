@@ -10,6 +10,11 @@ assert.strictEqual(T.parse('#math/'), null);
 assert.strictEqual(T.parse('#math/nope'), null);
 assert.strictEqual(T.parse('#foo/1'), null);
 assert.strictEqual(T.parse(''), null);
+assert.strictEqual(T.parse('#math/' + '1'.repeat(79)), null);
+assert.strictEqual(T.parse('#math/' + '0'.repeat(79)), null);
+assert.strictEqual(T.parse('#math/' + (2n ** 256n).toString()), null);
+assert.deepStrictEqual(T.parse('#math/' + (2n ** 256n - 1n).toString()), { kind: 'math', id: 2n ** 256n - 1n });
+assert.deepStrictEqual(T.parse('#math/0536'), { kind: 'math', id: 536n });
 
 assert.strictEqual(T.href('math', 536n), '#math/536');
 assert.strictEqual(T.path('rgb', '12'), 'rgb/12');

@@ -1152,19 +1152,26 @@
     if (view && SITE.token) SITE.token(view);
     paintPending();
     const next = '#' + tok.kind + '/' + id;
-    if (location.hash !== next) location.hash = tok.kind + '/' + id;
+    if (location.hash !== next) history.replaceState(null, '', next);
   }
 
   function onHash() {
     const tok = globalThis.TOKEN.parse(location.hash);
     if (tok) {
-      if (state.tab === 'token' && state.token && state.token.kind === tok.kind && state.token.id === tok.id.toString()) return;
+      const next = '#' + tok.kind + '/' + tok.id.toString();
+      if (state.tab === 'token' && state.token && state.token.kind === tok.kind && state.token.id === tok.id.toString()) {
+        if (location.hash !== next) history.replaceState(null, '', next);
+        return;
+      }
       openToken(tok);
       return;
     }
     let name = (location.hash || '#browse').slice(1);
     if (TABS.indexOf(name) === -1) name = 'browse';
-    if (state.tab === name && !state.token) return;
+    if (state.tab === name && !state.token) {
+      if (location.hash !== '#' + name) history.replaceState(null, '', '#' + name);
+      return;
+    }
     show(name);
   }
 
@@ -1492,15 +1499,16 @@
       const url = location.origin + location.pathname + '#' + b.dataset.share;
       function copied() {
         const old = b.textContent;
-        b.textContent = 'copied';
-        setTimeout(function () { if (b.isConnected && b.textContent === 'copied') b.textContent = old; }, 1200);
+        const next = b.closest('.card') ? '✓' : 'copied';
+        b.textContent = next;
+        setTimeout(function () { if (b.isConnected && b.textContent === next) b.textContent = old; }, 1200);
       }
       function copy() {
         if (!navigator.clipboard || !navigator.clipboard.writeText) return;
         navigator.clipboard.writeText(url).then(copied, function () {});
       }
       if (navigator.share) {
-        navigator.share({ title: document.title, url: url }).catch(function (e) {
+        navigator.share({ title: b.dataset.shareTitle || document.title, url: url }).catch(function (e) {
           if (e && e.name === 'AbortError') return;
           copy();
         });
