@@ -89,21 +89,32 @@
     if (el) el.textContent = why;
   }
 
+  function paintPartLinks() {
+    const math = $('#tm') && $('#tm').value;
+    const rgb = $('#tr') && $('#tr').value;
+    const ml = $('#tmLink');
+    const rl = $('#trLink');
+    if (ml) ml.innerHTML = math ? globalThis.TOKEN.idLink('math', math) : '';
+    if (rl) rl.innerHTML = rgb ? globalThis.TOKEN.idLink('rgb', rgb) : '';
+  }
+
   function toon(view) {
     const maths = listed(state.math, state.heldMath);
     const rgbs = listed(state.rgb, state.heldRgb);
     view.innerHTML =
-      '<div class="row"><label>MATH <select id="tm"><option value="">—</option>' + opt(maths, 'math', function (id) { return id; }) + '</select></label></div>' +
+      '<div class="row"><label>MATH <select id="tm"><option value="">—</option>' + opt(maths, 'math', function (id) { return id; }) + '</select> <span id="tmLink"></span></label></div>' +
       '<div class="row"><label>WORD <select id="tw"><option value="">—</option>' + opt(state.words, 'word', function (id) { return state.wordText.get(BigInt(id)) || id; }) + '</select></label>' +
       '<span class="dim">' + S.esc(state.wordNote) + '</span></div>' +
       '<div class="row"><label>FACE <select id="tf"><option value="">—</option>' + opt(state.faces, 'face', function (id) { return state.faceText.get(BigInt(id)) || id; }) + '</select></label>' +
       '<span class="dim">' + S.esc(state.faceNote) + '</span></div>' +
-      '<div class="row"><label>RGB <select id="tr"><option value="">—</option>' + opt(rgbs, 'rgb', rgbLabel) + '</select></label></div>' +
+      '<div class="row"><label>RGB <select id="tr"><option value="">—</option>' + opt(rgbs, 'rgb', rgbLabel) + '</select> <span id="trLink"></span></label></div>' +
       '<div id="toonPrev"><p class="dim toon-wait">pick four.</p></div>' +
       '<div class="preview" id="preview">TOON.add has no fee. you must own all four. grey picks say why.' + S.mark('ⓘ', S.TIPS.fees) + '</div>' +
       '<div class="row"><button type="button" id="simToon">simulate</button>' + S.mark('ⓘ', S.TIPS.simulate) + '<button type="button" id="sendToon">send add</button>' +
       '<span id="toonWhy" class="bad"></span></div>';
-    ['tm', 'tw', 'tf', 'tr'].forEach(function (id) { $('#' + id).addEventListener('change', previewToon); });
+    ['tm', 'tw', 'tf', 'tr'].forEach(function (id) {
+      $('#' + id).addEventListener('change', function () { paintPartLinks(); previewToon(); });
+    });
     $('#simToon').onclick = function () { sendToon(false); };
     $('#sendToon').onclick = function () { sendToon(true); };
     paintToonWhy();
@@ -124,6 +135,7 @@
         previewToon();
       }
     }
+    paintPartLinks();
     if (!state.account) MOLD.say('noWallet');
   }
 

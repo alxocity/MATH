@@ -77,7 +77,12 @@ function helpers() {
 }
 
 const rgbHtml = LIST.cardHtml('rgb', rgb, helpers());
-assert.ok(rgbHtml.includes('R 100 · G 200 · B 300'));
+assert.ok(rgbHtml.includes('href="#math/100"'));
+assert.ok(rgbHtml.includes('>100</a>'));
+assert.ok(rgbHtml.includes('href="#math/200"'));
+assert.ok(rgbHtml.includes('href="#math/300"'));
+assert.ok(rgbHtml.includes('href="#rgb/92"'));
+assert.ok(rgbHtml.includes('data-share="rgb/92"'));
 assert.ok(rgbHtml.includes('class="cells"'));
 assert.ok(!/r \d+ g \d+ b \d+/.test(rgbHtml));
 assert.ok(rgbHtml.includes('opensea'));
@@ -86,11 +91,12 @@ assert.ok(rgbHtml.includes('data-svg="rgb:92"'));
 
 const bare = LIST.cardHtml('rgb', { id: 5n, owner: '0x' }, helpers());
 assert.ok(!bare.includes('class="cells"'));
-assert.ok(bare.includes('>5</div>'));
+assert.ok(bare.includes('href="#rgb/5"'));
 
 const mathHtml = LIST.cardHtml('math', { id: 1500n, owner: '0x' }, helpers());
 assert.ok(mathHtml.includes('class="bits"'));
-assert.ok(mathHtml.includes('1500'));
+assert.ok(mathHtml.includes('href="#math/1500"'));
+assert.ok(mathHtml.includes('data-share="math/1500"'));
 const palHtml = LIST.cardHtml('math', { id: 121n, owner: '0x' }, helpers());
 assert.ok(palHtml.includes('⇌'));
 

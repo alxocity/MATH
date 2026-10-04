@@ -515,7 +515,8 @@
         btn = ' <button type="button" data-check="1">check</button>';
         if (s.chain !== false) btn += ' <button type="button" data-clear="' + i + '">clear</button>';
       } else if (s.status === 'submitted') btn = ' <button type="button" data-check="1">check</button>';
-      return '<div class="run">' + (i + 1) + '/' + rows.length + ' ' + esc(s.status || 'pending') + ' ' + esc(s.label) + hash + err + btn + '</div>';
+      const label = globalThis.TOKEN.labelHtml(s.label) || esc(s.label);
+      return '<div class="run">' + (i + 1) + '/' + rows.length + ' ' + esc(s.status || 'pending') + ' ' + label + hash + err + btn + '</div>';
     }).join('');
     host.querySelectorAll('[data-retry]').forEach(function (b) {
       b.onclick = function () { if (state.runSend) state.runSend(); };
@@ -1121,20 +1122,50 @@
     if (said) MOLD.say(said.key, said.vars);
   }
 
+  const TABS = ['browse', 'mint', 'route', 'rgb', 'toon', 'about', 'mine'];
+
   function show(tab, quiet) {
     if (tab === 'mine' && !state.account) tab = 'browse';
+    if (TABS.indexOf(tab) === -1) tab = 'browse';
     state.tab = tab;
-    location.hash = tab;
+    state.token = null;
+    document.title = '1 + 1 = 2';
     document.querySelectorAll('nav button').forEach(function (b) {
       b.classList.toggle('on', b.dataset.tab === tab);
     });
     const view = $('#view');
     SITE[tab](view);
     paintPending();
+    if (location.hash !== '#' + tab) location.hash = tab;
     if (quiet) return;
     if (tab === 'browse') MOLD.say('browse');
     if (tab === 'rgb') MOLD.say('rgb');
     if (tab === 'toon') MOLD.say('toon');
+  }
+
+  function openToken(tok) {
+    const id = BigInt(tok.id).toString();
+    state.tab = 'token';
+    state.token = { kind: tok.kind, id: id };
+    document.querySelectorAll('nav button').forEach(function (b) { b.classList.remove('on'); });
+    const view = $('#view');
+    if (view && SITE.token) SITE.token(view);
+    paintPending();
+    const next = '#' + tok.kind + '/' + id;
+    if (location.hash !== next) location.hash = tok.kind + '/' + id;
+  }
+
+  function onHash() {
+    const tok = globalThis.TOKEN.parse(location.hash);
+    if (tok) {
+      if (state.tab === 'token' && state.token && state.token.kind === tok.kind && state.token.id === tok.id.toString()) return;
+      openToken(tok);
+      return;
+    }
+    let name = (location.hash || '#browse').slice(1);
+    if (TABS.indexOf(name) === -1) name = 'browse';
+    if (state.tab === name && !state.token) return;
+    show(name);
   }
 
   const SITE = {
@@ -1292,7 +1323,8 @@
 
   function paintIndex() {
     setStatus('block ' + state.block);
-    if (state.tab === 'browse' || state.tab === 'toon' || state.tab === 'mine') show(state.tab);
+    if (state.tab === 'token' && state.token && SITE.token) SITE.token($('#view'));
+    else if (state.tab === 'browse' || state.tab === 'toon' || state.tab === 'mine') show(state.tab);
     else if (state.tab === 'mint' && $('#send')) SITE.paintMint(false);
     else if (state.tab === 'rgb' && $('#rgbMeta') && state.planes) {
       $('#rgbMeta').innerHTML = SITE.issuesHtml(SITE.planeIssues(state.planes));
@@ -1452,6 +1484,30 @@
     document.querySelectorAll('nav button').forEach(function (b) {
       b.onclick = function () { show(b.dataset.tab); };
     });
+    window.addEventListener('hashchange', onHash);
+    document.addEventListener('click', function (ev) {
+      const b = ev.target.closest('[data-share]');
+      if (!b) return;
+      ev.preventDefault();
+      const url = location.origin + location.pathname + '#' + b.dataset.share;
+      function copied() {
+        const old = b.textContent;
+        b.textContent = 'copied';
+        setTimeout(function () { if (b.isConnected && b.textContent === 'copied') b.textContent = old; }, 1200);
+      }
+      function copy() {
+        if (!navigator.clipboard || !navigator.clipboard.writeText) return;
+        navigator.clipboard.writeText(url).then(copied, function () {});
+      }
+      if (navigator.share) {
+        navigator.share({ title: document.title, url: url }).catch(function (e) {
+          if (e && e.name === 'AbortError') return;
+          copy();
+        });
+        return;
+      }
+      copy();
+    });
     document.addEventListener('click', function (ev) {
       const b = ev.target.closest('.addr');
       if (!b) return;
@@ -1507,8 +1563,12 @@
     }
     const pending = loadPending();
     if (pending && /^0x[0-9a-fA-F]{64}$/.test(pending)) state.pendingHash = pending;
-    const tab = (location.hash || '#browse').slice(1);
-    show(['browse', 'mint', 'route', 'rgb', 'toon', 'about', 'mine'].indexOf(tab) === -1 ? 'browse' : tab);
+    const tok = globalThis.TOKEN.parse(location.hash);
+    if (tok) openToken(tok);
+    else {
+      const tab = (location.hash || '#browse').slice(1);
+      show(TABS.indexOf(tab) === -1 ? 'browse' : tab);
+    }
     ETH.gasPrice().then(function (g) { state.gasPrice = g; }).catch(function () {});
     watchContractNames();
     watchEthereum();
