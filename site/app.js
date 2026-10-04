@@ -62,6 +62,8 @@
     preview: '',
     pendingHash: null,
     pendingOk: null,
+    pendingSums: new Map(),
+    planesTouched: false,
     run: null,
     runBusy: false,
     runGen: 0,
@@ -401,6 +403,7 @@
     state.txLock = null;
     state.pendingHash = null;
     state.pendingOk = null;
+    if (state.pendingSums) state.pendingSums.delete(hash);
     savePending('');
     const ok = globalThis.RUN.receiptOk(rec.status);
     MOLD.say('mined', { status: ok ? 'ok' : 'reverted' });
@@ -1134,6 +1137,12 @@
     if (tab === 'toon') MOLD.say('toon');
   }
 
+  function openMints() {
+    const rows = (state.queue || []).concat(state.run || []);
+    if (state.pendingSums) state.pendingSums.forEach(function (id) { rows.push({ sum: id }); });
+    return globalThis.SUGGEST.busyIds(rows);
+  }
+
   const SITE = {
     state: state,
     $: $,
@@ -1163,6 +1172,7 @@
     show: show,
     hit: hit,
     persistTexts: persistTexts,
+    openMints: openMints,
   };
   globalThis.SITE = SITE;
 
@@ -1293,7 +1303,6 @@
     setStatus('block ' + state.block);
     if (state.tab === 'browse' || state.tab === 'toon') show(state.tab);
     else if (state.tab === 'mint' && SITE.fillMint) SITE.fillMint(false);
-    else if (state.tab === 'mint' && $('#send')) SITE.paintMint(false);
     else if (state.tab === 'rgb' && SITE.fillRgb) SITE.fillRgb(false);
   }
 
@@ -1335,6 +1344,7 @@
       MOLD.say('heartNone');
       return;
     }
+    state.planesTouched = true;
     state.grid = state.heartPick.rows.slice();
     show('rgb', true);
     const p = state.heartPick;

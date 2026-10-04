@@ -126,6 +126,7 @@
       if (sim.error) throw new Error(ETH.reason(sim.error));
       if ($('#preview')) $('#preview').textContent = preview + '\nsimulation ok. confirm in the wallet.';
       const hash = await ETH.send(tx);
+      state.pendingSums.set(hash, pair.n);
       S.noteSent(hash, function () {
         state.supply.set(pair.n, S.me());
       });
@@ -159,6 +160,7 @@
       gasWei: P.G_ADD * state.gasPrice,
       owned: ownedMath(),
       example: !state.account,
+      skip: S.openMints(),
     };
   }
 
@@ -175,9 +177,10 @@
     const bEl = $('#b');
     if (!aEl || !bEl) return;
     const example = !state.account;
-    if (mathHint && mathHint.example !== example) mathHint = null;
-    const aFree = SUGGEST.fieldFree(aEl.value, mathHint && mathHint.ownA ? mathHint.a : null);
-    const bFree = SUGGEST.fieldFree(bEl.value, mathHint && mathHint.ownB ? mathHint.b : null);
+    const dropped = !!(mathHint && mathHint.example !== example);
+    const aFree = SUGGEST.hintFree(aEl.value, mathHint && { value: mathHint.a, example: mathHint.example }, !!(mathHint && mathHint.ownA), example);
+    const bFree = SUGGEST.hintFree(bEl.value, mathHint && { value: mathHint.b, example: mathHint.example }, !!(mathHint && mathHint.ownB), example);
+    if (dropped) mathHint = null;
     const ctx = mathCtx();
     if (!aFree && !bFree) {
       paintHint(false, '');
@@ -204,7 +207,7 @@
     });
     if (!next) {
       const stale = mathHint && !SUGGEST.mathOk(ctx, mathHint.a, mathHint.b);
-      if (stale) {
+      if (stale || dropped) {
         if (aFree) aEl.value = '';
         if (bFree) bEl.value = '';
         mathHint = null;
