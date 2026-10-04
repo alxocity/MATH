@@ -19,10 +19,11 @@
     return fieldFree(value, suggested);
   }
 
-  // A mode change only releases a field we filled. A number the user typed stays put.
+  // A mode change only releases a field we filled. Blank counts: the form was rebuilt.
   function hintFree(value, hint, own, exampleNow) {
     if (hint && hint.example !== exampleNow) {
-      return !!own && String(value == null ? '' : value).trim() === String(hint.value);
+      const v = String(value == null ? '' : value).trim();
+      return !!own && (v === '' || v === String(hint.value));
     }
     return fieldFree(value, hint && own ? hint.value : null);
   }
