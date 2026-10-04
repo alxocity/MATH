@@ -89,21 +89,188 @@
     if (el) el.textContent = why;
   }
 
+  let toonHint = null;
+  let catalog = null;
+  let catalogJob = null;
+  let toonFillGen = 0;
+
+  function paintToonHint(example, note) {
+    const el = $('#hintNote');
+    if (el) el.textContent = note || (example ? 'example' : '');
+  }
+
+  function pullIds(address) {
+    return ETH.ethCall(address, '0x' + ABI.SEL.totalSupply).then(function (raw) {
+      const n = Number(ABI.decodeUint(raw));
+      if (!Number.isSafeInteger(n) || n <= 0) return [];
+      const take = Math.min(n, 48);
+      const calls = [];
+      const seen = new Set();
+      for (let i = 0; i < take; i++) {
+        const idx = Math.min(n - 1, Math.floor(i * n / take));
+        if (seen.has(idx)) continue;
+        seen.add(idx);
+        calls.push({ to: address, data: ABI.call(ABI.SEL.tokenByIndex, [idx]), allow: true });
+      }
+      return ETH.ethCall(ADDR.MULTI, ABI.encodeAggregate(calls)).then(function (res) {
+        const ids = [];
+        ABI.decodeAggregate(res).forEach(function (row) {
+          if (row && row.success) ids.push(ABI.decodeUint(row.data));
+        });
+        return ids;
+      });
+    });
+  }
+
+  function loadCatalog() {
+    if (catalog) return Promise.resolve(catalog);
+    if (catalogJob) return catalogJob;
+    catalogJob = Promise.all([pullIds(ADDR.WORD), pullIds(ADDR.FACE)]).then(function (pair) {
+      catalog = { words: pair[0], faces: pair[1] };
+      return catalog;
+    }, function () {
+      catalogJob = null;
+      return { words: [], faces: [] };
+    });
+    return catalogJob;
+  }
+
+  function choose(el, id) {
+    const v = id.toString();
+    let has = false;
+    for (let i = 0; i < el.options.length; i++) if (el.options[i].value === v) has = true;
+    if (!has) {
+      const o = document.createElement('option');
+      o.value = v;
+      o.textContent = v;
+      el.appendChild(o);
+    }
+    el.value = v;
+  }
+
+  function toonCtx() {
+    const maths = state.account ? listed(state.math, state.heldMath) : state.math.map(function (t) { return t.id; });
+    const rgbs = state.account ? listed(state.rgb, state.heldRgb) : state.rgb.map(function (t) { return t.id; });
+    return {
+      maths: maths,
+      words: state.account ? state.words.slice() : (catalog ? catalog.words : []),
+      faces: state.account ? state.faces.slice() : (catalog ? catalog.faces : []),
+      rgbs: rgbs,
+      used: state.toonBy,
+    };
+  }
+
+  function hintLock(hint) {
+    return { math: hint.math, word: hint.word, face: hint.face, rgb: hint.rgb };
+  }
+
+  function applyToon(advance) {
+    const tm = $('#tm');
+    const tw = $('#tw');
+    const tf = $('#tf');
+    const tr = $('#tr');
+    if (!tm || !tw || !tf || !tr) return;
+    const example = !state.account;
+    const free = {
+      math: SUGGEST.fieldFree(tm.value, toonHint && toonHint.math),
+      word: SUGGEST.fieldFree(tw.value, toonHint && toonHint.word),
+      face: SUGGEST.fieldFree(tf.value, toonHint && toonHint.face),
+      rgb: SUGGEST.fieldFree(tr.value, toonHint && toonHint.rgb),
+    };
+    if (!free.math && !free.word && !free.face && !free.rgb) {
+      paintToonHint(false, '');
+      return;
+    }
+    const ctx = toonCtx();
+    if (!advance && toonHint && SUGGEST.toonTuple(ctx, { lock: hintLock(toonHint) })) {
+      if (free.math) choose(tm, toonHint.math);
+      if (free.word) choose(tw, toonHint.word);
+      if (free.face) choose(tf, toonHint.face);
+      if (free.rgb) choose(tr, toonHint.rgb);
+      paintToonHint(example, '');
+      previewToon();
+      return;
+    }
+    let cursor = null;
+    if (advance && toonHint) {
+      try {
+        cursor = {
+          math: BigInt(toonHint.math),
+          word: BigInt(toonHint.word),
+          face: BigInt(toonHint.face),
+          rgb: BigInt(toonHint.rgb),
+        };
+      } catch (e) { cursor = null; }
+    }
+    const next = SUGGEST.toonTuple(ctx, {
+      cursor: cursor,
+      lock: {
+        math: free.math ? null : tm.value,
+        word: free.word ? null : tw.value,
+        face: free.face ? null : tf.value,
+        rgb: free.rgb ? null : tr.value,
+      },
+    });
+    if (!next) {
+      const stale = toonHint && !SUGGEST.toonTuple(ctx, { lock: hintLock(toonHint) });
+      if (stale) {
+        if (free.math) tm.value = '';
+        if (free.word) tw.value = '';
+        if (free.face) tf.value = '';
+        if (free.rgb) tr.value = '';
+        toonHint = null;
+      }
+      paintToonHint(false, advance && toonHint ? 'nothing else' : 'nothing to suggest');
+      return;
+    }
+    if (free.math) choose(tm, next.math);
+    if (free.word) choose(tw, next.word);
+    if (free.face) choose(tf, next.face);
+    if (free.rgb) choose(tr, next.rgb);
+    toonHint = { math: tm.value, word: tw.value, face: tf.value, rgb: tr.value, example: example };
+    paintToonHint(example, '');
+    previewToon();
+  }
+
+  function fillToon(advance) {
+    const gen = ++toonFillGen;
+    const example = !state.account;
+    if (toonHint && toonHint.example !== example) toonHint = null;
+    const job = example ? loadCatalog() : Promise.resolve(null);
+    job.then(function () {
+      if (gen !== toonFillGen || !$('#tm')) return;
+      applyToon(advance);
+    }, function () {
+      if (gen !== toonFillGen || !$('#tm')) return;
+      applyToon(advance);
+    });
+  }
+
   function toon(view) {
     const maths = listed(state.math, state.heldMath);
     const rgbs = listed(state.rgb, state.heldRgb);
     view.innerHTML =
-      '<div class="row"><label>MATH <select id="tm"><option value="">—</option>' + opt(maths, 'math', function (id) { return id; }) + '</select></label></div>' +
-      '<div class="row"><label>WORD <select id="tw"><option value="">—</option>' + opt(state.words, 'word', function (id) { return state.wordText.get(BigInt(id)) || id; }) + '</select></label>' +
+      '<div class="row"><label class="num">MATH <select id="tm"><option value="">—</option>' + opt(maths, 'math', function (id) { return id; }) + '</select></label></div>' +
+      '<div class="row"><label class="num">WORD <select id="tw"><option value="">—</option>' + opt(state.words, 'word', function (id) { return state.wordText.get(BigInt(id)) || id; }) + '</select></label>' +
       '<span class="dim">' + S.esc(state.wordNote) + '</span></div>' +
-      '<div class="row"><label>FACE <select id="tf"><option value="">—</option>' + opt(state.faces, 'face', function (id) { return state.faceText.get(BigInt(id)) || id; }) + '</select></label>' +
+      '<div class="row"><label class="num">FACE <select id="tf"><option value="">—</option>' + opt(state.faces, 'face', function (id) { return state.faceText.get(BigInt(id)) || id; }) + '</select></label>' +
       '<span class="dim">' + S.esc(state.faceNote) + '</span></div>' +
-      '<div class="row"><label>RGB <select id="tr"><option value="">—</option>' + opt(rgbs, 'rgb', rgbLabel) + '</select></label></div>' +
+      '<div class="row"><label class="num">RGB <select id="tr"><option value="">—</option>' + opt(rgbs, 'rgb', rgbLabel) + '</select></label></div>' +
+      '<div class="row"><button type="button" id="suggest">suggest another</button><span id="hintNote" class="dim"></span></div>' +
       '<div id="toonPrev"><p class="dim toon-wait">pick four.</p></div>' +
       '<div class="preview" id="preview">TOON.add has no fee. you must own all four. grey picks say why.' + S.mark('ⓘ', S.TIPS.fees) + '</div>' +
       '<div class="row"><button type="button" id="simToon">simulate</button>' + S.mark('ⓘ', S.TIPS.simulate) + '<button type="button" id="sendToon">send add</button>' +
       '<span id="toonWhy" class="bad"></span></div>';
-    ['tm', 'tw', 'tf', 'tr'].forEach(function (id) { $('#' + id).addEventListener('change', previewToon); });
+    ['tm', 'tw', 'tf', 'tr'].forEach(function (id) {
+      $('#' + id).addEventListener('change', function () {
+        const el = $('#hintNote');
+        if (el && el.textContent === 'example' && toonHint &&
+          ($('#tm').value !== toonHint.math || $('#tw').value !== toonHint.word ||
+           $('#tf').value !== toonHint.face || $('#tr').value !== toonHint.rgb)) el.textContent = '';
+        previewToon();
+      });
+    });
+    $('#suggest').onclick = function () { fillToon(true); };
     $('#simToon').onclick = function () { sendToon(false); };
     $('#sendToon').onclick = function () { sendToon(true); };
     paintToonWhy();
@@ -125,6 +292,7 @@
       }
     }
     if (!state.account) MOLD.say('noWallet');
+    fillToon(false);
   }
 
   function rgbLabel(id) {
@@ -289,4 +457,5 @@
   }
 
   S.toon = toon;
+  S.fillToon = fillToon;
 })();

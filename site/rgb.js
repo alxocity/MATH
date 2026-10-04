@@ -315,6 +315,89 @@
     traits.innerHTML = (r || g || b) ? 'r ' + r + ' · g ' + g + ' · b ' + b + S.mark('ⓘ', S.TIPS.planes) : '';
   }
 
+  let rgbHint = null;
+
+  function rgbFree(value, suggested) {
+    if (String(value == null ? '' : value).trim() === '0') return true;
+    return SUGGEST.fieldFree(value, suggested);
+  }
+
+  function rgbReady(hint) {
+    if (!hint) return false;
+    const by = state.rgbBy;
+    try {
+      return !RULES.rgbChannel('r', hint.r, by.r) &&
+        !RULES.rgbChannel('g', hint.g, by.g) &&
+        !RULES.rgbChannel('b', hint.b, by.b);
+    } catch (e) { return false; }
+  }
+
+  function paintRgbHint(example, note) {
+    const el = $('#hintNote');
+    if (el) el.textContent = note || (example ? 'example' : '');
+  }
+
+  function fillRgb(advance) {
+    const rEl = $('#pR');
+    const gEl = $('#pG');
+    const bEl = $('#pB');
+    if (!rEl || !gEl || !bEl) return;
+    const example = !state.account;
+    const rFree = rgbFree(rEl.value, rgbHint && rgbHint.r);
+    const gFree = rgbFree(gEl.value, rgbHint && rgbHint.g);
+    const bFree = rgbFree(bEl.value, rgbHint && rgbHint.b);
+    if (!rFree && !gFree && !bFree) {
+      paintRgbHint(false, '');
+      return;
+    }
+    if (!advance && rgbReady(rgbHint)) {
+      if (rFree) rEl.value = String(rgbHint.r);
+      if (gFree) gEl.value = String(rgbHint.g);
+      if (bFree) bEl.value = String(rgbHint.b);
+      rgbHint.example = example;
+      paintRgbHint(example, '');
+      rEl.dispatchEvent(new Event('change'));
+      return;
+    }
+    const ids = [];
+    state.supply.forEach(function (owner, id) { ids.push(id); });
+    let avoid = null;
+    if (advance && rgbHint) {
+      try { avoid = { r: BigInt(rgbHint.r), g: BigInt(rgbHint.g), b: BigInt(rgbHint.b) }; }
+      catch (e) { avoid = null; }
+    }
+    const next = SUGGEST.rgbTriple({
+      ids: ids,
+      supply: state.supply,
+      blocked: state.blocked,
+      by: state.rgbBy,
+    }, {
+      rand: Math.random,
+      avoid: avoid,
+      lock: {
+        r: rFree ? null : rEl.value,
+        g: gFree ? null : gEl.value,
+        b: bFree ? null : bEl.value,
+      },
+    });
+    if (!next) {
+      if (rgbHint && !rgbReady(rgbHint)) {
+        if (rFree) rEl.value = '';
+        if (gFree) gEl.value = '';
+        if (bFree) bEl.value = '';
+        rgbHint = null;
+      }
+      paintRgbHint(false, advance && rgbHint ? 'nothing else' : 'nothing to suggest');
+      return;
+    }
+    if (rFree) rEl.value = next.r.toString();
+    if (gFree) gEl.value = next.g.toString();
+    if (bFree) bEl.value = next.b.toString();
+    rgbHint = { r: rEl.value, g: gEl.value, b: bEl.value, example: example };
+    paintRgbHint(example, '');
+    rEl.dispatchEvent(new Event('change'));
+  }
+
   function rgb(view) {
     if (state.arm && state.arm.kind === 'rgb') {
       syncPlanes();
@@ -336,9 +419,10 @@
       '<label>G <input type="range" id="thrG" min="0" max="100" value="50"></label>' +
       '<label>B <input type="range" id="thrB" min="0" max="100" value="50"></label></div>' +
       '<div id="cells"></div>' +
-      '<div class="row"><label>R <input id="pR" spellcheck="false" value="' + p.R + '"></label></div>' +
-      '<div class="row"><label>G <input id="pG" spellcheck="false" value="' + p.G + '"></label></div>' +
-      '<div class="row"><label>B <input id="pB" spellcheck="false" value="' + p.B + '"></label></div>' +
+      '<div class="row"><label class="num">R <input id="pR" spellcheck="false" inputmode="numeric" value="' + p.R + '"></label></div>' +
+      '<div class="row"><label class="num">G <input id="pG" spellcheck="false" inputmode="numeric" value="' + p.G + '"></label></div>' +
+      '<div class="row"><label class="num">B <input id="pB" spellcheck="false" inputmode="numeric" value="' + p.B + '"></label></div>' +
+      '<div class="row"><button type="button" id="suggest">suggest another</button><span id="hintNote" class="dim"></span></div>' +
       '<p id="rgbTraits" class="dim"></p><p id="rgbMeta"></p><div id="queue"></div>' +
       '<p class="dim" id="batchNote" hidden>A batch may ask MetaMask for a one-time smart account upgrade (EIP-7702). That delegates this address for the calls. You approve it in the wallet. This page does not sign by itself.</p>' +
       '<div id="run"></div>' +
@@ -454,6 +538,11 @@
           paintTraits();
           const issues = planeIssues(state.planes);
           $('#rgbMeta').innerHTML = issuesHtml(issues);
+          const note = $('#hintNote');
+          if (note && note.textContent === 'example' && rgbHint &&
+            ($('#pR').value !== String(rgbHint.r) || $('#pG').value !== String(rgbHint.g) || $('#pB').value !== String(rgbHint.b))) {
+            note.textContent = '';
+          }
           const rule = issues.find(function (s) { return RULES.mold(s); });
           S.hit(rule || '');
         } catch (e) { /* keep grid */ }
@@ -461,12 +550,15 @@
     });
     state.runSend = function () { sendAllQueue(); };
     $('#planRgb').onclick = planRgb;
+    $('#suggest').onclick = function () { fillRgb(true); };
     const issues = planeIssues(state.planes);
     $('#rgbMeta').innerHTML = issuesHtml(issues);
     paintQueue();
+    fillRgb(false);
   }
 
   S.rgb = rgb;
+  S.fillRgb = fillRgb;
   S.planeIssues = planeIssues;
   S.issuesHtml = issuesHtml;
 })();
