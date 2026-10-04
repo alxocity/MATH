@@ -167,6 +167,8 @@ a { color: var(--y); }
 .mine { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; border-top: 1px solid var(--line); padding: 8px 0; min-width: 0; }
 .addr { color: var(--dim); text-align: left; max-width: 100%; }
 .addr.open { color: var(--fg); word-break: break-all; }
+.outs { display: flex; flex-wrap: wrap; gap: 4px 10px; align-items: center; }
+a.out { color: var(--dim); }
 footer {
   grid-column: 1 / -1;
   display: flex;
@@ -193,5 +195,8 @@ footer a { color: var(--dim); }
   .piece { flex-wrap: wrap; }
   header, nav, footer { min-width: 0; max-width: 100%; }
   footer { padding: 8px 12px 16px; }
-  footer a { min-height: 40px; display: inline-flex; align-items: center; }
+  footer a, a.out { min-height: 40px; min-width: 40px; display: inline-flex; align-items: center; }
+}
+@media (hover: none) {
+  footer a, a.out { min-height: 40px; min-width: 40px; display: inline-flex; align-items: center; }
 }

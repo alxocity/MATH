@@ -85,7 +85,8 @@
       }
       const tag = tags.filter(Boolean).join(' ');
       return '<article class="card"><div>' + (state.kind === 'toon' ? title : t.id) + (tag ? ' <span class="dim">' + S.esc(tag) + '</span>' : '') + marks.join('') + '</div>' +
-        '<div class="dim">' + S.addr(t.owner) + '</div>' + extra + grid +
+        '<div class="dim">' + S.addr(t.owner) + '</div>' +
+        '<div class="outs">' + S.links(state.kind, t.id) + '</div>' + extra + grid +
         '<img alt="" data-svg="' + state.kind + ':' + t.id + '"></article>';
     }).join('') || '<p class="dim">' + (state.math.length || state.rgb.length || state.toon.length ? 'nothing in this filter.' : (state.indexState === 'error' ? 'index not loaded. refresh.' : 'loading index…')) + '</p>';
     if (pager) {

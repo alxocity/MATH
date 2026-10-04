@@ -68,6 +68,13 @@
     });
   }
 
+  function links(kind, id) {
+    const c = kind === 'rgb' ? ADDR.RGB : kind === 'toon' ? ADDR.TOON : ADDR.MATH;
+    const n = id.toString();
+    return '<a class="out" href="https://opensea.io/assets/ethereum/' + c + '/' + n + '" target="_blank" rel="noopener">opensea</a>' +
+      '<a class="out" href="https://etherscan.io/nft/' + c + '/' + n + '" target="_blank" rel="noopener">etherscan</a>';
+  }
+
   const TIPS = {
     blocked: "can't receive the 0.001 ETH payout. MATH (2019) pays with transfer's 2300 gas. some contract wallets need more, so their MATH is not an input and the plan routes around them.",
     unchecked: "the payout check couldn't reach a node. holder not confirmed. simulate before sending.",
@@ -404,6 +411,7 @@
     state: state,
     $: $,
     esc: esc,
+    links: links,
     mark: mark,
     TIPS: TIPS,
     fmt: fmt,
