@@ -396,6 +396,8 @@
         rgbHint = null;
       }
       paintRgbHint(false, advance && rgbHint ? 'nothing else' : 'nothing to suggest');
+      const meta = $('#rgbMeta');
+      if (meta) meta.innerHTML = issuesHtml(planeIssues(state.planes));
       return;
     }
     if (rFree) rEl.value = next.r.toString();

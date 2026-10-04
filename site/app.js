@@ -404,6 +404,7 @@
     state.pendingHash = null;
     state.pendingOk = null;
     if (state.pendingSums) state.pendingSums.delete(hash);
+    saveSums();
     savePending('');
     const ok = globalThis.RUN.receiptOk(rec.status);
     MOLD.say('mined', { status: ok ? 'ok' : 'reverted' });
@@ -461,28 +462,63 @@
     paintPending();
   }
 
-  function readRun() {
+  function readRunStore() {
     try {
       const raw = sessionStorage.getItem(RUN_KEY);
       const j = raw ? JSON.parse(raw) : null;
-      return j && Array.isArray(j.steps) ? j.steps : [];
-    } catch (e) { return []; }
+      if (!j || typeof j !== 'object') return { steps: [], sums: {} };
+      return {
+        steps: Array.isArray(j.steps) ? j.steps : [],
+        sums: j.sums && typeof j.sums === 'object' && !Array.isArray(j.sums) ? j.sums : {},
+      };
+    } catch (e) { return { steps: [], sums: {} }; }
+  }
+
+  function readRun() {
+    return readRunStore().steps;
+  }
+
+  function writeRunStore(steps, sums) {
+    try {
+      sessionStorage.setItem(RUN_KEY, JSON.stringify({ steps: steps, sums: sums || {} }));
+    } catch (e) { /* ignore */ }
   }
 
   function saveRun(steps) {
-    try {
-      sessionStorage.setItem(RUN_KEY, JSON.stringify({
-        steps: (steps || []).map(function (s) {
-          return {
-            label: s.label,
-            status: s.status || 'pending',
-            hash: s.hash || '',
-            calls: s.calls || '',
-            error: s.error || '',
-          };
-        }),
-      }));
-    } catch (e) { /* ignore */ }
+    const cur = readRunStore();
+    writeRunStore((steps || []).map(function (s) {
+      return {
+        label: s.label,
+        status: s.status || 'pending',
+        hash: s.hash || '',
+        calls: s.calls || '',
+        error: s.error || '',
+      };
+    }), cur.sums);
+  }
+
+  function sumsObj() {
+    const sums = {};
+    if (state.pendingSums) state.pendingSums.forEach(function (id, hash) { sums[String(hash)] = id.toString(); });
+    return sums;
+  }
+
+  function saveSums() {
+    const cur = readRunStore();
+    writeRunStore(cur.steps, sumsObj());
+  }
+
+  function loadSums() {
+    const saved = readRunStore();
+    Object.keys(saved.sums).forEach(function (hash) {
+      try { state.pendingSums.set(hash, BigInt(saved.sums[hash])); } catch (e) { /* ignore */ }
+    });
+  }
+
+  function rememberSum(hash, id) {
+    if (!state.pendingSums || !hash || id == null) return;
+    state.pendingSums.set(hash, id);
+    saveSums();
   }
 
   function syncNote(steps) {
@@ -1138,9 +1174,9 @@
   }
 
   function openMints() {
-    const rows = (state.queue || []).concat(state.run || []);
-    if (state.pendingSums) state.pendingSums.forEach(function (id) { rows.push({ sum: id }); });
-    return globalThis.SUGGEST.busyIds(rows);
+    const saved = readRunStore();
+    const run = state.run && state.run.length ? state.run : saved.steps;
+    return globalThis.SUGGEST.flightSums((state.queue || []).concat(run), sumsObj());
   }
 
   const SITE = {
@@ -1173,6 +1209,7 @@
     hit: hit,
     persistTexts: persistTexts,
     openMints: openMints,
+    rememberSum: rememberSum,
   };
   globalThis.SITE = SITE;
 
@@ -1515,6 +1552,7 @@
     }
     const pending = loadPending();
     if (pending && /^0x[0-9a-fA-F]{64}$/.test(pending)) state.pendingHash = pending;
+    loadSums();
     const tab = (location.hash || '#browse').slice(1);
     show(['browse', 'mint', 'route', 'rgb', 'toon', 'about', 'mine'].indexOf(tab) === -1 ? 'browse' : tab);
     ETH.gasPrice().then(function (g) { state.gasPrice = g; }).catch(function () {});

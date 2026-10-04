@@ -141,6 +141,7 @@ assert.strictEqual(S.hintFree('1', exampleHint, true, false), true);
 assert.strictEqual(S.hintFree('536', { value: '536', example: true }, true, false), true);
 assert.strictEqual(S.hintFree('9', exampleHint, true, false), false);
 assert.strictEqual(S.hintFree('1', exampleHint, false, true), false);
+assert.strictEqual(S.hintFree('5', { value: '5', example: true }, false, false), false);
 assert.strictEqual(S.hintFree('1', exampleHint, true, true), true);
 assert.strictEqual(S.hintFree('1', null, false, false), false);
 
@@ -170,6 +171,15 @@ const busy = S.busyIds([
 });
 assert.strictEqual(busy.has(12n), false);
 assert.strictEqual(busy.has(18n), false);
+const flight = S.flightSums([
+  { label: '1 + 2 = 13', status: 'submitted', hash: '0x' + 'ab'.repeat(32) },
+  { label: '4 + 4 = 8', status: 'confirmed' },
+  { label: 'RGB.add 14, 15, 16', status: 'pending' },
+], { '0x11': '99' });
+assert.ok(flight.has(13n));
+assert.ok(flight.has(99n));
+assert.ok(flight.has(14n) && flight.has(15n) && flight.has(16n));
+assert.strictEqual(flight.has(8n), false);
 
 let scans = 0;
 const wide = supply([[1n, stranger], [4n, stranger], [6n, stranger]]);
