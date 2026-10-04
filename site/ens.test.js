@@ -20,6 +20,32 @@ assert.strictEqual(ENS.isName('vitalik.eth'), true);
 assert.strictEqual(ENS.isName('vita'), false);
 assert.strictEqual(ENS.isName('1.5'), false);
 
+const mathAddr = '0x6B4fccdd888Bb6fD3934A9e49eF64dfd2c0D8e6D';
+const otherAddr = '0x' + '11'.repeat(20);
+assert.strictEqual(ENS.matchedName('math.alxocity.eth', mathAddr, mathAddr), 'math.alxocity.eth');
+assert.strictEqual(ENS.matchedName('Math.alxocity.eth', mathAddr, mathAddr.toLowerCase()), 'math.alxocity.eth');
+assert.strictEqual(ENS.matchedName('math.alxocity.eth', mathAddr, otherAddr), '');
+assert.strictEqual(ENS.matchedName('math.alxocity.eth', mathAddr, ''), '');
+assert.strictEqual(ENS.matchedName('not a name', mathAddr, mathAddr), '');
+const named = ENS.contractNames({
+  MATH: mathAddr,
+  RGB: '0x9355Fb9693ffF9bB6f06721C82fe0B5F49E6c956',
+  TOON: '0x026A7D72a448D0E44d441e55F746BF56B843aEDB',
+  MATH_RENDER: '0xb3cA13A2722CAB48c8d9068bD67656efe2d5e376',
+  RGB_RENDER: '0x62FFe75cd9824A2e8855CbC055256De229B5b936',
+  TOON_RENDER: '0x1E1a576e4186551e4DEdE58Ccc2DCC34697159Cb',
+});
+assert.strictEqual(named.length, 6);
+assert.deepStrictEqual(named.map(function (row) { return row[0]; }), [
+  'math.alxocity.eth',
+  'rgb.alxocity.eth',
+  'toon.alxocity.eth',
+  'mathrender.alxocity.eth',
+  'rgbrender.alxocity.eth',
+  'toonrender.alxocity.eth',
+]);
+assert.strictEqual(ENS.normAddr(named[3][1]), '0xb3ca13a2722cab48c8d9068bd67656efe2d5e376');
+
 const vitalik = '0xd8da6bf26964af9d7eed9e03e53415d37aa96045';
 assert.strictEqual(ENS.ownerHit(vitalik, 'd8da', '', ''), true);
 assert.strictEqual(ENS.ownerHit(vitalik, 'vita', 'vitalik.eth', ''), true);

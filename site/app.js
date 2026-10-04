@@ -143,6 +143,45 @@
     return a.slice(0, 6) + '…' + a.slice(-4);
   }
 
+  function namedAddr(a) {
+    let name = '';
+    ENS.contractNames(ADDR).forEach(function (row) {
+      if (ENS.normAddr(row[1]) !== ENS.normAddr(a)) return;
+      name = ENS.matchedName(row[0], row[1], ENS.forwardCached(row[0]));
+    });
+    if (!name) return esc(a);
+    return esc(name) + ' ' + esc(short(a));
+  }
+
+  function paintContractNames() {
+    const bits = ENS.contractNames(ADDR).map(function (row) {
+      const name = ENS.matchedName(row[0], row[1], ENS.forwardCached(row[0]));
+      if (!name) return '';
+      return name + ' ' + short(row[1]);
+    }).filter(Boolean);
+    let host = $('#contracts');
+    if (!bits.length) {
+      if (host) host.remove();
+    } else {
+      if (!host) {
+        host = document.createElement('span');
+        host.id = 'contracts';
+        const tile = $('#tile');
+        if (tile && tile.parentNode) tile.parentNode.insertBefore(host, tile);
+      }
+      if (host) host.textContent = bits.join(' ');
+    }
+    if (state.tab === 'about' && $('#view') && SITE.about) SITE.about($('#view'));
+  }
+
+  function watchContractNames() {
+    paintContractNames();
+    ENS.contractNames(ADDR).forEach(function (row) {
+      if (ENS.matchedName(row[0], row[1], ENS.forwardCached(row[0]))) return;
+      ENS.resolveForward(row[0]).then(function () { paintContractNames(); }, function () {});
+    });
+  }
+
   function addr(a) {
     const n = ENS.normAddr(a);
     if (!n) return esc(short(a));
@@ -1097,6 +1136,7 @@
     fmt: fmt,
     hex: hex,
     short: short,
+    namedAddr: namedAddr,
     addr: addr,
     me: me,
     ctx: ctx,
@@ -1459,6 +1499,7 @@
     const tab = (location.hash || '#browse').slice(1);
     show(['browse', 'mint', 'route', 'rgb', 'toon', 'about', 'mine'].indexOf(tab) === -1 ? 'browse' : tab);
     ETH.gasPrice().then(function (g) { state.gasPrice = g; }).catch(function () {});
+    watchContractNames();
     watchEthereum();
     refresh();
   }

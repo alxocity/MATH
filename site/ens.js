@@ -178,6 +178,27 @@
     return n;
   }
 
+  // Forward only. A name is shown when it resolves to this contract, not from a reverse record.
+  function contractNames(addr) {
+    const a = addr || {};
+    return [
+      ['math.alxocity.eth', a.MATH],
+      ['rgb.alxocity.eth', a.RGB],
+      ['toon.alxocity.eth', a.TOON],
+      ['mathrender.alxocity.eth', a.MATH_RENDER],
+      ['rgbrender.alxocity.eth', a.RGB_RENDER],
+      ['toonrender.alxocity.eth', a.TOON_RENDER],
+    ];
+  }
+
+  function matchedName(name, expected, resolved) {
+    const n = showName(name);
+    const want = normAddr(expected);
+    const got = normAddr(resolved);
+    if (!n || !want || got !== want) return '';
+    return n;
+  }
+
   function fresh(at, now) {
     return typeof at === 'number' && now - at >= 0 && now - at < TTL;
   }
@@ -373,6 +394,8 @@
     forwardCached: forwardCached,
     hasForward: hasForward,
     want: want,
+    contractNames: contractNames,
+    matchedName: matchedName,
     label: label,
     flush: flush,
     resolveForward: resolveForward,
