@@ -19,10 +19,10 @@
     return fieldFree(value, suggested);
   }
 
-  // Connecting drops the example flag. Those numbers are still ours when they match.
+  // A mode change only releases a field we filled. A number the user typed stays put.
   function hintFree(value, hint, own, exampleNow) {
     if (hint && hint.example !== exampleNow) {
-      return String(value == null ? '' : value).trim() === String(hint.value);
+      return !!own && String(value == null ? '' : value).trim() === String(hint.value);
     }
     return fieldFree(value, hint && own ? hint.value : null);
   }
@@ -254,6 +254,14 @@
     return status === 'confirmed' || status === 'failed' || status === 'reverted';
   }
 
+  function flightSums(steps, sums) {
+    const rows = (steps || []).slice();
+    if (sums) Object.keys(sums).forEach(function (hash) {
+      rows.push({ sum: sums[hash], status: 'submitted' });
+    });
+    return busyIds(rows);
+  }
+
   function busyIds(rows) {
     const skip = new Set();
     function add(v) {
@@ -286,6 +294,7 @@
     channelFree: channelFree,
     hintFree: hintFree,
     busyIds: busyIds,
+    flightSums: flightSums,
     mathPair: mathPair,
     mathOk: mathOk,
     rgbTriple: rgbTriple,

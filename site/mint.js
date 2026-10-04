@@ -126,7 +126,7 @@
       if (sim.error) throw new Error(ETH.reason(sim.error));
       if ($('#preview')) $('#preview').textContent = preview + '\nsimulation ok. confirm in the wallet.';
       const hash = await ETH.send(tx);
-      state.pendingSums.set(hash, pair.n);
+      S.rememberSum(hash, pair.n);
       S.noteSent(hash, function () {
         state.supply.set(pair.n, S.me());
       });
@@ -190,7 +190,7 @@
     if (!advance && mathHint && mathHint.ownA && mathHint.ownB && SUGGEST.mathOk(ctx, mathHint.a, mathHint.b)) {
       if (aFree) aEl.value = String(mathHint.a);
       if (bFree) bEl.value = String(mathHint.b);
-      paintHint(example, '');
+      paintHint(example && aFree && bFree, '');
       paintMint(false);
       return;
     }
