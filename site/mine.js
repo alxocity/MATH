@@ -39,19 +39,19 @@
       const toon = flags.toon ? '<button type="button" data-go="toon" data-slot="tm" data-id="' + t.id + '">toon</button>' : '';
       const note = channels || toon ? '' : ' <span class="dim">used</span>';
       const free = channels ? '<span class="dim">free</span>' : '';
-      return '<div class="mine"><span>' + t.id + '</span>' + note + free + '<span class="row">' + channels + toon + '</span></div>';
+      return '<div class="mine"><span>' + t.id + '</span>' + note + free + '<span class="row">' + channels + toon + '</span>' + S.links('math', t.id) + '</div>';
     }
     function rgbRow(t) {
       const pop = t.r != null ? ' <span class="dim">r ' + P.popcount(t.r) + ' g ' + P.popcount(t.g) + ' b ' + P.popcount(t.b) + '</span>' : '';
       const used = state.usedRgb.has(t.id);
       const toon = used ? '' : '<button type="button" data-go="toon" data-slot="tr" data-id="' + t.id + '">toon</button>';
-      return '<div class="mine"><span>' + t.id + '</span>' + pop + (used ? ' <span class="dim">used</span>' : '') + '<span class="row">' + toon + '</span></div>';
+      return '<div class="mine"><span>' + t.id + '</span>' + pop + (used ? ' <span class="dim">used</span>' : '') + '<span class="row">' + toon + '</span>' + S.links('rgb', t.id) + '</div>';
     }
     function toonRow(t) {
       const word = t.word != null ? (state.wordText.get(t.word) || String(t.word)) : '';
       const face = t.face != null ? (state.faceText.get(t.face) || '') : '';
       return '<div class="mine"><span>' + t.id + (word ? ' ' + S.esc(word) : '') + '</span>' +
-        (face ? '<span class="face">' + S.esc(face) + '</span>' : '') + '</div>';
+        (face ? '<span class="face">' + S.esc(face) + '</span>' : '') + S.links('toon', t.id) + '</div>';
     }
     view.innerHTML =
       '<h2>my collection</h2>' +
