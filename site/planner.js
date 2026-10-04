@@ -44,6 +44,14 @@
     return c;
   }
 
+  // Short ids stay whole. A longer one keeps both ends, so you can find it. Four digits still collide.
+  function channelTag(n) {
+    const s = BigInt(n).toString();
+    const keep = 5;
+    if (s.length <= keep * 2) return s;
+    return s.slice(0, keep) + '…' + s.slice(-keep);
+  }
+
   function isPow2(n) {
     const x = BigInt(n);
     return x > 0n && (x & (x - 1n)) === 0n;
@@ -570,6 +578,7 @@
     G_RGB: G_RGB,
     MAX: MAX,
     popcount: popcount,
+    channelTag: channelTag,
     isPow2: isPow2,
     isPal: isPal,
     isStrobo: isStrobo,

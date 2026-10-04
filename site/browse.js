@@ -57,16 +57,20 @@
     cards.innerHTML = slice.map(function (t) {
       const ch = state.kind === 'math' ? state.channels.get(t.id) : null;
       const tags = [];
-      if (ch) tags.push(Array.from(ch).join(''));
+      const marks = [];
+      if (ch && ch.size) {
+        tags.push(Array.from(ch).join(''));
+        marks.push(S.mark('ⓘ', S.TIPS.used));
+      }
       if (state.kind === 'math') {
-        if (P.isPal(t.id)) tags.push('pal');
-        if (P.isStrobo(t.id)) tags.push('stro');
+        if (P.isPal(t.id)) marks.push(S.mark('⇌', 'palindrome, reads the same backwards'));
+        if (P.isStrobo(t.id)) marks.push(S.mark('↻', 'strobogrammatic, reads the same upside down'));
       }
       let title = String(t.id);
       let extra = '';
       let grid = S.bitHtml(t.id);
       if (state.kind === 'rgb') {
-        extra = '<div class="dim">r ' + P.popcount(t.r) + ' · g ' + P.popcount(t.g) + ' · b ' + P.popcount(t.b) + '</div>';
+        extra = '<div class="dim">R ' + P.channelTag(t.r) + ' · G ' + P.channelTag(t.g) + ' · B ' + P.channelTag(t.b) + '</div>';
         grid = S.cellsHtml(P.planesToRows(t.r, t.g, t.b)).replace(/<button/g, '<i').replace(/<\/button>/g, '</i>');
       }
       if (state.kind === 'toon') {
@@ -78,7 +82,7 @@
         grid = rgb ? S.cellsHtml(P.planesToRows(rgb.r, rgb.g, rgb.b)).replace(/<button/g, '<i').replace(/<\/button>/g, '</i>') : '';
       }
       const tag = tags.filter(Boolean).join(' ');
-      return '<article class="card"><div>' + (state.kind === 'toon' ? title : t.id) + (tag ? ' <span class="dim">' + S.esc(tag) + '</span>' : '') + '</div>' +
+      return '<article class="card"><div>' + (state.kind === 'toon' ? title : t.id) + (tag ? ' <span class="dim">' + S.esc(tag) + '</span>' : '') + marks.join('') + '</div>' +
         '<div class="dim">' + S.esc(S.short(t.owner)) + '</div>' + extra + grid +
         '<img alt="" data-svg="' + state.kind + ':' + t.id + '"></article>';
     }).join('') || '<p class="dim">' + (state.math.length || state.rgb.length || state.toon.length ? 'nothing in this filter.' : (state.indexState === 'error' ? 'index not loaded. refresh.' : 'loading index…')) + '</p>';
@@ -141,7 +145,7 @@
       '<label>..<input id="popMax" size="4" value="' + S.esc(f.popMax) + '"></label>' +
       '<label><input type="checkbox" id="pal"' + (f.pal ? ' checked' : '') + '> pal</label>' +
       '<label><input type="checkbox" id="pow"' + (f.pow ? ' checked' : '') + '> 2^k</label>' +
-      '<label>used <select id="used">' +
+      '<label>used ' + S.mark('ⓘ', S.TIPS.used) + ' <select id="used">' +
       ['any', 'r', 'g', 'b', 'free'].map(function (u) {
         return '<option' + (f.used === u ? ' selected' : '') + '>' + u + '</option>';
       }).join('') + '</select></label>' +

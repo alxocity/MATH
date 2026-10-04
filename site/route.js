@@ -53,23 +53,28 @@
       };
     });
     if (!built) {
-      if (meta) meta.textContent = state.blockedDone ? state.blocked.size + ' blocked holders' : 'holder scan still running';
+      if (meta) {
+        if (state.blockedDone) meta.innerHTML = state.blocked.size + ' blocked' + S.mark('ⓘ', S.TIPS.blocked);
+        else if (state.holdersReady) meta.innerHTML = 'holder unchecked' + S.mark('ⓘ', S.TIPS.unchecked);
+        else meta.textContent = 'holder scan still running';
+      }
       if (steps) steps.innerHTML = '';
       return;
     }
     const warn = built.target.toString() === state.routeTarget ? '' : ' sums to ' + built.target + ', not the target.';
-    if (meta) meta.textContent = built.mints + ' mints, royalty ' + S.fmt(built.royalty) + ' ETH, gas ~' + S.fmt(built.gas) +
-      ', msg.value ' + S.fmt(built.msgValue) + ', net ~' + S.fmt(built.net) + warn;
+    if (meta) meta.innerHTML = built.mints + ' mints' + S.mark('ⓘ', S.TIPS.mints) + S.esc(', royalty ' + S.fmt(built.royalty) + ' ETH, gas ~' + S.fmt(built.gas) +
+      ', msg.value ' + S.fmt(built.msgValue) + ', net ~' + S.fmt(built.net) + warn);
     if (steps) {
       steps.innerHTML = built.steps.map(function (s, i) {
         const note = stepNote(s);
         const sendOff = note === RULES.payout() ? ' disabled' : '';
         const buttons = s.exists ? '' :
-          '<button type="button" data-sim="' + i + '">simulate</button>' +
+          '<button type="button" data-sim="' + i + '">simulate</button>' + S.mark('ⓘ', S.TIPS.simulate) +
           '<button type="button" data-send="' + i + '"' + sendOff + '>send</button>';
+        const noteMark = note === RULES.payout() ? S.mark('ⓘ', S.TIPS.blocked) : note === RULES.unchecked() ? S.mark('ⓘ', S.TIPS.unchecked) : '';
         return '<div class="step">' + s.a + ' + ' + s.b + ' = ' + s.result +
           (s.exists ? ' <span class="dim">exists</span>' : '') +
-          (note ? ' <span class="' + (note === RULES.unchecked() ? 'dim' : 'bad') + '">' + S.esc(note) + '</span>' : '') +
+          (note ? ' <span class="' + (note === RULES.unchecked() ? 'dim' : 'bad') + '">' + S.esc(note) + '</span>' + noteMark : '') +
           '<div class="dim">pay ' + S.esc(S.short(s.payTo[0])) + ' ' + S.esc(S.short(s.payTo[1])) + ' royalty ' + S.fmt(s.royalty) + '</div>' +
           buttons +
           '</div>';

@@ -100,8 +100,8 @@
       '<span class="dim">' + S.esc(state.faceNote) + '</span></div>' +
       '<div class="row"><label>RGB <select id="tr"><option value="">—</option>' + opt(rgbs, 'rgb', rgbLabel) + '</select></label></div>' +
       '<div id="toonPrev"></div>' +
-      '<div class="preview" id="preview">TOON.add has no fee. you must own all four. grey picks say why.</div>' +
-      '<div class="row"><button type="button" id="simToon">simulate</button><button type="button" id="sendToon">send add</button>' +
+      '<div class="preview" id="preview">TOON.add has no fee. you must own all four. grey picks say why.' + S.mark('ⓘ', S.TIPS.fees) + '</div>' +
+      '<div class="row"><button type="button" id="simToon">simulate</button>' + S.mark('ⓘ', S.TIPS.simulate) + '<button type="button" id="sendToon">send add</button>' +
       '<span id="toonWhy" class="bad"></span></div>';
     ['tm', 'tw', 'tf', 'tr'].forEach(function (id) { $('#' + id).addEventListener('change', previewToon); });
     $('#simToon').onclick = function () { sendToon(false); };
