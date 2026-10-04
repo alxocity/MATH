@@ -99,7 +99,7 @@
       '<div class="row"><label>FACE <select id="tf"><option value="">—</option>' + opt(state.faces, 'face', function (id) { return state.faceText.get(BigInt(id)) || id; }) + '</select></label>' +
       '<span class="dim">' + S.esc(state.faceNote) + '</span></div>' +
       '<div class="row"><label>RGB <select id="tr"><option value="">—</option>' + opt(rgbs, 'rgb', rgbLabel) + '</select></label></div>' +
-      '<div id="toonPrev"></div>' +
+      '<div id="toonPrev"><p class="dim toon-wait">pick four.</p></div>' +
       '<div class="preview" id="preview">TOON.add has no fee. you must own all four. grey picks say why.' + S.mark('ⓘ', S.TIPS.fees) + '</div>' +
       '<div class="row"><button type="button" id="simToon">simulate</button>' + S.mark('ⓘ', S.TIPS.simulate) + '<button type="button" id="sendToon">send add</button>' +
       '<span id="toonWhy" class="bad"></span></div>';
@@ -125,37 +125,78 @@
     return text;
   }
 
+  const tones = new Map();
+  let prevGen = 0;
+
+  function rgbPlanes(id) {
+    const s = String(id);
+    const tok = state.rgb.find(function (t) { return t.id.toString() === s; });
+    if (!tok) return null;
+    return { r: tok.r, g: tok.g, b: tok.b };
+  }
+
+  function readPlanes(id) {
+    return ETH.ethCall(ADDR.RGB, ABI.call(ABI.SEL.get, [BigInt(id)])).then(function (raw) {
+      const w = ABI.wordsOf(raw);
+      if (w.length < 3) throw new Error('rgb');
+      return { r: w[0], g: w[1], b: w[2] };
+    });
+  }
+
+  function readTone(id) {
+    const key = BigInt(id);
+    if (tones.has(key)) return Promise.resolve(tones.get(key));
+    return Promise.all([
+      ETH.ethCall(ADDR.FACE, ABI.call(ABI.SEL.getBackgroundColor, [key])),
+      ETH.ethCall(ADDR.FACE, ABI.call(ABI.SEL.getTextColor, [key])),
+    ]).then(function (pair) {
+      const tone = { bg: ABI.decodeUint(pair[0]), fg: ABI.decodeUint(pair[1]) };
+      tones.set(key, tone);
+      return tone;
+    });
+  }
+
+  function quiet(p) {
+    return Promise.resolve(p).then(function (v) { return v; }, function () { return null; });
+  }
+
+  function showSvg(host, planes, face, tone) {
+    const xml = TOONR.svg(planes.r, planes.g, planes.b, face || '', tone ? tone.bg : 0n, tone ? tone.fg : 0n);
+    host.innerHTML = '<img class="toon" alt="toon" src="' + S.svgUrl(xml) + '">' +
+      (tone ? '' : '<p class="dim">colors unavailable</p>');
+  }
+
   async function previewToon() {
-    const pick = toonPick();
+    const gen = ++prevGen;
     state.toonOwn = '';
+    const pick = toonPick();
     if (pick && state.account && !spentReason()) confirmOwn(pick);
-    const why = toonWhy(pick);
     paintToonWhy();
-    S.hit(why);
-    if (why) return;
-    const word = $('#tw').value;
-    const face = $('#tf').value;
-    const rgb = $('#tr').value;
-    const math = $('#tm').value;
+    S.hit(toonWhy(pick));
     const host = $('#toonPrev');
     if (!host) return;
-    let wordText = '';
-    let faceText = '';
-    try {
-      if (word) wordText = await cachedText(state.wordText, ADDR.WORD, ABI.SEL.getWord, word);
-      if (face) faceText = await cachedText(state.faceText, ADDR.FACE, ABI.SEL.getFace, face);
-    } catch (e) {
-      host.textContent = e.message;
+    if (!pick) {
+      host.innerHTML = '<p class="dim toon-wait">pick four.</p>';
       return;
     }
+    const known = rgbPlanes(pick.rgb);
+    const got = await Promise.all([
+      quiet(cachedText(state.wordText, ADDR.WORD, ABI.SEL.getWord, pick.word)),
+      quiet(cachedText(state.faceText, ADDR.FACE, ABI.SEL.getFace, pick.face)),
+      known ? known : quiet(readPlanes(pick.rgb)),
+      quiet(readTone(pick.face)),
+    ]);
+    if (gen !== prevGen) return;
+    const wordText = got[0];
+    const faceText = got[1];
+    const planes = got[2];
+    const tone = got[3];
     if (wordText || faceText) MOLD.say('toonPick', { word: wordText || '…', face: faceText || '…' });
-    let grid = '';
-    if (rgb) {
-      const tok = state.rgb.find(function (t) { return t.id.toString() === rgb; });
-      if (tok) grid = S.cellsHtml(P.planesToRows(tok.r, tok.g, tok.b)).replace(/<button/g, '<i').replace(/<\/button>/g, '</i>');
+    if (!planes) {
+      host.textContent = 'rgb unavailable';
+      return;
     }
-    host.innerHTML = '<p>' + S.esc(wordText || '…') + '</p><div class="face">' + S.esc(faceText || '') + '</div>' +
-      (math ? S.bitHtml(math) : '') + grid;
+    showSvg(host, planes, faceText || '', tone);
   }
 
   function toonPick() {

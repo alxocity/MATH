@@ -155,6 +155,15 @@ input, select { max-width: 100%; }
 h2 { font-size: 14px; font-weight: 500; margin: 18px 0 8px; }
 a { color: var(--y); }
 .face { white-space: pre-wrap; color: var(--fg); }
+.toon, .toon-wait { width: min(100%, 350px); margin: 8px 0; }
+.toon { height: auto; display: block; background: #000; }
+.toon-wait {
+  aspect-ratio: 1;
+  border: 1px solid var(--line);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
 @media (max-width: 860px) {
   body { grid-template-columns: minmax(0, 1fr); }
   aside { border-left: 0; border-top: 1px solid var(--line); }
