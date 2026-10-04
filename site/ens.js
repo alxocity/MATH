@@ -171,6 +171,7 @@
   const wait = new Set();
   let flight = null;
   const TTL = 7 * 24 * 60 * 60 * 1000;
+  const MISS = 24 * 60 * 60 * 1000;
 
   function showName(name) {
     const n = String(name || '').trim().toLowerCase();
@@ -203,6 +204,13 @@
     return typeof at === 'number' && now - at >= 0 && now - at < TTL;
   }
 
+  // A hit lasts a week. A miss lasts a day so an unregistered name is not looked up every visit.
+  function forwardFresh(addr, at, now) {
+    const t = typeof now === 'number' ? now : Date.now();
+    if (typeof at !== 'number' || t - at < 0) return false;
+    return t - at < (normAddr(addr) ? TTL : MISS);
+  }
+
   function readStore() {
     try {
       if (typeof localStorage === 'undefined') return;
@@ -220,11 +228,13 @@
       });
       Object.keys(raw.forward || {}).forEach(function (n) {
         const rec = raw.forward[n];
-        const addr = normAddr(typeof rec === 'string' ? rec : rec && rec.a);
+        const rawAddr = typeof rec === 'string' ? rec : rec && rec.a;
+        const addr = normAddr(rawAddr);
         const name = showName(n);
-        if (!name || !addr || !fresh(rec && rec.at, now)) return;
+        const at = rec && typeof rec.at === 'number' ? rec.at : 0;
+        if (!name || !forwardFresh(addr || rawAddr, at, now)) return;
         forward.set(name, addr);
-        forwardAt.set(name, rec.at);
+        forwardAt.set(name, at);
       });
     } catch (e) { /* ignore */ }
   }
@@ -237,7 +247,7 @@
         if (n) pack.names[a] = { n: n, at: namedAt.get(a) || Date.now() };
       });
       forward.forEach(function (a, n) {
-        if (a) pack.forward[n] = { a: a, at: forwardAt.get(n) || Date.now() };
+        pack.forward[n] = { a: a || '', at: forwardAt.get(n) || Date.now() };
       });
       localStorage.setItem(KEY, JSON.stringify(pack));
     } catch (e) { /* ignore */ }
@@ -361,6 +371,38 @@
     return flight;
   }
 
+  function resolveForwards(list) {
+    const out = {};
+    const pending = [];
+    (list || []).forEach(function (q) {
+      const name = showName(q);
+      if (!name) return;
+      if (forward.has(name)) {
+        out[name] = forward.get(name) || '';
+        return;
+      }
+      let data;
+      try { data = resolveData(name); } catch (e) {
+        out[name] = '';
+        return;
+      }
+      pending.push({ name: name, data: data });
+    });
+    if (!pending.length) return Promise.resolve(out);
+    return callMany(pending.map(function (p) { return p.data; })).then(function (rows) {
+      const at = Date.now();
+      pending.forEach(function (p, i) {
+        const row = rows && rows[i];
+        const got = row && row.success ? decodeAddr(row.data) : '';
+        forward.set(p.name, got || '');
+        forwardAt.set(p.name, at);
+        out[p.name] = got || '';
+      });
+      writeStore();
+      return out;
+    }, function () { return out; });
+  }
+
   function resolveForward(q) {
     const name = String(q || '').trim().toLowerCase();
     if (!isName(name)) return Promise.resolve('');
@@ -396,6 +438,8 @@
     want: want,
     contractNames: contractNames,
     matchedName: matchedName,
+    forwardFresh: forwardFresh,
+    resolveForwards: resolveForwards,
     label: label,
     flush: flush,
     resolveForward: resolveForward,
