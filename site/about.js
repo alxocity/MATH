@@ -11,7 +11,7 @@
       '<h2>rules</h2>' +
       globalThis.RULES.about().map(function (line) { return '<p>' + S.esc(line) + '</p>'; }).join('') +
       '<p class="dim">served from site/ at math.alxo.city.</p>' +
-      '<p class="dim"><a href="https://github.com/alxocity/MATH" target="_blank" rel="noopener">source</a> &amp; <a href="https://github.com/alxocity/MATH/issues/new" target="_blank" rel="noopener">feedback</a></p>' +
+      '<p class="dim"><a href="https://github.com/alxocity/MATH" target="_blank" rel="noopener noreferrer">source</a> &amp; <a href="https://github.com/alxocity/MATH/issues/new" target="_blank" rel="noopener noreferrer">feedback</a></p>' +
       '<p class="dim">MATH ' + ADDR.MATH + '<br>RGB ' + ADDR.RGB + '<br>TOON ' + ADDR.TOON +
       '<br>WORD ' + ADDR.WORD + '<br>FACE ' + ADDR.FACE +
       '<br>render ' + ADDR.MATH_RENDER + '<br>' + ADDR.RGB_RENDER + '<br>' + ADDR.TOON_RENDER + '</p>';
