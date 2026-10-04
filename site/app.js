@@ -690,7 +690,29 @@
     }
   }
 
+  function applyTile(mode) {
+    const dark = mode === 'dark';
+    document.documentElement.dataset.tile = dark ? 'dark' : 'light';
+    const b = $('#tile');
+    if (!b) return;
+    b.textContent = dark ? 'dark' : 'light';
+    b.setAttribute('aria-pressed', dark ? 'true' : 'false');
+    b.setAttribute('aria-label', dark ? 'dark tile' : 'light tile');
+  }
+
   function boot() {
+    let tile = 'light';
+    try {
+      const saved = localStorage.getItem('math.tile.v1');
+      if (saved === 'dark' || saved === 'light') tile = saved;
+    } catch (e) { /* ignore */ }
+    applyTile(tile);
+    const tileBtn = $('#tile');
+    if (tileBtn) tileBtn.onclick = function () {
+      const next = document.documentElement.dataset.tile === 'dark' ? 'light' : 'dark';
+      try { localStorage.setItem('math.tile.v1', next); } catch (e) { /* ignore */ }
+      applyTile(next);
+    };
     bindTips();
     document.querySelectorAll('nav button').forEach(function (b) {
       b.onclick = function () { show(b.dataset.tab); };

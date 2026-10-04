@@ -7,6 +7,12 @@
   --y: #e6c229;
   --mold: #c5d48a;
   --bad: #e07a6a;
+  --tile: #e4e0d4;
+  --tile-line: #8f8a7c;
+}
+:root[data-tile="dark"] {
+  --tile: #1c1b18;
+  --tile-line: #5c5a52;
 }
 * { box-sizing: border-box; }
 body {
@@ -131,7 +137,7 @@ aside .who { margin: 0 0 8px; color: var(--dim); }
 }
 #cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 190px), 1fr)); gap: 12px; min-width: 0; }
 .card { border: 1px solid var(--line); padding: 8px; min-width: 0; }
-.card img { width: 100%; background: #000; image-rendering: pixelated; display: block; margin-top: 6px; }
+.card img { width: 100%; background: var(--tile); border: 1px solid var(--tile-line); image-rendering: pixelated; display: block; margin-top: 6px; }
 .bits, .cells { display: grid; gap: 1px; width: 100%; max-width: 16rem; }
 .bits { grid-template-columns: repeat(16, minmax(0, 1fr)); }
 .bits i { width: 100%; aspect-ratio: 1; background: #1b1b18; display: block; }
@@ -156,7 +162,7 @@ h2 { font-size: 14px; font-weight: 500; margin: 18px 0 8px; }
 a { color: var(--y); }
 .face { white-space: pre-wrap; color: var(--fg); }
 .toon, .toon-wait { width: min(100%, 350px); margin: 8px 0; }
-.toon { height: auto; display: block; background: #000; }
+.toon { height: auto; display: block; background: var(--tile); border: 1px solid var(--tile-line); }
 .toon-wait {
   aspect-ratio: 1;
   border: 1px solid var(--line);
@@ -198,5 +204,5 @@ footer a { color: var(--dim); }
   footer a, a.out { min-height: 40px; min-width: 40px; display: inline-flex; align-items: center; }
 }
 @media (hover: none) {
-  footer a, a.out { min-height: 40px; min-width: 40px; display: inline-flex; align-items: center; }
+  footer a, a.out, #tile { min-height: 40px; min-width: 40px; display: inline-flex; align-items: center; justify-content: center; }
 }
