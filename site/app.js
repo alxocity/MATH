@@ -81,25 +81,28 @@
   function mark(glyph, label) {
     const t = esc(label);
     const id = 't' + (++tipSeq);
-    return '<span class="mark"><button type="button" class="mark-hit" aria-describedby="' + id + '">' + glyph +
+    return '<span class="mark"><button type="button" class="mark-hit" aria-label="info" aria-describedby="' + id + '">' + glyph +
       '</button><span class="tip" id="' + id + '" role="tooltip">' + t + '</span></span>';
   }
 
   function bindTips() {
     document.addEventListener('click', function (ev) {
       const hit = ev.target.closest('.mark-hit');
-      const markEl = hit && hit.closest('.mark');
+      if (!hit) return;
+      ev.preventDefault();
+      ev.stopPropagation();
+      const markEl = hit.closest('.mark');
       document.querySelectorAll('.mark.open').forEach(function (el) {
         if (el !== markEl) el.classList.remove('open');
       });
-      if (!markEl) {
-        const ae = document.activeElement;
-        if (ae && ae.classList && ae.classList.contains('mark-hit')) ae.blur();
-        return;
-      }
-      ev.preventDefault();
       markEl.classList.toggle('open');
       if (!markEl.classList.contains('open')) hit.blur();
+    }, true);
+    document.addEventListener('click', function (ev) {
+      if (ev.target.closest('.mark')) return;
+      document.querySelectorAll('.mark.open').forEach(function (el) { el.classList.remove('open'); });
+      const ae = document.activeElement;
+      if (ae && ae.classList && ae.classList.contains('mark-hit')) ae.blur();
     });
     document.addEventListener('keydown', function (ev) {
       if (ev.key !== 'Escape') return;

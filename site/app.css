@@ -100,8 +100,7 @@ aside .who { margin: 0 0 8px; color: var(--dim); }
   z-index: 20;
 }
 @media (hover: hover) {
-  .mark:hover .tip,
-  .mark:focus-within .tip {
+  .mark:hover .tip {
     position: absolute;
     left: 0;
     right: auto;
