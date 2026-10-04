@@ -62,6 +62,8 @@ aside .who { margin: 0 0 8px; color: var(--dim); }
 #mold-sug { display: flex; flex-wrap: wrap; gap: 6px; }
 #status { color: var(--dim); margin-left: auto; }
 .row { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin: 8px 0; min-width: 0; max-width: 100%; }
+label.num { flex: 1 1 10rem; min-width: 0; display: flex; gap: 6px; align-items: center; }
+label.num input, label.num select { flex: 1 1 auto; min-width: 0; width: 100%; }
 .eq { font-size: 22px; margin: 12px 0; }
 .dim { color: var(--dim); }
 .mark { position: relative; display: inline-block; vertical-align: middle; }

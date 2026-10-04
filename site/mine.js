@@ -3,30 +3,11 @@
   const state = S.state;
   const LIST = globalThis.LIST;
 
-  function rowsOf(list, held) {
-    const m = S.me();
-    const out = [];
-    const seen = new Set();
-    (list || []).forEach(function (t) {
-      if (t.owner !== m) return;
-      const s = t.id.toString();
-      if (seen.has(s)) return;
-      seen.add(s);
-      out.push(t);
-    });
-    (held || []).forEach(function (id) {
-      const s = id.toString();
-      if (seen.has(s)) return;
-      seen.add(s);
-      out.push({ id: id, owner: m });
-    });
-    return out;
-  }
-
   function owned(kind) {
-    if (kind === 'rgb') return rowsOf(state.rgb, state.heldRgb);
-    if (kind === 'toon') return rowsOf(state.toon, state.heldToon);
-    return rowsOf(state.math, state.heldMath);
+    const m = S.me();
+    if (kind === 'rgb') return LIST.ownedRows(state.rgb, state.heldRgb, m);
+    if (kind === 'toon') return LIST.ownedRows(state.toon, state.heldToon, m);
+    return LIST.ownedRows(state.math, state.heldMath, m);
   }
 
   function actions(kind, tok) {
@@ -117,30 +98,10 @@
     view.querySelectorAll('[data-kind]').forEach(function (b) {
       b.onclick = function () { state.mineKind = b.dataset.kind; state.minePage = 0; S.show('mine'); };
     });
-    function read() {
-      state.mineFilter.q = S.$('#q').value.trim();
-      state.mineFilter.popMin = S.$('#popMin').value.trim();
-      state.mineFilter.popMax = S.$('#popMax').value.trim();
-      state.mineFilter.pal = S.$('#pal').checked;
-      state.mineFilter.pow = S.$('#pow').checked;
-      state.mineFilter.used = S.$('#used').value;
-      state.mineFilter.sort = S.$('#sort').value;
+    LIST.bindSearch(state.mineFilter, function () {
       state.minePage = 0;
       paintMine();
-    }
-    let nameWait = 0;
-    function readSoon() {
-      read();
-      const q = state.mineFilter.q.trim().toLowerCase();
-      if (!ENS.isName(q) || ENS.hasForward(q)) return;
-      clearTimeout(nameWait);
-      nameWait = setTimeout(function () {
-        ENS.resolveForward(q).then(function () {
-          if (state.tab === 'mine' && state.mineFilter.q.trim().toLowerCase() === q) paintMine();
-        });
-      }, 250);
-    }
-    LIST.bindBar(read, readSoon);
+    }, paintMine, function () { return state.tab === 'mine'; }, ENS);
     paintMine();
   }
 

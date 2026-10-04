@@ -28,23 +28,7 @@
   }
 
   function listed(rows, held) {
-    const m = S.me();
-    const ids = [];
-    const seen = new Set();
-    rows.forEach(function (t) {
-      if (t.owner !== m) return;
-      const s = t.id.toString();
-      if (seen.has(s)) return;
-      seen.add(s);
-      ids.push(t.id);
-    });
-    (held || []).forEach(function (id) {
-      const s = id.toString();
-      if (seen.has(s)) return;
-      seen.add(s);
-      ids.push(id);
-    });
-    return ids;
+    return globalThis.LIST.ownedRows(rows, held, S.me()).map(function (t) { return t.id; });
   }
 
   let ownGen = 0;
@@ -98,23 +82,247 @@
     if (rl) rl.innerHTML = rgb ? globalThis.TOKEN.idLink('rgb', rgb) : '';
   }
 
+  let toonHint = null;
+  let toonAccount = '';
+  let catalog = null;
+  let catalogJob = null;
+  let toonFillGen = 0;
+
+  function paintToonHint(example, note) {
+    const el = $('#hintNote');
+    if (el) el.textContent = note || (example ? 'example' : '');
+  }
+
+  function pullIds(address) {
+    return ETH.ethCall(address, '0x' + ABI.SEL.totalSupply).then(function (raw) {
+      const n = Number(ABI.decodeUint(raw));
+      if (!Number.isSafeInteger(n) || n <= 0) return [];
+      const take = Math.min(n, 48);
+      const calls = [];
+      const seen = new Set();
+      for (let i = 0; i < take; i++) {
+        const idx = Math.min(n - 1, Math.floor(i * n / take));
+        if (seen.has(idx)) continue;
+        seen.add(idx);
+        calls.push({ to: address, data: ABI.call(ABI.SEL.tokenByIndex, [idx]), allow: true });
+      }
+      return ETH.ethCall(ADDR.MULTI, ABI.encodeAggregate(calls)).then(function (res) {
+        const ids = [];
+        ABI.decodeAggregate(res).forEach(function (row) {
+          if (row && row.success) ids.push(ABI.decodeUint(row.data));
+        });
+        return ids;
+      });
+    });
+  }
+
+  function loadCatalog() {
+    if (catalog) return Promise.resolve(catalog);
+    if (catalogJob) return catalogJob;
+    catalogJob = Promise.all([pullIds(ADDR.WORD), pullIds(ADDR.FACE)]).then(function (pair) {
+      catalog = { words: pair[0], faces: pair[1] };
+      return catalog;
+    }, function () {
+      catalogJob = null;
+      return { words: [], faces: [] };
+    });
+    return catalogJob;
+  }
+
+  function choose(el, id) {
+    const v = id.toString();
+    let has = false;
+    for (let i = 0; i < el.options.length; i++) if (el.options[i].value === v) has = true;
+    if (!has) {
+      const o = document.createElement('option');
+      o.value = v;
+      o.textContent = v;
+      el.appendChild(o);
+    }
+    el.value = v;
+  }
+
+  function toonCtx() {
+    const maths = state.account ? listed(state.math, state.heldMath) : state.math.map(function (t) { return t.id; });
+    const rgbs = state.account ? listed(state.rgb, state.heldRgb) : state.rgb.map(function (t) { return t.id; });
+    return {
+      maths: maths,
+      words: state.account ? state.words.slice() : (catalog ? catalog.words : []),
+      faces: state.account ? state.faces.slice() : (catalog ? catalog.faces : []),
+      rgbs: rgbs,
+      used: state.toonBy,
+    };
+  }
+
+  function hintLock(hint) {
+    return { math: hint.math, word: hint.word, face: hint.face, rgb: hint.rgb };
+  }
+
+  function restoreUser(el, own, value) {
+    if (!el || own || value == null || String(value) === '' || el.value) return;
+    choose(el, value);
+  }
+
+  function applyToon(advance) {
+    const tm = $('#tm');
+    const tw = $('#tw');
+    const tf = $('#tf');
+    const tr = $('#tr');
+    if (!tm || !tw || !tf || !tr) return;
+    try {
+      if (toonHint) {
+        restoreUser(tm, toonHint.ownMath, toonHint.math);
+        restoreUser(tw, toonHint.ownWord, toonHint.word);
+        restoreUser(tf, toonHint.ownFace, toonHint.face);
+        restoreUser(tr, toonHint.ownRgb, toonHint.rgb);
+      }
+      const example = !state.account;
+      const free = {
+        math: SUGGEST.fieldFree(tm.value, toonHint && toonHint.ownMath ? toonHint.math : null),
+        word: SUGGEST.fieldFree(tw.value, toonHint && toonHint.ownWord ? toonHint.word : null),
+        face: SUGGEST.fieldFree(tf.value, toonHint && toonHint.ownFace ? toonHint.face : null),
+        rgb: SUGGEST.fieldFree(tr.value, toonHint && toonHint.ownRgb ? toonHint.rgb : null),
+      };
+      if (!free.math && !free.word && !free.face && !free.rgb) {
+        paintToonHint(false, '');
+        if (tm.value && tw.value && tf.value && tr.value) previewToon();
+        return;
+      }
+      const ctx = toonCtx();
+      const toonValues = { math: tm.value, word: tw.value, face: tf.value, rgb: tr.value };
+      const toonOwns = toonHint && {
+        math: !!toonHint.ownMath, word: !!toonHint.ownWord, face: !!toonHint.ownFace, rgb: !!toonHint.ownRgb,
+      };
+      const shown = toonHint && {
+        math: toonHint.ownMath ? toonHint.math : tm.value,
+        word: toonHint.ownWord ? toonHint.word : tw.value,
+        face: toonHint.ownFace ? toonHint.face : tf.value,
+        rgb: toonHint.ownRgb ? toonHint.rgb : tr.value,
+      };
+      const toonFilled = shown && shown.math && shown.word && shown.face && shown.rgb;
+      if (!advance && SUGGEST.keepParts(toonHint, toonValues, toonOwns, toonFilled && SUGGEST.toonTuple(ctx, { lock: shown }))) {
+        if (free.math && toonHint.ownMath) choose(tm, toonHint.math);
+        if (free.word && toonHint.ownWord) choose(tw, toonHint.word);
+        if (free.face && toonHint.ownFace) choose(tf, toonHint.face);
+        if (free.rgb && toonHint.ownRgb) choose(tr, toonHint.rgb);
+        const pure = tm.value === String(toonHint.math) && tw.value === String(toonHint.word) &&
+          tf.value === String(toonHint.face) && tr.value === String(toonHint.rgb);
+        paintToonHint(example && pure, '');
+        if (free.math || free.word || free.face || free.rgb) previewToon();
+        return;
+      }
+      let cursor = null;
+      if (advance && toonHint &&
+        (free.math || tm.value === String(toonHint.math)) &&
+        (free.word || tw.value === String(toonHint.word)) &&
+        (free.face || tf.value === String(toonHint.face)) &&
+        (free.rgb || tr.value === String(toonHint.rgb))) {
+        try {
+          cursor = {
+            math: BigInt(toonHint.math),
+            word: BigInt(toonHint.word),
+            face: BigInt(toonHint.face),
+            rgb: BigInt(toonHint.rgb),
+          };
+        } catch (e) { cursor = null; }
+      }
+      const next = SUGGEST.toonTuple(ctx, {
+        cursor: cursor,
+        lock: {
+          math: free.math ? null : tm.value,
+          word: free.word ? null : tw.value,
+          face: free.face ? null : tf.value,
+          rgb: free.rgb ? null : tr.value,
+        },
+      });
+      if (!next) {
+        const stale = toonHint && !SUGGEST.toonTuple(ctx, { lock: hintLock(toonHint) });
+        if (stale) {
+          if (free.math) tm.value = '';
+          if (free.word) tw.value = '';
+          if (free.face) tf.value = '';
+          if (free.rgb) tr.value = '';
+          toonHint = null;
+        }
+        paintToonHint(false, advance && toonHint ? 'nothing else' : 'nothing to suggest');
+        return;
+      }
+      if (free.math) choose(tm, next.math);
+      if (free.word) choose(tw, next.word);
+      if (free.face) choose(tf, next.face);
+      if (free.rgb) choose(tr, next.rgb);
+      toonHint = {
+        math: tm.value,
+        word: tw.value,
+        face: tf.value,
+        rgb: tr.value,
+        ownMath: !!free.math,
+        ownWord: !!free.word,
+        ownFace: !!free.face,
+        ownRgb: !!free.rgb,
+        example: example,
+      };
+      paintToonHint(example && free.math && free.word && free.face && free.rgb, '');
+      previewToon();
+    } finally {
+      paintPartLinks();
+    }
+  }
+
+  function shiftAccount() {
+    const who = state.account ? String(state.account).toLowerCase() : '';
+    if (who === toonAccount) return;
+    toonAccount = who;
+    toonHint = SUGGEST.stripToon(toonHint);
+  }
+
+  function fillToon(advance) {
+    const gen = ++toonFillGen;
+    shiftAccount();
+    const example = !state.account;
+    const job = example ? loadCatalog() : Promise.resolve(null);
+    job.then(function () {
+      if (gen !== toonFillGen || !$('#tm')) return;
+      applyToon(advance);
+    }, function () {
+      if (gen !== toonFillGen || !$('#tm')) return;
+      applyToon(advance);
+    });
+  }
+
   function toon(view) {
+    shiftAccount();
     const maths = listed(state.math, state.heldMath);
     const rgbs = listed(state.rgb, state.heldRgb);
     view.innerHTML =
-      '<div class="row"><label>MATH <select id="tm"><option value="">—</option>' + opt(maths, 'math', function (id) { return id; }) + '</select> <span id="tmLink"></span></label></div>' +
-      '<div class="row"><label>WORD <select id="tw"><option value="">—</option>' + opt(state.words, 'word', function (id) { return state.wordText.get(BigInt(id)) || id; }) + '</select></label>' +
+      '<div class="row"><label class="num">MATH <select id="tm"><option value="">—</option>' + opt(maths, 'math', function (id) { return id; }) + '</select> <span id="tmLink"></span></label></div>' +
+      '<div class="row"><label class="num">WORD <select id="tw"><option value="">—</option>' + opt(state.words, 'word', function (id) { return state.wordText.get(BigInt(id)) || id; }) + '</select></label>' +
       '<span class="dim">' + S.esc(state.wordNote) + '</span></div>' +
-      '<div class="row"><label>FACE <select id="tf"><option value="">—</option>' + opt(state.faces, 'face', function (id) { return state.faceText.get(BigInt(id)) || id; }) + '</select></label>' +
+      '<div class="row"><label class="num">FACE <select id="tf"><option value="">—</option>' + opt(state.faces, 'face', function (id) { return state.faceText.get(BigInt(id)) || id; }) + '</select></label>' +
       '<span class="dim">' + S.esc(state.faceNote) + '</span></div>' +
-      '<div class="row"><label>RGB <select id="tr"><option value="">—</option>' + opt(rgbs, 'rgb', rgbLabel) + '</select> <span id="trLink"></span></label></div>' +
+      '<div class="row"><label class="num">RGB <select id="tr"><option value="">—</option>' + opt(rgbs, 'rgb', rgbLabel) + '</select> <span id="trLink"></span></label></div>' +
+      '<div class="row"><button type="button" id="suggest">suggest another</button><span id="hintNote" class="dim"></span></div>' +
       '<div id="toonPrev"><p class="dim toon-wait">pick four.</p></div>' +
       '<div class="preview" id="preview">TOON.add has no fee. you must own all four. grey picks say why.' + S.mark('ⓘ', S.TIPS.fees) + '</div>' +
       '<div class="row"><button type="button" id="simToon">simulate</button>' + S.mark('ⓘ', S.TIPS.simulate) + '<button type="button" id="sendToon">send add</button>' +
       '<span id="toonWhy" class="bad"></span></div>';
+    const pickKey = { tm: 'math', tw: 'word', tf: 'face', tr: 'rgb' };
+    const pickOwn = { tm: 'ownMath', tw: 'ownWord', tf: 'ownFace', tr: 'ownRgb' };
     ['tm', 'tw', 'tf', 'tr'].forEach(function (id) {
-      $('#' + id).addEventListener('change', function () { paintPartLinks(); previewToon(); });
+      $('#' + id).addEventListener('change', function (ev) {
+        if (ev.isTrusted && toonHint) {
+          toonHint[pickKey[id]] = $('#' + id).value;
+          toonHint[pickOwn[id]] = false;
+        }
+        const el = $('#hintNote');
+        if (el && el.textContent === 'example' && toonHint &&
+          ($('#tm').value !== toonHint.math || $('#tw').value !== toonHint.word ||
+           $('#tf').value !== toonHint.face || $('#tr').value !== toonHint.rgb)) el.textContent = '';
+        paintPartLinks();
+        previewToon();
+      });
     });
+    $('#suggest').onclick = function () { fillToon(true); };
     $('#simToon').onclick = function () { sendToon(false); };
     $('#sendToon').onclick = function () { sendToon(true); };
     paintToonWhy();
@@ -135,8 +343,17 @@
         previewToon();
       }
     }
+    if (toonHint) {
+      [['tm', 'math'], ['tw', 'word'], ['tf', 'face'], ['tr', 'rgb']].forEach(function (row) {
+        const el = $('#' + row[0]);
+        const v = toonHint[row[1]];
+        if (!el || el.value || v == null || String(v) === '') return;
+        choose(el, v);
+      });
+    }
     paintPartLinks();
     if (!state.account) MOLD.say('noWallet');
+    fillToon(false);
   }
 
   function rgbLabel(id) {
@@ -301,4 +518,5 @@
   }
 
   S.toon = toon;
+  S.fillToon = fillToon;
 })();

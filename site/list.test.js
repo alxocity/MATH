@@ -127,3 +127,14 @@ assert.ok(pager.includes('disabled'));
 assert.ok(pager.includes('1/2'));
 assert.ok(pager.includes('>30<'));
 assert.strictEqual(LIST.PAGE, 24);
+
+const mine = '0xabc';
+const owned = LIST.ownedRows([
+  { id: 1n, owner: '0xabc', r: 2n },
+  { id: 2n, owner: '0xdef' },
+  { id: 3n, owner: '0xABC' },
+], [3n, 4n], mine);
+assert.deepStrictEqual(owned.map(function (t) { return t.id; }), [1n, 3n, 4n]);
+assert.strictEqual(owned[0].r, 2n);
+assert.strictEqual(owned[2].owner, mine);
+assert.strictEqual(owned[2].id, 4n);

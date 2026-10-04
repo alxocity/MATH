@@ -153,6 +153,59 @@
       '<button type="button" id="next"' + (page + 1 < pages ? '' : ' disabled') + '>next</button>';
   }
 
+  function ownedRows(list, held, me) {
+    const who = String(me || '').toLowerCase();
+    const out = [];
+    const seen = new Set();
+    (list || []).forEach(function (t) {
+      if (!t || String(t.owner || '').toLowerCase() !== who) return;
+      const s = t.id.toString();
+      if (seen.has(s)) return;
+      seen.add(s);
+      out.push(t);
+    });
+    (held || []).forEach(function (id) {
+      const s = id.toString();
+      if (seen.has(s)) return;
+      seen.add(s);
+      out.push({ id: id, owner: who });
+    });
+    return out;
+  }
+
+  function bindSearch(filter, onRead, onNames, still, ens) {
+    function read() {
+      const q = document.getElementById('q');
+      const popMin = document.getElementById('popMin');
+      const popMax = document.getElementById('popMax');
+      const pal = document.getElementById('pal');
+      const pow = document.getElementById('pow');
+      const used = document.getElementById('used');
+      const sort = document.getElementById('sort');
+      if (q) filter.q = q.value.trim();
+      if (popMin) filter.popMin = popMin.value.trim();
+      if (popMax) filter.popMax = popMax.value.trim();
+      if (pal) filter.pal = pal.checked;
+      if (pow) filter.pow = pow.checked;
+      if (used) filter.used = used.value;
+      if (sort) filter.sort = sort.value;
+      onRead();
+    }
+    let nameWait = 0;
+    function readSoon() {
+      read();
+      const q = String(filter.q || '').trim().toLowerCase();
+      if (!ens.isName(q) || ens.hasForward(q)) return;
+      clearTimeout(nameWait);
+      nameWait = setTimeout(function () {
+        ens.resolveForward(q).then(function () {
+          if (still() && String(filter.q || '').trim().toLowerCase() === q) onNames();
+        });
+      }, 250);
+    }
+    bindBar(read, readSoon);
+  }
+
   function bindBar(read, soon) {
     const on = soon || read;
     ['q', 'popMin', 'popMax'].forEach(function (id) {
@@ -172,6 +225,8 @@
     cardHtml: cardHtml,
     barHtml: barHtml,
     pagerHtml: pagerHtml,
+    ownedRows: ownedRows,
+    bindSearch: bindSearch,
     bindBar: bindBar,
   };
 });

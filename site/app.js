@@ -65,6 +65,8 @@
     preview: '',
     pendingHash: null,
     pendingOk: null,
+    pendingSums: new Map(),
+    planesTouched: false,
     run: null,
     runBusy: false,
     runGen: 0,
@@ -404,6 +406,8 @@
     state.txLock = null;
     state.pendingHash = null;
     state.pendingOk = null;
+    if (state.pendingSums) state.pendingSums.delete(hash);
+    saveSums();
     savePending('');
     const ok = globalThis.RUN.receiptOk(rec.status);
     MOLD.say('mined', { status: ok ? 'ok' : 'reverted' });
@@ -461,28 +465,84 @@
     paintPending();
   }
 
-  function readRun() {
+  function readRunStore() {
     try {
       const raw = sessionStorage.getItem(RUN_KEY);
       const j = raw ? JSON.parse(raw) : null;
-      return j && Array.isArray(j.steps) ? j.steps : [];
-    } catch (e) { return []; }
+      if (!j || typeof j !== 'object') return { steps: [], sums: {} };
+      return {
+        steps: Array.isArray(j.steps) ? j.steps : [],
+        sums: j.sums && typeof j.sums === 'object' && !Array.isArray(j.sums) ? j.sums : {},
+      };
+    } catch (e) { return { steps: [], sums: {} }; }
+  }
+
+  function readRun() {
+    return readRunStore().steps;
+  }
+
+  function writeRunStore(steps, sums) {
+    try {
+      sessionStorage.setItem(RUN_KEY, JSON.stringify({ steps: steps, sums: sums || {} }));
+    } catch (e) { /* ignore */ }
   }
 
   function saveRun(steps) {
-    try {
-      sessionStorage.setItem(RUN_KEY, JSON.stringify({
-        steps: (steps || []).map(function (s) {
-          return {
-            label: s.label,
-            status: s.status || 'pending',
-            hash: s.hash || '',
-            calls: s.calls || '',
-            error: s.error || '',
-          };
-        }),
-      }));
-    } catch (e) { /* ignore */ }
+    const cur = readRunStore();
+    writeRunStore((steps || []).map(function (s) {
+      return {
+        label: s.label,
+        status: s.status || 'pending',
+        hash: s.hash || '',
+        calls: s.calls || '',
+        error: s.error || '',
+      };
+    }), cur.sums);
+  }
+
+  function freshSum(entry, hash, now) {
+    const row = globalThis.SUGGEST.sumEntry(hash, entry, now);
+    if (!row && state.pendingSums) state.pendingSums.delete(hash);
+    return row;
+  }
+
+  function sumsObj() {
+    const sums = {};
+    const now = Date.now();
+    if (state.pendingSums) state.pendingSums.forEach(function (entry, hash) {
+      const row = freshSum(entry, hash, now);
+      if (row) sums[hash] = row.id.toString();
+    });
+    return sums;
+  }
+
+  function saveSums() {
+    const cur = readRunStore();
+    const sums = {};
+    const now = Date.now();
+    if (state.pendingSums) state.pendingSums.forEach(function (entry, hash) {
+      const row = freshSum(entry, hash, now);
+      if (row) sums[hash] = { id: row.id.toString(), at: row.at };
+    });
+    writeRunStore(cur.steps, sums);
+  }
+
+  function loadSums() {
+    const saved = readRunStore();
+    const now = Date.now();
+    Object.keys(saved.sums).forEach(function (hash) {
+      const row = globalThis.SUGGEST.sumEntry(hash, saved.sums[hash], now);
+      if (row) state.pendingSums.set(hash, { id: row.id, at: row.at });
+    });
+  }
+
+  function rememberSum(hash, id) {
+    if (!state.pendingSums || !hash || id == null) return;
+    const now = Date.now();
+    const row = globalThis.SUGGEST.sumEntry(hash, { id: String(id), at: now }, now);
+    if (!row) return;
+    state.pendingSums.set(hash, { id: row.id, at: row.at });
+    saveSums();
   }
 
   function syncNote(steps) {
@@ -1125,6 +1185,10 @@
   const TABS = ['browse', 'mint', 'route', 'rgb', 'toon', 'about', 'mine'];
 
   function show(tab, quiet) {
+    const ae = document.activeElement;
+    const focusId = ae && ae.id;
+    const selStart = ae && typeof ae.selectionStart === 'number' ? ae.selectionStart : null;
+    const selEnd = ae && typeof ae.selectionEnd === 'number' ? ae.selectionEnd : null;
     if (tab === 'mine' && !state.account) tab = 'browse';
     if (TABS.indexOf(tab) === -1) tab = 'browse';
     state.tab = tab;
@@ -1137,6 +1201,15 @@
     SITE[tab](view);
     paintPending();
     if (location.hash !== '#' + tab) location.hash = tab;
+    if (focusId) {
+      const next = document.getElementById(focusId);
+      if (next && next !== ae) {
+        next.focus();
+        if (selStart != null && next.setSelectionRange) {
+          try { next.setSelectionRange(selStart, selEnd); } catch (e) { /* ignore */ }
+        }
+      }
+    }
     if (quiet) return;
     if (tab === 'browse') MOLD.say('browse');
     if (tab === 'rgb') MOLD.say('rgb');
@@ -1175,6 +1248,12 @@
     show(name);
   }
 
+  function openMints() {
+    const saved = readRunStore();
+    const run = state.run && state.run.length ? state.run : saved.steps;
+    return globalThis.SUGGEST.flightSums((state.queue || []).concat(run), sumsObj());
+  }
+
   const SITE = {
     state: state,
     $: $,
@@ -1204,6 +1283,8 @@
     show: show,
     hit: hit,
     persistTexts: persistTexts,
+    openMints: openMints,
+    rememberSum: rememberSum,
   };
   globalThis.SITE = SITE;
 
@@ -1228,6 +1309,7 @@
         syncMine();
         if (state.account) loadWallet();
         if (state.tab === 'toon' || state.tab === 'mint' || state.tab === 'mine' || state.tab === 'browse') show(state.tab);
+        else if (state.tab === 'rgb' && SITE.fillRgb) SITE.fillRgb(false);
       });
       eth.on('chainChanged', onChain);
     }
@@ -1316,6 +1398,7 @@
     await loadHeld();
     paintWho();
     if (state.tab === 'toon' || state.tab === 'mine') show(state.tab);
+    else if (state.tab === 'mint' && SITE.fillMint) SITE.fillMint(false);
   }
 
   let loadGen = 0;
@@ -1331,11 +1414,9 @@
   function paintIndex() {
     setStatus('block ' + state.block);
     if (state.tab === 'token' && state.token && SITE.token) SITE.token($('#view'));
+    else if (state.tab === 'mint' && SITE.fillMint) SITE.fillMint(false);
+    else if (state.tab === 'rgb' && SITE.fillRgb) SITE.fillRgb(false);
     else if (state.tab === 'browse' || state.tab === 'toon' || state.tab === 'mine') show(state.tab);
-    else if (state.tab === 'mint' && $('#send')) SITE.paintMint(false);
-    else if (state.tab === 'rgb' && $('#rgbMeta') && state.planes) {
-      $('#rgbMeta').innerHTML = SITE.issuesHtml(SITE.planeIssues(state.planes));
-    }
   }
 
   function heartCtx() {
@@ -1376,6 +1457,7 @@
       MOLD.say('heartNone');
       return;
     }
+    state.planesTouched = true;
     state.grid = state.heartPick.rows.slice();
     show('rgb', true);
     const p = state.heartPick;
@@ -1571,6 +1653,7 @@
     }
     const pending = loadPending();
     if (pending && /^0x[0-9a-fA-F]{64}$/.test(pending)) state.pendingHash = pending;
+    loadSums();
     const tok = globalThis.TOKEN.parse(location.hash);
     if (tok) openToken(tok);
     else {

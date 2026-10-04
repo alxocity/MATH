@@ -126,25 +126,115 @@
       if (sim.error) throw new Error(ETH.reason(sim.error));
       if ($('#preview')) $('#preview').textContent = preview + '\nsimulation ok. confirm in the wallet.';
       const hash = await ETH.send(tx);
+      S.rememberSum(hash, pair.n);
       S.noteSent(hash, function () {
         state.supply.set(pair.n, S.me());
       });
     });
   }
 
+  function ownedMath() {
+    return globalThis.LIST.ownedRows(state.math, state.heldMath, S.me()).map(function (t) { return t.id; });
+  }
+
+  function mathCtx() {
+    return {
+      supply: state.supply,
+      user: S.me(),
+      blocked: state.blocked,
+      gasWei: P.G_ADD * state.gasPrice,
+      owned: ownedMath(),
+      example: !state.account,
+      skip: S.openMints(),
+    };
+  }
+
+  let mathHint = null;
+
+  function paintHint(example, note) {
+    const el = $('#hintNote');
+    if (!el) return;
+    el.textContent = note || (example ? 'example' : '');
+  }
+
+  function fillMint(advance) {
+    const aEl = $('#a');
+    const bEl = $('#b');
+    if (!aEl || !bEl) return;
+    const example = !state.account;
+    const dropped = !!(mathHint && mathHint.example !== example);
+    const aFree = SUGGEST.hintFree(aEl.value, mathHint && { value: mathHint.a, example: mathHint.example }, !!(mathHint && mathHint.ownA), example);
+    const bFree = SUGGEST.hintFree(bEl.value, mathHint && { value: mathHint.b, example: mathHint.example }, !!(mathHint && mathHint.ownB), example);
+    if (dropped) mathHint = null;
+    const ctx = mathCtx();
+    if (!aFree && !bFree) {
+      paintHint(false, '');
+      paintMint(false);
+      return;
+    }
+    if (!advance && mathHint && mathHint.ownA && mathHint.ownB && SUGGEST.mathOk(ctx, mathHint.a, mathHint.b)) {
+      if (aFree) aEl.value = String(mathHint.a);
+      if (bFree) bEl.value = String(mathHint.b);
+      paintHint(example && aFree && bFree, '');
+      paintMint(false);
+      return;
+    }
+    let cursor = null;
+    if (advance && mathHint &&
+      (aFree || aEl.value === String(mathHint.a)) &&
+      (bFree || bEl.value === String(mathHint.b))) {
+      try { cursor = { a: BigInt(mathHint.a), b: BigInt(mathHint.b) }; } catch (e) { cursor = null; }
+    }
+    const next = SUGGEST.mathPair(ctx, {
+      cursor: cursor,
+      lockA: aFree ? null : aEl.value,
+      lockB: bFree ? null : bEl.value,
+    });
+    if (!next) {
+      const stale = mathHint && !SUGGEST.mathOk(ctx, mathHint.a, mathHint.b);
+      if (stale || dropped) {
+        if (aFree) aEl.value = '';
+        if (bFree) bEl.value = '';
+        mathHint = null;
+      }
+      paintHint(false, advance && mathHint ? 'nothing else' : 'nothing to suggest');
+      paintMint(false);
+      return;
+    }
+    if (aFree) aEl.value = next.a.toString();
+    if (bFree) bEl.value = next.b.toString();
+    mathHint = {
+      a: aEl.value,
+      b: bEl.value,
+      ownA: aFree,
+      ownB: bFree,
+      example: example,
+    };
+    paintHint(example && aFree && bFree, '');
+    paintMint(false);
+  }
+
   function mint(view) {
     view.innerHTML =
-      '<div class="row"><label>a <input id="a" value="1" spellcheck="false"></label>' +
-      '<label>b <input id="b" value="1" spellcheck="false"></label></div>' +
-      '<div class="eq" id="eq">1 + 1 = 2</div>' +
+      '<div class="row"><label class="num">a <input id="a" spellcheck="false" inputmode="numeric"></label>' +
+      '<label class="num">b <input id="b" spellcheck="false" inputmode="numeric"></label></div>' +
+      '<div class="row"><button type="button" id="suggest">suggest another</button>' +
+      '<span id="hintNote" class="dim"></span></div>' +
+      '<div class="eq" id="eq">a + b = ?</div>' +
       '<div id="grid"></div>' +
       '<p id="mintMeta"></p>' +
       '<div class="preview" id="preview">simulate, then send. this page does not sign.</div>' +
       '<div class="row"><button type="button" id="sim">simulate</button>' + S.mark('ⓘ', S.TIPS.simulate) + '<button type="button" id="send">send add</button>' +
       '<span id="sendWhy" class="bad"></span></div>';
-    const draw = function () { paintMint(false, true); };
+    const draw = function () {
+      paintMint(false, true);
+      const el = $('#hintNote');
+      if (!el || el.textContent !== 'example' || !mathHint) return;
+      if ($('#a').value !== String(mathHint.a) || $('#b').value !== String(mathHint.b)) el.textContent = '';
+    };
     $('#a').addEventListener('input', draw);
     $('#b').addEventListener('input', draw);
+    $('#suggest').onclick = function () { fillMint(true); };
     $('#sim').onclick = function () { paintMint(true, true); };
     $('#send').onclick = function () {
       const pair = readPair();
@@ -153,9 +243,10 @@
       if (mintClosed(note)) return;
       sendMath();
     };
-    paintMint(false);
+    fillMint(false);
   }
 
   S.mint = mint;
   S.paintMint = paintMint;
+  S.fillMint = fillMint;
 })();

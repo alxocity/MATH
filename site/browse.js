@@ -118,30 +118,10 @@
     view.querySelectorAll('[data-kind]').forEach(function (b) {
       b.onclick = function () { state.kind = b.dataset.kind; state.page = 0; S.show('browse'); };
     });
-    function read() {
-      state.filter.q = $('#q').value.trim();
-      state.filter.popMin = $('#popMin').value.trim();
-      state.filter.popMax = $('#popMax').value.trim();
-      state.filter.pal = $('#pal').checked;
-      state.filter.pow = $('#pow').checked;
-      state.filter.used = $('#used').value;
-      state.filter.sort = $('#sort').value;
+    LIST.bindSearch(state.filter, function () {
       state.page = 0;
       paintCards();
-    }
-    let nameWait = 0;
-    function readSoon() {
-      read();
-      const q = state.filter.q.trim().toLowerCase();
-      if (!ENS.isName(q) || ENS.hasForward(q)) return;
-      clearTimeout(nameWait);
-      nameWait = setTimeout(function () {
-        ENS.resolveForward(q).then(function () {
-          if (state.tab === 'browse' && state.filter.q.trim().toLowerCase() === q) paintCards();
-        });
-      }, 250);
-    }
-    LIST.bindBar(read, readSoon);
+    }, paintCards, function () { return state.tab === 'browse'; }, ENS);
     paintCards();
   }
 

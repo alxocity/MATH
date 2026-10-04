@@ -133,6 +133,9 @@
       return {
         label: 'RGB.add ' + item.r + ', ' + item.g + ', ' + item.b,
         result: null,
+        r: item.r,
+        g: item.g,
+        b: item.b,
         uses: uses,
         tx: function () {
           return {
@@ -315,6 +318,112 @@
     traits.innerHTML = (r || g || b) ? 'r ' + r + ' · g ' + g + ' · b ' + b + S.mark('ⓘ', S.TIPS.planes) : '';
   }
 
+  let rgbHint = null;
+
+  function rgbFree(value, suggested) {
+    return SUGGEST.channelFree(value, suggested, state.planesTouched);
+  }
+
+  function rgbReady(hint) {
+    if (!hint) return false;
+    const by = state.rgbBy;
+    try {
+      return !RULES.rgbChannel('r', hint.r, by.r) &&
+        !RULES.rgbChannel('g', hint.g, by.g) &&
+        !RULES.rgbChannel('b', hint.b, by.b);
+    } catch (e) { return false; }
+  }
+
+  function paintRgbHint(example, note) {
+    const el = $('#hintNote');
+    if (el) el.textContent = note || (example ? 'example' : '');
+  }
+
+  function fillRgb(advance) {
+    const rEl = $('#pR');
+    const gEl = $('#pG');
+    const bEl = $('#pB');
+    if (!rEl || !gEl || !bEl) return;
+    const example = !state.account;
+    const rFree = rgbFree(rEl.value, rgbHint && rgbHint.ownR ? rgbHint.r : null);
+    const gFree = rgbFree(gEl.value, rgbHint && rgbHint.ownG ? rgbHint.g : null);
+    const bFree = rgbFree(bEl.value, rgbHint && rgbHint.ownB ? rgbHint.b : null);
+    if (!rFree && !gFree && !bFree) {
+      paintRgbHint(false, '');
+      const meta = $('#rgbMeta');
+      if (meta) meta.innerHTML = issuesHtml(planeIssues(state.planes));
+      return;
+    }
+    const shown = rgbHint && {
+      r: rgbHint.ownR ? rgbHint.r : rEl.value,
+      g: rgbHint.ownG ? rgbHint.g : gEl.value,
+      b: rgbHint.ownB ? rgbHint.b : bEl.value,
+    };
+    const rgbValues = { r: rEl.value, g: gEl.value, b: bEl.value };
+    const rgbOwns = rgbHint && { r: !!rgbHint.ownR, g: !!rgbHint.ownG, b: !!rgbHint.ownB };
+    const rgbFilled = shown && String(shown.r).trim() && String(shown.g).trim() && String(shown.b).trim();
+    if (!advance && SUGGEST.keepParts(rgbHint, rgbValues, rgbOwns, rgbFilled && rgbReady(shown))) {
+      if (rgbHint.ownR && rFree) rEl.value = String(rgbHint.r);
+      if (rgbHint.ownG && gFree) gEl.value = String(rgbHint.g);
+      if (rgbHint.ownB && bFree) bEl.value = String(rgbHint.b);
+      const pure = rEl.value === String(rgbHint.r) && gEl.value === String(rgbHint.g) && bEl.value === String(rgbHint.b);
+      paintRgbHint(example && pure, '');
+      rEl.dispatchEvent(new Event('change'));
+      return;
+    }
+    const ids = [];
+    state.supply.forEach(function (owner, id) { ids.push(id); });
+    let avoid = null;
+    if (advance && rgbHint &&
+      (rFree || rEl.value === String(rgbHint.r)) &&
+      (gFree || gEl.value === String(rgbHint.g)) &&
+      (bFree || bEl.value === String(rgbHint.b))) {
+      try { avoid = { r: BigInt(rgbHint.r), g: BigInt(rgbHint.g), b: BigInt(rgbHint.b) }; }
+      catch (e) { avoid = null; }
+    }
+    const next = SUGGEST.rgbTriple({
+      ids: ids,
+      supply: state.supply,
+      blocked: state.blocked,
+      by: state.rgbBy,
+      skip: S.openMints(),
+    }, {
+      rand: Math.random,
+      avoid: avoid,
+      lock: {
+        r: rFree ? null : rEl.value,
+        g: gFree ? null : gEl.value,
+        b: bFree ? null : bEl.value,
+      },
+    });
+    if (!next) {
+      if (rgbHint && !rgbReady(rgbHint)) {
+        if (rFree) rEl.value = '';
+        if (gFree) gEl.value = '';
+        if (bFree) bEl.value = '';
+        rgbHint = null;
+      }
+      paintRgbHint(false, advance && rgbHint ? 'nothing else' : 'nothing to suggest');
+      const meta = $('#rgbMeta');
+      if (meta) meta.innerHTML = issuesHtml(planeIssues(state.planes));
+      return;
+    }
+    if (rFree) rEl.value = next.r.toString();
+    if (gFree) gEl.value = next.g.toString();
+    if (bFree) bEl.value = next.b.toString();
+    rgbHint = {
+      r: rEl.value,
+      g: gEl.value,
+      b: bEl.value,
+      ownR: !!rFree,
+      ownG: !!gFree,
+      ownB: !!bFree,
+      example: example,
+    };
+    paintRgbHint(example && rFree && gFree && bFree, '');
+    rEl.dispatchEvent(new Event('change'));
+  }
+
   function rgb(view) {
     if (state.arm && state.arm.kind === 'rgb') {
       syncPlanes();
@@ -336,9 +445,10 @@
       '<label>G <input type="range" id="thrG" min="0" max="100" value="50"></label>' +
       '<label>B <input type="range" id="thrB" min="0" max="100" value="50"></label></div>' +
       '<div id="cells"></div>' +
-      '<div class="row"><label>R <input id="pR" spellcheck="false" value="' + p.R + '"></label></div>' +
-      '<div class="row"><label>G <input id="pG" spellcheck="false" value="' + p.G + '"></label></div>' +
-      '<div class="row"><label>B <input id="pB" spellcheck="false" value="' + p.B + '"></label></div>' +
+      '<div class="row"><label class="num">R <input id="pR" spellcheck="false" inputmode="numeric" value="' + p.R + '"></label></div>' +
+      '<div class="row"><label class="num">G <input id="pG" spellcheck="false" inputmode="numeric" value="' + p.G + '"></label></div>' +
+      '<div class="row"><label class="num">B <input id="pB" spellcheck="false" inputmode="numeric" value="' + p.B + '"></label></div>' +
+      '<div class="row"><button type="button" id="suggest">suggest another</button><span id="hintNote" class="dim"></span></div>' +
       '<p id="rgbTraits" class="dim"></p><p id="rgbMeta"></p><div id="queue"></div>' +
       '<p class="dim" id="batchNote" hidden>A batch may ask MetaMask for a one-time smart account upgrade (EIP-7702). That delegates this address for the calls. You approve it in the wallet. This page does not sign by itself.</p>' +
       '<div id="run"></div>' +
@@ -350,6 +460,7 @@
     let stroke = '';
     function put(btn, ch) {
       if (!btn || btn.className === ch) return false;
+      state.planesTouched = true;
       const i = Number(btn.dataset.i);
       const y = Math.floor(i / 16);
       const x = i % 16;
@@ -404,6 +515,7 @@
     $('#file').onchange = function () {
       const file = $('#file').files && $('#file').files[0];
       if (!file) return;
+      state.planesTouched = true;
       const img = new Image();
       img.onload = function () {
         state.sample = sampleImage(img);
@@ -413,6 +525,7 @@
     };
     $('#apply').onclick = function () {
       if (!state.sample) return;
+      state.planesTouched = true;
       const px = new Float32Array(state.sample);
       const thr = [Number($('#thrR').value) / 100, Number($('#thrG').value) / 100, Number($('#thrB').value) / 100];
       const dither = $('#dither').checked;
@@ -443,7 +556,11 @@
       S.show('rgb');
     };
     ['pR', 'pG', 'pB'].forEach(function (id) {
-      $('#' + id).addEventListener('change', function () {
+      $('#' + id).addEventListener('input', function (ev) {
+        if (ev.isTrusted) state.planesTouched = true;
+      });
+      $('#' + id).addEventListener('change', function (ev) {
+        if (ev.isTrusted) state.planesTouched = true;
         try {
           const R = BigInt($('#pR').value.trim());
           const G = BigInt($('#pG').value.trim());
@@ -454,6 +571,11 @@
           paintTraits();
           const issues = planeIssues(state.planes);
           $('#rgbMeta').innerHTML = issuesHtml(issues);
+          const note = $('#hintNote');
+          if (note && note.textContent === 'example' && rgbHint &&
+            ($('#pR').value !== String(rgbHint.r) || $('#pG').value !== String(rgbHint.g) || $('#pB').value !== String(rgbHint.b))) {
+            note.textContent = '';
+          }
           const rule = issues.find(function (s) { return RULES.mold(s); });
           S.hit(rule || '');
         } catch (e) { /* keep grid */ }
@@ -461,12 +583,15 @@
     });
     state.runSend = function () { sendAllQueue(); };
     $('#planRgb').onclick = planRgb;
+    $('#suggest').onclick = function () { fillRgb(true); };
     const issues = planeIssues(state.planes);
     $('#rgbMeta').innerHTML = issuesHtml(issues);
     paintQueue();
+    fillRgb(false);
   }
 
   S.rgb = rgb;
+  S.fillRgb = fillRgb;
   S.planeIssues = planeIssues;
   S.issuesHtml = issuesHtml;
 })();
