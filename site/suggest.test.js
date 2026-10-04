@@ -207,4 +207,34 @@ wide.set(8n, stranger);
 S.mathPair(wideCtx, {});
 assert.strictEqual(scans, 2);
 
+const now = 10000000;
+const hx = '0x' + 'ab'.repeat(32);
+assert.strictEqual(S.sumEntry('w', '7', now), null);
+assert.strictEqual(S.sumEntry(hx, '0', now), null);
+assert.strictEqual(S.sumEntry(hx, '-3', now), null);
+assert.strictEqual(S.sumEntry(hx, '7.0', now), null);
+assert.strictEqual(S.sumEntry(hx, '0x10', now), null);
+assert.strictEqual(S.sumEntry(hx, '7abc', now), null);
+assert.strictEqual(S.sumEntry(hx, '7', now).id, 7n);
+assert.strictEqual(S.sumEntry(hx, '7', now).at, now);
+assert.strictEqual(S.sumEntry(hx, { id: '7', at: now - 3600000 }, now), null);
+assert.strictEqual(S.sumEntry(hx, { id: '7', at: now - 3600001 }, now), null);
+assert.strictEqual(S.sumEntry(hx, { id: '7', at: now - 3599999 }, now).id, 7n);
+assert.strictEqual(S.sumEntry(hx, { id: 7n, at: now - 1000 }, now).id, 7n);
+assert.strictEqual(S.stripToon(null), null);
+assert.strictEqual(S.stripToon({
+  math: '1', word: '2', face: '3', rgb: '4',
+  ownMath: true, ownWord: true, ownFace: true, ownRgb: true,
+}), null);
+const kept = S.stripToon({
+  math: '65537', word: '2', face: '3', rgb: '4',
+  ownMath: false, ownWord: true, ownFace: true, ownRgb: true, example: false,
+});
+assert.strictEqual(kept.math, '65537');
+assert.strictEqual(kept.ownMath, false);
+assert.strictEqual(kept.word, '');
+assert.strictEqual(kept.ownWord, false);
+assert.strictEqual(kept.face, '');
+assert.strictEqual(kept.rgb, '');
+
 console.log('suggest.test.js ok');

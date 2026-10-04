@@ -274,6 +274,39 @@
     return busyIds(rows);
   }
 
+  // A pending sum counts for about an hour. A bad key or a non-id never counts.
+  function sumEntry(hash, value, now) {
+    if (!/^0x[0-9a-fA-F]{64}$/.test(String(hash || ''))) return null;
+    const boxed = value && typeof value === 'object';
+    const raw = boxed ? value.id : value;
+    const text = String(raw == null ? '' : raw).trim();
+    if (!/^\d+$/.test(text)) return null;
+    let n;
+    try { n = BigInt(text); } catch (e) { return null; }
+    if (n <= 0n) return null;
+    const at = boxed && value.at != null ? Number(value.at) : now;
+    if (!Number.isFinite(at) || now - at >= 3600000) return null;
+    return { id: n, at: at };
+  }
+
+  // Drop parts the suggestion filled. A part the user chose stays.
+  function stripToon(hint) {
+    if (!hint) return null;
+    const next = {
+      math: hint.math, word: hint.word, face: hint.face, rgb: hint.rgb,
+      ownMath: !!hint.ownMath, ownWord: !!hint.ownWord, ownFace: !!hint.ownFace, ownRgb: !!hint.ownRgb,
+      example: hint.example,
+    };
+    [['math', 'ownMath'], ['word', 'ownWord'], ['face', 'ownFace'], ['rgb', 'ownRgb']].forEach(function (row) {
+      if (next[row[1]]) {
+        next[row[0]] = '';
+        next[row[1]] = false;
+      }
+    });
+    if (!next.math && !next.word && !next.face && !next.rgb) return null;
+    return next;
+  }
+
   function busyIds(rows) {
     const skip = new Set();
     function add(v) {
@@ -307,6 +340,8 @@
     hintFree: hintFree,
     busyIds: busyIds,
     flightSums: flightSums,
+    sumEntry: sumEntry,
+    stripToon: stripToon,
     keepParts: keepParts,
     mathPair: mathPair,
     mathOk: mathOk,
