@@ -39,6 +39,9 @@
     gasPrice: 1000000000n,
     page: 0,
     filter: { q: '', popMin: '', popMax: '', pal: false, pow: false, used: 'any', sort: 'index' },
+    mineKind: 'math',
+    minePage: 0,
+    mineFilter: { q: '', popMin: '', popMax: '', pal: false, pow: false, used: 'any', sort: 'index' },
     words: [],
     faces: [],
     wordText: new Map(),
@@ -1289,7 +1292,7 @@
 
   function paintIndex() {
     setStatus('block ' + state.block);
-    if (state.tab === 'browse' || state.tab === 'toon') show(state.tab);
+    if (state.tab === 'browse' || state.tab === 'toon' || state.tab === 'mine') show(state.tab);
     else if (state.tab === 'mint' && $('#send')) SITE.paintMint(false);
     else if (state.tab === 'rgb' && $('#rgbMeta') && state.planes) {
       $('#rgbMeta').innerHTML = SITE.issuesHtml(SITE.planeIssues(state.planes));
