@@ -458,10 +458,11 @@
         ? ' <a href="https://etherscan.io/tx/' + s.hash + '" target="_blank" rel="noopener noreferrer">tx</a>'
         : '';
       const err = s.status === 'failed' && s.error ? ' <span class="bad">' + esc(s.error) + '</span>' : '';
-      const btn = s.status === 'failed'
-        ? ' <button type="button" data-retry="1">retry</button>'
-        : (s.status === 'submitted' || globalThis.RUN.isUnknown(s.status)
-          ? ' <button type="button" data-check="1">check</button>' : '');
+      let btn = '';
+      if (s.status === 'failed') btn = ' <button type="button" data-retry="1">retry</button>';
+      else if (globalThis.RUN.isUnknown(s.status)) {
+        btn = ' <button type="button" data-check="1">check</button> <button type="button" data-clear="' + i + '">clear</button>';
+      } else if (s.status === 'submitted') btn = ' <button type="button" data-check="1">check</button>';
       return '<div class="run">' + (i + 1) + '/' + rows.length + ' ' + esc(s.status || 'pending') + ' ' + esc(s.label) + hash + err + btn + '</div>';
     }).join('');
     host.querySelectorAll('[data-retry]').forEach(function (b) {
@@ -472,6 +473,9 @@
         state.runTick = true;
         checkSubmitted().catch(function () {});
       };
+    });
+    host.querySelectorAll('[data-clear]').forEach(function (b) {
+      b.onclick = function () { clearUnknown(rows[Number(b.dataset.clear)]).catch(function () {}); };
     });
   }
 
@@ -596,7 +600,7 @@
         error: s.error || '',
         result: null,
         uses: [],
-        done: async function () { return false; },
+        done: async function () { throw new Error('unchecked'); },
       };
     });
     paintRun();
@@ -604,15 +608,22 @@
   }
 
   function giveUpCalls(group) {
-    const note = 'batch status unavailable';
-    let any = false;
-    (group || []).forEach(function (s) {
-      if (!s || s.status !== 'submitted') return;
-      if (s.hash && /^0x[0-9a-fA-F]{64}$/.test(s.hash)) return;
-      markStep(s, { status: 'failed', error: note });
-      any = true;
+    const next = globalThis.RUN.settleUnread(group);
+    (group || []).forEach(function (s, i) {
+      const row = next[i];
+      if (!row || row.status === s.status) return;
+      markStep(s, { status: row.status, error: '' });
     });
-    if (any) MOLD.say('simFail', { err: note });
+  }
+
+  async function clearUnknown(step) {
+    if (!step || !globalThis.RUN.isUnknown(step.status)) return;
+    let done;
+    try { done = await step.done(); }
+    catch (e) { return; }
+    const next = globalThis.RUN.clearAnswer(step.status, done);
+    if (next === step.status) return;
+    markStep(step, { status: next, error: '' });
   }
 
   async function checkCalls(id, group) {
@@ -774,9 +785,36 @@
     return null;
   }
 
+  function callCost(tx) {
+    const to = String(tx && tx.to || '').toLowerCase();
+    const gas = to === ADDR.RGB.toLowerCase() ? P.G_RGB : P.G_ADD;
+    return { value: tx && tx.value || 0, gas: gas };
+  }
+
+  async function afford(live) {
+    const price = await ETH.gasPrice();
+    state.gasPrice = price;
+    const need = globalThis.RUN.batchNeed(live.map(function (s) { return callCost(s.tx()); }), price);
+    const bal = await ETH.balance(state.account);
+    if (globalThis.RUN.shortBalance(bal, need)) return 'balance too low';
+    return '';
+  }
+
   async function sendSeq(batch, gen) {
+    if ((batch || []).some(inFlight)) return;
     const live = await prepareBatch(batch);
-    if (!live) return;
+    if (!live || !live.length) return;
+    if (live.some(inFlight)) return;
+    let short;
+    try { short = await afford(live); }
+    catch (e) {
+      fail(live[0], clip(e && e.message ? e.message : e));
+      return;
+    }
+    if (short) {
+      fail(live[0], short);
+      return;
+    }
     for (let i = 0; i < live.length; i++) {
       if (gen !== state.runGen) return;
       const step = live[i];
@@ -817,9 +855,21 @@
   }
 
   async function sendBatch(batch, gen) {
+    if ((batch || []).some(inFlight)) return;
     const live = await prepareBatch(batch);
     if (!live) return;
+    if (live.some(inFlight)) return;
     if (live.length < 2) return sendSeq(live, gen);
+    let short;
+    try { short = await afford(live); }
+    catch (e) {
+      fail(live[0], clip(e && e.message ? e.message : e));
+      return;
+    }
+    if (short) {
+      fail(live[0], short);
+      return;
+    }
     let caps = null;
     try {
       caps = await withTimeout(ethereum.request({ method: 'wallet_getCapabilities', params: [state.account] }), 8000);
@@ -840,7 +890,8 @@
           return { from: state.account, to: tx.to, data: tx.data, value: tx.value || '0x0' };
         }));
       } catch (e) {
-        if (globalThis.RUN.unsupported(e)) return sendSeq(live, gen);
+        if (live.some(inFlight)) return;
+        if (globalThis.RUN.simFallback(e)) return sendSeq(live, gen);
         fail(live[0], clip(e && e.message ? e.message : e));
         return;
       }

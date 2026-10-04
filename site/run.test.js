@@ -98,6 +98,38 @@ assert.strictEqual(RUN.rgbMatch([{ r: 1n, g: 2n, b: 4n }], 1n, 2n, 3n), false);
 assert.strictEqual(RUN.rgbMatch([], 1n, 2n, 3n), false);
 assert.strictEqual(RUN.rgbMatch(null, 1n, 2n, 3n), false);
 
+const unread = { status: 'submitted', calls: '0xbatch', hash: '', error: 'old' };
+const gaveUp = RUN.settleUnread([unread]);
+assert.strictEqual(gaveUp[0].status, RUN.UNKNOWN);
+assert.notStrictEqual(gaveUp[0].status, 'failed');
+assert.strictEqual(gaveUp[0].error, '');
+assert.strictEqual(unread.status, 'submitted');
+assert.strictEqual(RUN.settleUnread([{ status: 'submitted', calls: '0xbatch', hash: '0x' + 'ab'.repeat(32) }])[0].status, 'submitted');
+assert.strictEqual(RUN.clearAnswer(RUN.UNKNOWN, true), 'confirmed');
+assert.strictEqual(RUN.clearAnswer(RUN.UNKNOWN, false), 'pending');
+assert.strictEqual(RUN.clearAnswer(RUN.UNKNOWN, undefined), RUN.UNKNOWN);
+assert.strictEqual(RUN.clearAnswer('failed', false), 'failed');
+
+assert.strictEqual(RUN.rgbPlane([{ r: 1n, g: 9n, b: 9n }], 1n, 2n, 3n), 'R already used');
+assert.strictEqual(RUN.rgbPlane([{ r: 9n, g: 2n, b: 9n }], 1n, 2n, 3n), 'G already used');
+assert.strictEqual(RUN.rgbPlane([{ r: 9n, g: 9n, b: 3n }], 1n, 2n, 3n), 'B already used');
+assert.strictEqual(RUN.rgbPlane([{ r: 4n, g: 5n, b: 6n }], 1n, 2n, 3n), '');
+assert.strictEqual(RUN.rgbPlane([{ r: 8n, g: 8n, b: 3n }, { r: 1n, g: 2n, b: 8n }], 1n, 2n, 3n), 'R already used');
+
+const price = 1000000000n;
+const need = RUN.batchNeed([
+  { value: 2000000000000000n, gas: 175000n },
+  { value: 30000000000000000n, gas: 340000n },
+], price);
+assert.strictEqual(need, 2000000000000000n + 175000n * price + 30000000000000000n + 340000n * price);
+assert.strictEqual(RUN.shortBalance(need - 1n, need), true);
+assert.strictEqual(RUN.shortBalance(need, need), false);
+assert.strictEqual(RUN.simFallback({ code: -32601, message: 'Method not found' }), true);
+assert.strictEqual(RUN.simFallback({ code: -32603, message: 'Internal error' }), true);
+assert.strictEqual(RUN.simFallback(new Error('timeout')), true);
+assert.strictEqual(RUN.simFallback({ code: 3, message: 'execution reverted' }), false);
+assert.strictEqual(RUN.simFallback({ message: 'execution reverted' }), false);
+
 assert.strictEqual(RUN.receiptOk('0x1'), true);
 assert.strictEqual(RUN.receiptOk('0x01'), true);
 assert.strictEqual(RUN.receiptOk('1'), true);

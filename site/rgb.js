@@ -153,6 +153,8 @@
             if (producedNow[String(ids[k])]) continue;
             if (!(await ETH.ownerOf(ADDR.MATH, ids[k]))) return 'a plane is not minted yet';
           }
+          const used = await ETH.rgbUsed(item.r, item.g, item.b);
+          if (used) return used;
           const why = rgbQueueWhy(item);
           if (why) return why;
           return '';

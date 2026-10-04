@@ -166,6 +166,12 @@
     return BigInt(j.result);
   }
 
+  async function balance(account) {
+    const j = await rpc('eth_getBalance', [account, 'latest']);
+    if (j.error) throw new Error(j.error.message || 'balance');
+    return BigInt(j.result);
+  }
+
   async function loadIds(address, n, progress, label, start) {
     const from = start || 0;
     const calls = [];
@@ -554,23 +560,31 @@
     });
   }
 
-  // RGB.r_to_id is not a public getter. get(id) is. A short read throws
-  // so a missing row is not treated as "this triple is free to mint again".
-  async function rgbMinted(r, g, b) {
+  // RGB ids are totalSupply()+1 with no burn, so they are 1..n. get(id) is the public view.
+  // A short read throws so a missing row is not treated as free to mint again.
+  async function rgbRows() {
     const sup = await ethCall(ADDR.RGB, '0x' + ABI.SEL.totalSupply);
     const n = Number(ABI.decodeUint(sup));
     if (!Number.isSafeInteger(n) || n < 0) throw new Error('RGB supply');
-    if (!n) return false;
-    const ids = await loadIds(ADDR.RGB, n, null, 'RGB');
-    if (ids.length !== n) throw new Error('RGB supply');
+    if (!n) return [];
+    const ids = [];
+    for (let i = 1; i <= n; i++) ids.push(BigInt(i));
     const gets = await loadGets(ADDR.RGB, ids, null, 'RGB');
-    if (gets.length !== ids.length) throw new Error('RGB get');
-    const rows = gets.map(function (w) {
+    if (gets.length !== n) throw new Error('RGB get');
+    return gets.map(function (w) {
       if (!w || w.length < 3) throw new Error('RGB get');
       return { r: w[0], g: w[1], b: w[2] };
     });
+  }
+
+  async function rgbMinted(r, g, b) {
     if (!globalThis.RUN || typeof globalThis.RUN.rgbMatch !== 'function') throw new Error('RGB match');
-    return globalThis.RUN.rgbMatch(rows, r, g, b);
+    return globalThis.RUN.rgbMatch(await rgbRows(), r, g, b);
+  }
+
+  async function rgbUsed(r, g, b) {
+    if (!globalThis.RUN || typeof globalThis.RUN.rgbPlane !== 'function') throw new Error('RGB plane');
+    return globalThis.RUN.rgbPlane(await rgbRows(), r, g, b);
   }
 
   async function simulate(tx) {
@@ -624,6 +638,7 @@
     reason: reason,
     ownerOf: ownerOf,
     gasPrice: gasPrice,
+    balance: balance,
     loadInventory: loadInventory,
     loadDelta: loadDelta,
     loadTexts: loadTexts,
@@ -643,6 +658,7 @@
     readString: readString,
     ethCall: ethCall,
     rgbMinted: rgbMinted,
+    rgbUsed: rgbUsed,
     simulate: simulate,
     simulateCalls: simulateCalls,
     send: send,
