@@ -15,6 +15,9 @@ assert.strictEqual(TOONR.toneHex(0xd8b4a0n), 'ffffff');
 assert.strictEqual(TOONR.toneHex(0n), '000000');
 assert.strictEqual(TOONR.textHex(0n), '0000-5');
 assert.strictEqual(TOONR.textHex(5n), '000000');
+assert.strictEqual(TOONR.lightHex(0n), 'e7e2d4');
+assert.strictEqual(TOONR.lightHex(5n), '000000');
+assert.ok(TOONR.svg(1n, 0n, 0n, 'x', 0n, 0n).indexOf('#0000-5') !== -1);
 assert.ok(TOONR.svg(1n, 0n, 0n, 'a&b', 0xffffffn, 5n).indexOf('a&amp;b') !== -1);
 assert.ok(TOONR.svg(1n, 0n, 0n, 'x', 1n, 5n).indexOf('viewBox="0 0 350 350"') !== -1);
 
