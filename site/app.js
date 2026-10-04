@@ -475,7 +475,7 @@
     });
   }
 
-  function mark(step, patch) {
+  function markStep(step, patch) {
     if (!step) return;
     Object.keys(patch).forEach(function (k) { step[k] = patch[k]; });
     const row = (state.run || []).find(function (s) { return s.label === step.label; });
@@ -488,7 +488,7 @@
   function confirm(step) {
     if (!step || step.status === 'confirmed') return;
     const fn = step.onOk;
-    mark(step, { status: 'confirmed', error: '' });
+    markStep(step, { status: 'confirmed', error: '' });
     if (fn) fn();
   }
 
@@ -505,7 +505,7 @@
     const mine = state.account && String(owner).toLowerCase() === String(state.account).toLowerCase();
     if (mine) confirm(step);
     else {
-      mark(step, { status: 'confirmed', error: '' });
+      markStep(step, { status: 'confirmed', error: '' });
       state.supply.set(step.result, owner);
     }
     return true;
@@ -513,7 +513,7 @@
 
   function fail(step, error) {
     const msg = error || 'failed';
-    mark(step, { status: 'failed', error: msg });
+    markStep(step, { status: 'failed', error: msg });
     if (msg === 'rejected') MOLD.say('rejected');
     else if (msg === 'reverted') MOLD.say('mined', { status: 'reverted' });
     else MOLD.say('simFail', { err: msg });
@@ -609,7 +609,7 @@
     (group || []).forEach(function (s) {
       if (!s || s.status !== 'submitted') return;
       if (s.hash && /^0x[0-9a-fA-F]{64}$/.test(s.hash)) return;
-      mark(s, { status: 'failed', error: note });
+      markStep(s, { status: 'failed', error: note });
       any = true;
     });
     if (any) MOLD.say('simFail', { err: note });
@@ -629,15 +629,15 @@
     if (receipts.length === group.length) {
       group.forEach(function (s, i) {
         const h = receipts[i] && (receipts[i].transactionHash || receipts[i].hash);
-        if (h) mark(s, { hash: h });
+        if (h) markStep(s, { hash: h });
       });
     } else {
       const h = receipts.map(function (r) { return r && (r.transactionHash || r.hash); }).find(Boolean);
-      if (h) group.forEach(function (s) { if (!s.hash) mark(s, { hash: h }); });
+      if (h) group.forEach(function (s) { if (!s.hash) markStep(s, { hash: h }); });
     }
     if (outcome === 'pending') {
       group.forEach(function (s) {
-        if (globalThis.RUN.isUnknown(s.status)) mark(s, { status: 'submitted', error: '' });
+        if (globalThis.RUN.isUnknown(s.status)) markStep(s, { status: 'submitted', error: '' });
       });
       return '';
     }
@@ -650,7 +650,7 @@
       if (!waiting) MOLD.say('mined', { status: 'ok' });
       return '';
     }
-    group.forEach(function (s) { mark(s, { status: 'failed', error: 'reverted' }); });
+    group.forEach(function (s) { markStep(s, { status: 'failed', error: 'reverted' }); });
     MOLD.say('mined', { status: 'reverted' });
     return '';
   }
@@ -692,7 +692,7 @@
     (state.run || []).forEach(function (s, i) {
       const row = next[i];
       if (!row || row.status === s.status) return;
-      mark(s, { status: row.status, error: '' });
+      markStep(s, { status: row.status, error: '' });
     });
   }
 
@@ -750,7 +750,7 @@
         return null;
       }
       if (why === 'skip') {
-        mark(step, { status: 'confirmed', error: '' });
+        markStep(step, { status: 'confirmed', error: '' });
         continue;
       }
       if (why) {
@@ -787,14 +787,14 @@
         return;
       }
       if (again === 'skip') {
-        mark(step, { status: 'confirmed', error: '' });
+        markStep(step, { status: 'confirmed', error: '' });
         continue;
       }
       if (again) {
         fail(step, again);
         return;
       }
-      mark(step, { status: 'signing', error: '' });
+      markStep(step, { status: 'signing', error: '' });
       let hash;
       try { hash = await ETH.send(step.tx()); }
       catch (e) {
@@ -802,7 +802,7 @@
         return;
       }
       if (gen !== state.runGen) return;
-      mark(step, { status: 'submitted', hash: hash, error: '' });
+      markStep(step, { status: 'submitted', hash: hash, error: '' });
       MOLD.say('sent', { hash: short(hash) });
       const rec = await pollReceipt(hash, gen);
       if (gen !== state.runGen) return;
@@ -851,7 +851,7 @@
         return;
       }
     }
-    live.forEach(function (s) { mark(s, { status: 'signing', error: '' }); });
+    live.forEach(function (s) { markStep(s, { status: 'signing', error: '' }); });
     let res;
     try {
       res = await ethereum.request({
@@ -869,22 +869,22 @@
       });
     } catch (e) {
       if (globalThis.RUN.unsupported(e)) {
-        live.forEach(function (s) { mark(s, { status: 'pending', error: '' }); });
+        live.forEach(function (s) { markStep(s, { status: 'pending', error: '' }); });
         return sendSeq(live, gen);
       }
       const msg = globalThis.RUN.rejected(e) ? 'rejected' : clip(e && e.message ? e.message : e);
-      live.forEach(function (s) { mark(s, { status: 'failed', error: msg }); });
+      live.forEach(function (s) { markStep(s, { status: 'failed', error: msg }); });
       if (msg === 'rejected') MOLD.say('rejected');
       else MOLD.say('simFail', { err: msg });
       return;
     }
     const id = globalThis.RUN.callsId(res);
     if (!id) {
-      live.forEach(function (s) { mark(s, { status: 'failed', error: 'no calls id' }); });
+      live.forEach(function (s) { markStep(s, { status: 'failed', error: 'no calls id' }); });
       MOLD.say('simFail', { err: 'no calls id' });
       return;
     }
-    live.forEach(function (s) { mark(s, { status: 'submitted', calls: id, error: '' }); });
+    live.forEach(function (s) { markStep(s, { status: 'submitted', calls: id, error: '' }); });
     MOLD.say('sent', { hash: short(id) });
     await watchOpen(gen);
   }
@@ -917,8 +917,8 @@
           fail(step, clip(e && e.message ? e.message : e));
           return;
         }
-        if (done) mark(step, { status: 'confirmed', error: '' });
-        else if (!flying && step.status === 'confirmed' && step.result != null) mark(step, { status: 'pending', error: '' });
+        if (done) markStep(step, { status: 'confirmed', error: '' });
+        else if (!flying && step.status === 'confirmed' && step.result != null) markStep(step, { status: 'pending', error: '' });
       }
       if (gen !== state.runGen) return;
       if ((state.run || []).some(inFlight)) {
