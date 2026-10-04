@@ -15,6 +15,10 @@
     'https://eth.drpc.org',
     'https://mainnet.gateway.tenderly.co',
   ];
+  if (typeof process !== 'undefined' && process.env && process.env.ETH_RPC_URL) {
+    const extra = String(process.env.ETH_RPC_URL).trim();
+    if (extra) RPCS.unshift(extra);
+  }
   const CACHE = 'math.site.v1';
   const ABI = globalThis.ABI;
 
