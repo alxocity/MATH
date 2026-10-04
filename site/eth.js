@@ -34,7 +34,7 @@
     if (!error) return false;
     const msg = String(error.message || '');
     if (error.code === 3 || /execution reverted/i.test(msg)) return false;
-    if (error.code === -32603 || error.code === -32005) return true;
+    if (error.code === -32603 || error.code === -32005 || error.code === -32601) return true;
     return /rate|limit|timeout|busy|temporarily|internal error|unauthorized|unavailable|overloaded/i.test(msg);
   }
 
@@ -56,7 +56,11 @@
         });
         if (res.status === 429 || res.status >= 500) throw new Error('http ' + res.status);
         const j = await res.json();
-        if (rpcRetryable(res.status, j.error)) throw new Error((j.error && j.error.message) || 'rpc');
+        if (rpcRetryable(res.status, j.error)) {
+          const err = new Error((j.error && j.error.message) || 'rpc');
+          if (j.error && j.error.code != null) err.code = j.error.code;
+          throw err;
+        }
         return j;
       } catch (e) {
         last = e;
@@ -159,6 +163,12 @@
   async function gasPrice() {
     const j = await rpc('eth_gasPrice', []);
     if (j.error) throw new Error(j.error.message || 'gas');
+    return BigInt(j.result);
+  }
+
+  async function balance(account) {
+    const j = await rpc('eth_getBalance', [account, 'latest']);
+    if (j.error) throw new Error(j.error.message || 'balance');
     return BigInt(j.result);
   }
 
@@ -550,6 +560,45 @@
     });
   }
 
+  // Supply and get(id) share one multicall. A later split would let a lagging node
+  // answer get(id) with (0,0,0) for a token it has not seen yet.
+  async function rgbRows() {
+    const supply = '0x' + ABI.SEL.totalSupply;
+    const probed = await ethCall(ADDR.RGB, supply);
+    const n = Number(ABI.decodeUint(probed));
+    if (!Number.isSafeInteger(n) || n < 0) throw new Error('RGB supply');
+    const calls = [{ to: ADDR.RGB, data: supply }];
+    for (let i = 1; i <= n; i++) calls.push({ to: ADDR.RGB, data: ABI.call(ABI.SEL.get, [BigInt(i)]) });
+    const data = ABI.encodeAggregate(calls.map(function (c) {
+      return { to: c.to, data: c.data, allow: true };
+    }));
+    const j = await rpc('eth_call', [{ to: ADDR.MULTI, data: data }, 'latest']);
+    if (j.error) throw new Error('RGB get');
+    const rows = ABI.decodeAggregate(j.result);
+    if (rows.length !== calls.length || !rows[0] || !rows[0].success) throw new Error('RGB get');
+    const seen = Number(ABI.decodeUint(rows[0].data));
+    if (seen !== n) throw new Error('RGB get');
+    if (!n) return [];
+    if (!globalThis.RUN || typeof globalThis.RUN.rgbWord !== 'function') throw new Error('RGB get');
+    const out = [];
+    for (let i = 1; i <= n; i++) {
+      const row = rows[i];
+      if (!row || !row.success) throw new Error('RGB get');
+      out.push(globalThis.RUN.rgbWord(ABI.wordsOf(row.data)));
+    }
+    return out;
+  }
+
+  async function rgbMinted(r, g, b) {
+    if (!globalThis.RUN || typeof globalThis.RUN.rgbMatch !== 'function') throw new Error('RGB match');
+    return globalThis.RUN.rgbMatch(await rgbRows(), r, g, b);
+  }
+
+  async function rgbUsed(r, g, b) {
+    if (!globalThis.RUN || typeof globalThis.RUN.rgbPlane !== 'function') throw new Error('RGB plane');
+    return globalThis.RUN.rgbPlane(await rgbRows(), r, g, b);
+  }
+
   async function simulate(tx) {
     return rpc('eth_call', [tx, 'latest']);
   }
@@ -601,6 +650,7 @@
     reason: reason,
     ownerOf: ownerOf,
     gasPrice: gasPrice,
+    balance: balance,
     loadInventory: loadInventory,
     loadDelta: loadDelta,
     loadTexts: loadTexts,
@@ -619,6 +669,8 @@
     tokenSVGs: tokenSVGs,
     readString: readString,
     ethCall: ethCall,
+    rgbMinted: rgbMinted,
+    rgbUsed: rgbUsed,
     simulate: simulate,
     simulateCalls: simulateCalls,
     send: send,

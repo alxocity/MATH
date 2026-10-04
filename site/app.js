@@ -440,9 +440,11 @@
     if (!note) return;
     const list = steps || [];
     const seeded = list.filter(function (s) {
-      return (s.status === 'confirmed' || s.status === 'submitted') && s.result != null;
+      return (s.status === 'confirmed' || s.status === 'submitted' || globalThis.RUN.isUnknown(s.status)) && s.result != null;
     }).map(function (s) { return String(s.result); });
-    const open = list.filter(function (s) { return s.status !== 'confirmed' && s.status !== 'submitted'; });
+    const open = list.filter(function (s) {
+      return s.status !== 'confirmed' && s.status !== 'submitted' && !globalThis.RUN.isUnknown(s.status);
+    });
     const first = (globalThis.RUN.splitCalls(open, seeded)[0]) || [];
     note.hidden = first.length < 2;
   }
@@ -455,10 +457,14 @@
       const hash = s.hash && /^0x[0-9a-fA-F]{64}$/.test(s.hash)
         ? ' <a href="https://etherscan.io/tx/' + s.hash + '" target="_blank" rel="noopener noreferrer">tx</a>'
         : '';
-      const err = s.status === 'failed' && s.error ? ' <span class="bad">' + esc(s.error) + '</span>' : '';
-      const btn = s.status === 'failed'
-        ? ' <button type="button" data-retry="1">retry</button>'
-        : (s.status === 'submitted' ? ' <button type="button" data-check="1">check</button>' : '');
+      const err = (s.status === 'failed' || globalThis.RUN.isUnknown(s.status)) && s.error
+        ? ' <span class="bad">' + esc(s.error) + '</span>' : '';
+      let btn = '';
+      if (s.status === 'failed') btn = ' <button type="button" data-retry="1">retry</button>';
+      else if (globalThis.RUN.isUnknown(s.status)) {
+        btn = ' <button type="button" data-check="1">check</button>';
+        if (s.chain !== false) btn += ' <button type="button" data-clear="' + i + '">clear</button>';
+      } else if (s.status === 'submitted') btn = ' <button type="button" data-check="1">check</button>';
       return '<div class="run">' + (i + 1) + '/' + rows.length + ' ' + esc(s.status || 'pending') + ' ' + esc(s.label) + hash + err + btn + '</div>';
     }).join('');
     host.querySelectorAll('[data-retry]').forEach(function (b) {
@@ -470,9 +476,12 @@
         checkSubmitted().catch(function () {});
       };
     });
+    host.querySelectorAll('[data-clear]').forEach(function (b) {
+      b.onclick = function () { clearUnknown(rows[Number(b.dataset.clear)]).catch(function () {}); };
+    });
   }
 
-  function mark(step, patch) {
+  function markStep(step, patch) {
     if (!step) return;
     Object.keys(patch).forEach(function (k) { step[k] = patch[k]; });
     const row = (state.run || []).find(function (s) { return s.label === step.label; });
@@ -485,7 +494,7 @@
   function confirm(step) {
     if (!step || step.status === 'confirmed') return;
     const fn = step.onOk;
-    mark(step, { status: 'confirmed', error: '' });
+    markStep(step, { status: 'confirmed', error: '' });
     if (fn) fn();
   }
 
@@ -498,11 +507,11 @@
     let owner = null;
     try { owner = await ETH.ownerOf(ADDR.MATH, step.result); }
     catch (e) { return false; }
-    if (!owner) return false;
+    if (!owner || /^0x0{40}$/.test(String(owner).toLowerCase())) return false;
     const mine = state.account && String(owner).toLowerCase() === String(state.account).toLowerCase();
     if (mine) confirm(step);
     else {
-      mark(step, { status: 'confirmed', error: '' });
+      markStep(step, { status: 'confirmed', error: '' });
       state.supply.set(step.result, owner);
     }
     return true;
@@ -510,7 +519,7 @@
 
   function fail(step, error) {
     const msg = error || 'failed';
-    mark(step, { status: 'failed', error: msg });
+    markStep(step, { status: 'failed', error: msg });
     if (msg === 'rejected') MOLD.say('rejected');
     else if (msg === 'reverted') MOLD.say('mined', { status: 'reverted' });
     else MOLD.say('simFail', { err: msg });
@@ -566,7 +575,7 @@
       s.status = st;
     });
     const stuck = (state.run || []).filter(function (s) {
-      return s.status === 'submitted' && s.label && !labels[s.label];
+      return (s.status === 'submitted' || globalThis.RUN.isUnknown(s.status)) && s.label && !labels[s.label];
     });
     state.run = stuck.concat(steps || []);
     paintRun();
@@ -593,7 +602,8 @@
         error: s.error || '',
         result: null,
         uses: [],
-        done: async function () { return false; },
+        chain: false,
+        done: async function () { throw new Error('unchecked'); },
       };
     });
     paintRun();
@@ -601,15 +611,25 @@
   }
 
   function giveUpCalls(group) {
-    const note = 'batch status unavailable';
-    let any = false;
-    (group || []).forEach(function (s) {
-      if (!s || s.status !== 'submitted') return;
-      if (s.hash && /^0x[0-9a-fA-F]{64}$/.test(s.hash)) return;
-      mark(s, { status: 'failed', error: note });
-      any = true;
+    const next = globalThis.RUN.settleUnread(group);
+    (group || []).forEach(function (s, i) {
+      const row = next[i];
+      if (!row || row.status === s.status) return;
+      markStep(s, { status: row.status, error: '' });
     });
-    if (any) MOLD.say('simFail', { err: note });
+  }
+
+  async function clearUnknown(step) {
+    if (!step || !globalThis.RUN.isUnknown(step.status)) return;
+    let done;
+    try { done = await step.done(); }
+    catch (e) {
+      markStep(step, { status: globalThis.RUN.UNKNOWN, error: 'could not read the chain' });
+      return;
+    }
+    const next = globalThis.RUN.clearAnswer(step.status, done);
+    if (next === step.status) return;
+    markStep(step, { status: next, error: '' });
   }
 
   async function checkCalls(id, group) {
@@ -619,20 +639,25 @@
       st = await withTimeout(ethereum.request({ method: 'wallet_getCallsStatus', params: [id] }), 8000);
     } catch (e) {
       if (globalThis.RUN.unsupported(e)) return 'unread';
-      return '';
+      return 'timeout';
     }
     const outcome = globalThis.RUN.callsOutcome(st && st.status);
     const receipts = (st && st.receipts) || [];
     if (receipts.length === group.length) {
       group.forEach(function (s, i) {
         const h = receipts[i] && (receipts[i].transactionHash || receipts[i].hash);
-        if (h) mark(s, { hash: h });
+        if (h) markStep(s, { hash: h });
       });
     } else {
       const h = receipts.map(function (r) { return r && (r.transactionHash || r.hash); }).find(Boolean);
-      if (h) group.forEach(function (s) { if (!s.hash) mark(s, { hash: h }); });
+      if (h) group.forEach(function (s) { if (!s.hash) markStep(s, { hash: h }); });
     }
-    if (outcome === 'pending') return '';
+    if (outcome === 'pending') {
+      group.forEach(function (s) {
+        if (globalThis.RUN.isUnknown(s.status)) markStep(s, { status: 'submitted', error: '' });
+      });
+      return '';
+    }
     if (outcome === 'confirmed') {
       let waiting = false;
       for (let i = 0; i < group.length; i++) {
@@ -642,20 +667,25 @@
       if (!waiting) MOLD.say('mined', { status: 'ok' });
       return '';
     }
-    group.forEach(function (s) { mark(s, { status: 'failed', error: 'reverted' }); });
+    group.forEach(function (s) { markStep(s, { status: 'failed', error: 'reverted' }); });
     MOLD.say('mined', { status: 'reverted' });
     return '';
   }
 
+  function inFlight(step) {
+    return !!(step && (step.status === 'submitted' || globalThis.RUN.isUnknown(step.status)));
+  }
+
   async function checkSubmitted() {
-    const steps = (state.run || []).filter(function (s) { return s.status === 'submitted'; });
+    const steps = (state.run || []).filter(inFlight);
     const seen = {};
+    let heard = false;
     for (let i = 0; i < steps.length; i++) {
       const step = steps[i];
-      if (step.status !== 'submitted') continue;
+      if (!inFlight(step)) continue;
       if (step.hash && /^0x[0-9a-fA-F]{64}$/.test(step.hash)) {
         let rec = null;
-        try { rec = await ETH.receipt(step.hash); } catch (e) { return; }
+        try { rec = await ETH.receipt(step.hash); } catch (e) { continue; }
         if (!rec) continue;
         if (!globalThis.RUN.receiptOk(rec.status)) {
           fail(step, 'reverted');
@@ -665,29 +695,41 @@
         MOLD.say('mined', { status: 'ok' });
       } else if (step.calls && !seen[step.calls]) {
         seen[step.calls] = true;
-        const group = (state.run || []).filter(function (s) { return s.status === 'submitted' && s.calls === step.calls; });
+        const group = (state.run || []).filter(function (s) { return inFlight(s) && s.calls === step.calls; });
         const how = await checkCalls(step.calls, group);
         if (how === 'unread') giveUpCalls(group);
+        else if (how !== 'timeout') heard = true;
       }
     }
+    return heard ? 'heard' : '';
+  }
+
+  function markUnheard() {
+    const next = globalThis.RUN.settleUnheard(state.run, false);
+    (state.run || []).forEach(function (s, i) {
+      const row = next[i];
+      if (!row || row.status === s.status) return;
+      markStep(s, { status: row.status, error: '' });
+    });
   }
 
   async function watchOpen(gen) {
+    let heard = false;
     for (let i = 0; i < 30; i++) {
       if (gen !== state.runGen) return;
       await sleepOrTick(i === 0 ? 800 : 4000);
       if (gen !== state.runGen) return;
-      await checkSubmitted();
-      if (!(state.run || []).some(function (s) { return s.status === 'submitted'; })) return;
+      const how = await checkSubmitted();
+      if (how === 'heard') heard = true;
+      if (!(state.run || []).some(inFlight)) return;
     }
+    if (gen !== state.runGen || heard) return;
+    markUnheard();
   }
 
   function resumeIfSubmitted() {
     if (state.runBusy || state.txLock) return;
-    const hasHash = (state.run || []).some(function (s) {
-      return s.status === 'submitted' && /^0x[0-9a-fA-F]{64}$/.test(s.hash || '');
-    });
-    if (!hasHash) return;
+    if (!(state.run || []).some(function (s) { return globalThis.RUN.shouldResume(s); })) return;
     state.runGen += 1;
     const gen = state.runGen;
     state.runBusy = true;
@@ -725,7 +767,7 @@
         return null;
       }
       if (why === 'skip') {
-        mark(step, { status: 'confirmed', error: '' });
+        markStep(step, { status: 'confirmed', error: '' });
         continue;
       }
       if (why) {
@@ -749,9 +791,37 @@
     return null;
   }
 
+  function callCost(tx) {
+    const to = String(tx && tx.to || '').toLowerCase();
+    const gas = to === ADDR.RGB.toLowerCase() ? P.G_RGB : P.G_ADD;
+    return { value: tx && tx.value || 0, gas: gas };
+  }
+
+  // eth_gasPrice, not maxFee. Rough pre-check before the wallet opens.
+  async function afford(live) {
+    const price = await ETH.gasPrice();
+    state.gasPrice = price;
+    const need = globalThis.RUN.batchNeed(live.map(function (s) { return callCost(s.tx()); }), price);
+    const bal = await ETH.balance(state.account);
+    if (globalThis.RUN.shortBalance(bal, need)) return 'balance too low — rough pre-check';
+    return '';
+  }
+
   async function sendSeq(batch, gen) {
+    if ((batch || []).some(inFlight)) return;
     const live = await prepareBatch(batch);
-    if (!live) return;
+    if (!live || !live.length) return;
+    if (live.some(inFlight)) return;
+    let short;
+    try { short = await afford(live); }
+    catch (e) {
+      fail(live[0], clip(e && e.message ? e.message : e));
+      return;
+    }
+    if (short) {
+      fail(live[0], short);
+      return;
+    }
     for (let i = 0; i < live.length; i++) {
       if (gen !== state.runGen) return;
       const step = live[i];
@@ -762,14 +832,14 @@
         return;
       }
       if (again === 'skip') {
-        mark(step, { status: 'confirmed', error: '' });
+        markStep(step, { status: 'confirmed', error: '' });
         continue;
       }
       if (again) {
         fail(step, again);
         return;
       }
-      mark(step, { status: 'signing', error: '' });
+      markStep(step, { status: 'signing', error: '' });
       let hash;
       try { hash = await ETH.send(step.tx()); }
       catch (e) {
@@ -777,7 +847,7 @@
         return;
       }
       if (gen !== state.runGen) return;
-      mark(step, { status: 'submitted', hash: hash, error: '' });
+      markStep(step, { status: 'submitted', hash: hash, error: '' });
       MOLD.say('sent', { hash: short(hash) });
       const rec = await pollReceipt(hash, gen);
       if (gen !== state.runGen) return;
@@ -792,12 +862,24 @@
   }
 
   async function sendBatch(batch, gen) {
+    if ((batch || []).some(inFlight)) return;
     const live = await prepareBatch(batch);
     if (!live) return;
+    if (live.some(inFlight)) return;
     if (live.length < 2) return sendSeq(live, gen);
+    let short;
+    try { short = await afford(live); }
+    catch (e) {
+      fail(live[0], clip(e && e.message ? e.message : e));
+      return;
+    }
+    if (short) {
+      fail(live[0], short);
+      return;
+    }
     let caps = null;
     try {
-      caps = await ethereum.request({ method: 'wallet_getCapabilities', params: [state.account] });
+      caps = await withTimeout(ethereum.request({ method: 'wallet_getCapabilities', params: [state.account] }), 8000);
     } catch (e) {
       if (globalThis.RUN.rejected(e)) {
         fail(live[0], 'rejected');
@@ -815,14 +897,8 @@
           return { from: state.account, to: tx.to, data: tx.data, value: tx.value || '0x0' };
         }));
       } catch (e) {
-        if (globalThis.RUN.unsupported(e)) {
-          const note = globalThis.RUN.batchSimNote(live.length);
-          live.forEach(function (s) {
-            if (globalThis.RUN.deferSim(s, live)) mark(s, { status: 'failed', error: note });
-          });
-          MOLD.say('simFail', { err: note });
-          return;
-        }
+        if (live.some(inFlight)) return;
+        if (globalThis.RUN.simFallback(e)) return sendSeq(live, gen);
         fail(live[0], clip(e && e.message ? e.message : e));
         return;
       }
@@ -833,7 +909,7 @@
         return;
       }
     }
-    live.forEach(function (s) { mark(s, { status: 'signing', error: '' }); });
+    live.forEach(function (s) { markStep(s, { status: 'signing', error: '' }); });
     let res;
     try {
       res = await ethereum.request({
@@ -851,22 +927,22 @@
       });
     } catch (e) {
       if (globalThis.RUN.unsupported(e)) {
-        live.forEach(function (s) { mark(s, { status: 'pending', error: '' }); });
+        live.forEach(function (s) { markStep(s, { status: 'pending', error: '' }); });
         return sendSeq(live, gen);
       }
       const msg = globalThis.RUN.rejected(e) ? 'rejected' : clip(e && e.message ? e.message : e);
-      live.forEach(function (s) { mark(s, { status: 'failed', error: msg }); });
+      live.forEach(function (s) { markStep(s, { status: 'failed', error: msg }); });
       if (msg === 'rejected') MOLD.say('rejected');
       else MOLD.say('simFail', { err: msg });
       return;
     }
     const id = globalThis.RUN.callsId(res);
     if (!id) {
-      live.forEach(function (s) { mark(s, { status: 'failed', error: 'no calls id' }); });
+      live.forEach(function (s) { markStep(s, { status: 'failed', error: 'no calls id' }); });
       MOLD.say('simFail', { err: 'no calls id' });
       return;
     }
-    live.forEach(function (s) { mark(s, { status: 'submitted', calls: id, error: '' }); });
+    live.forEach(function (s) { markStep(s, { status: 'submitted', calls: id, error: '' }); });
     MOLD.say('sent', { hash: short(id) });
     await watchOpen(gen);
   }
@@ -891,28 +967,33 @@
       hydrateRun(steps, true);
       for (let i = 0; i < state.run.length; i++) {
         const step = state.run[i];
-        if (step.status === 'submitted') continue;
+        const flying = inFlight(step);
         let done = false;
         try { done = await step.done(); }
         catch (e) {
+          if (flying) continue;
           fail(step, clip(e && e.message ? e.message : e));
           return;
         }
-        if (done) mark(step, { status: 'confirmed', error: '' });
-        else if (step.status === 'confirmed' && step.result != null) mark(step, { status: 'pending', error: '' });
+        if (done) markStep(step, { status: 'confirmed', error: '' });
+        else if (!flying && step.status === 'confirmed' && step.result != null) markStep(step, { status: 'pending', error: '' });
       }
       if (gen !== state.runGen) return;
-      if ((state.run || []).some(function (s) { return s.status === 'submitted'; })) {
+      if ((state.run || []).some(inFlight)) {
         MOLD.say('wait');
         await watchOpen(gen);
         return;
       }
       let work;
       if (opt && opt.only) {
-        work = state.run.filter(function (s) { return s.label === opt.only && s.status !== 'confirmed'; });
+        work = state.run.filter(function (s) {
+          return s.label === opt.only && s.status !== 'confirmed' && !inFlight(s);
+        });
       } else {
-        const seeded = state.run.filter(function (s) { return s.status === 'confirmed' && s.result != null; }).map(function (s) { return String(s.result); });
-        const open = state.run.filter(function (s) { return s.status !== 'confirmed'; });
+        const seeded = state.run.filter(function (s) {
+          return (s.status === 'confirmed' || inFlight(s)) && s.result != null;
+        }).map(function (s) { return String(s.result); });
+        const open = state.run.filter(function (s) { return s.status !== 'confirmed' && !inFlight(s); });
         work = (globalThis.RUN.splitCalls(open, seeded)[0]) || [];
       }
       if (!work.length) return;

@@ -61,7 +61,79 @@ pending.status = 'submitted';
 assert.strictEqual(RUN.deferSim(next, [pending, next]), false);
 pending.status = 'pending';
 assert.strictEqual(RUN.deferSim({ result: 4n, uses: [], status: 'pending' }, [pending]), false);
+pending.status = RUN.UNKNOWN;
+assert.strictEqual(RUN.deferSim(next, [pending, next]), false);
+pending.status = 'pending';
 assert.strictEqual(RUN.batchSimNote(3), "steps 2–3 can't be simulated until step 1 is minted");
+
+assert.strictEqual(RUN.UNKNOWN, 'status unknown — check your wallet');
+assert.notStrictEqual(RUN.UNKNOWN, 'failed');
+assert.strictEqual(RUN.isUnknown(RUN.UNKNOWN), true);
+assert.strictEqual(RUN.isUnknown('failed'), false);
+assert.strictEqual(RUN.isUnknown('submitted'), false);
+
+const callsOnly = { status: 'submitted', calls: '0xbatch', hash: '', error: 'old' };
+const unheard = RUN.settleUnheard([callsOnly], false);
+assert.notStrictEqual(unheard[0], callsOnly);
+assert.strictEqual(unheard[0].status, RUN.UNKNOWN);
+assert.notStrictEqual(unheard[0].status, 'failed');
+assert.strictEqual(unheard[0].error, '');
+assert.strictEqual(callsOnly.status, 'submitted');
+assert.strictEqual(RUN.settleUnheard([callsOnly], true)[0].status, 'submitted');
+const hashed = { status: 'submitted', calls: '0xbatch', hash: '0x' + 'ab'.repeat(32) };
+assert.strictEqual(RUN.settleUnheard([hashed], false)[0].status, 'submitted');
+assert.strictEqual(RUN.settleUnheard([{ status: 'submitted', hash: '', calls: '' }], false)[0].status, 'submitted');
+assert.strictEqual(RUN.settleUnheard([{ status: 'failed', calls: '0xbatch' }], false)[0].status, 'failed');
+
+assert.strictEqual(RUN.shouldResume({ status: 'submitted', calls: 'id' }), true);
+assert.strictEqual(RUN.shouldResume({ status: RUN.UNKNOWN, calls: 'id' }), true);
+assert.strictEqual(RUN.shouldResume({ status: 'submitted', hash: '0x' + '11'.repeat(32) }), true);
+assert.strictEqual(RUN.shouldResume({ status: 'failed', calls: 'id' }), false);
+assert.strictEqual(RUN.shouldResume({ status: 'submitted', hash: '', calls: '' }), false);
+assert.strictEqual(RUN.shouldResume(null), false);
+
+assert.strictEqual(RUN.rgbMatch([{ r: 1n, g: 2n, b: 3n }], 1n, 2n, 3n), true);
+assert.strictEqual(RUN.rgbMatch([{ r: 9n, g: 9n, b: 9n }, { r: '1', g: '2', b: '3' }], 1, 2, 3), true);
+assert.strictEqual(RUN.rgbMatch([{ r: 1n, g: 2n, b: 4n }], 1n, 2n, 3n), false);
+assert.strictEqual(RUN.rgbMatch([], 1n, 2n, 3n), false);
+assert.strictEqual(RUN.rgbMatch(null, 1n, 2n, 3n), false);
+
+const unread = { status: 'submitted', calls: '0xbatch', hash: '', error: 'old' };
+const gaveUp = RUN.settleUnread([unread]);
+assert.strictEqual(gaveUp[0].status, RUN.UNKNOWN);
+assert.notStrictEqual(gaveUp[0].status, 'failed');
+assert.strictEqual(gaveUp[0].error, '');
+assert.strictEqual(unread.status, 'submitted');
+assert.strictEqual(RUN.settleUnread([{ status: 'submitted', calls: '0xbatch', hash: '0x' + 'ab'.repeat(32) }])[0].status, 'submitted');
+assert.strictEqual(RUN.clearAnswer(RUN.UNKNOWN, true), 'confirmed');
+assert.strictEqual(RUN.clearAnswer(RUN.UNKNOWN, false), 'pending');
+assert.strictEqual(RUN.clearAnswer(RUN.UNKNOWN, undefined), RUN.UNKNOWN);
+assert.strictEqual(RUN.clearAnswer('failed', false), 'failed');
+
+assert.strictEqual(RUN.rgbPlane([{ r: 1n, g: 9n, b: 9n }], 1n, 2n, 3n), 'R already used');
+assert.strictEqual(RUN.rgbPlane([{ r: 9n, g: 2n, b: 9n }], 1n, 2n, 3n), 'G already used');
+assert.strictEqual(RUN.rgbPlane([{ r: 9n, g: 9n, b: 3n }], 1n, 2n, 3n), 'B already used');
+assert.strictEqual(RUN.rgbPlane([{ r: 4n, g: 5n, b: 6n }], 1n, 2n, 3n), '');
+assert.strictEqual(RUN.rgbPlane([{ r: 8n, g: 8n, b: 3n }, { r: 1n, g: 2n, b: 8n }], 1n, 2n, 3n), 'R already used');
+assert.deepStrictEqual(RUN.rgbWord([1n, 2n, 3n]), { r: 1n, g: 2n, b: 3n });
+assert.throws(function () { RUN.rgbWord([0n, 1n, 2n]); }, /RGB get/);
+assert.throws(function () { RUN.rgbWord([1n, 0n, 2n]); }, /RGB get/);
+assert.throws(function () { RUN.rgbWord([1n, 2n, 0n]); }, /RGB get/);
+assert.throws(function () { RUN.rgbWord([1n, 2n]); }, /RGB get/);
+
+const price = 1000000000n;
+const need = RUN.batchNeed([
+  { value: 2000000000000000n, gas: 175000n },
+  { value: 30000000000000000n, gas: 340000n },
+], price);
+assert.strictEqual(need, 2000000000000000n + 175000n * price + 30000000000000000n + 340000n * price);
+assert.strictEqual(RUN.shortBalance(need - 1n, need), true);
+assert.strictEqual(RUN.shortBalance(need, need), false);
+assert.strictEqual(RUN.simFallback({ code: -32601, message: 'Method not found' }), true);
+assert.strictEqual(RUN.simFallback({ code: -32603, message: 'Internal error' }), true);
+assert.strictEqual(RUN.simFallback(new Error('timeout')), true);
+assert.strictEqual(RUN.simFallback({ code: 3, message: 'execution reverted' }), false);
+assert.strictEqual(RUN.simFallback({ message: 'execution reverted' }), false);
 
 assert.strictEqual(RUN.receiptOk('0x1'), true);
 assert.strictEqual(RUN.receiptOk('0x01'), true);
