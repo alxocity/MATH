@@ -115,6 +115,11 @@ assert.strictEqual(RUN.rgbPlane([{ r: 9n, g: 2n, b: 9n }], 1n, 2n, 3n), 'G alrea
 assert.strictEqual(RUN.rgbPlane([{ r: 9n, g: 9n, b: 3n }], 1n, 2n, 3n), 'B already used');
 assert.strictEqual(RUN.rgbPlane([{ r: 4n, g: 5n, b: 6n }], 1n, 2n, 3n), '');
 assert.strictEqual(RUN.rgbPlane([{ r: 8n, g: 8n, b: 3n }, { r: 1n, g: 2n, b: 8n }], 1n, 2n, 3n), 'R already used');
+assert.deepStrictEqual(RUN.rgbWord([1n, 2n, 3n]), { r: 1n, g: 2n, b: 3n });
+assert.throws(function () { RUN.rgbWord([0n, 1n, 2n]); }, /RGB get/);
+assert.throws(function () { RUN.rgbWord([1n, 0n, 2n]); }, /RGB get/);
+assert.throws(function () { RUN.rgbWord([1n, 2n, 0n]); }, /RGB get/);
+assert.throws(function () { RUN.rgbWord([1n, 2n]); }, /RGB get/);
 
 const price = 1000000000n;
 const need = RUN.batchNeed([

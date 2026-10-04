@@ -560,21 +560,33 @@
     });
   }
 
-  // RGB ids are totalSupply()+1 with no burn, so they are 1..n. get(id) is the public view.
-  // A short read throws so a missing row is not treated as free to mint again.
+  // Supply and get(id) share one multicall. A later split would let a lagging node
+  // answer get(id) with (0,0,0) for a token it has not seen yet.
   async function rgbRows() {
-    const sup = await ethCall(ADDR.RGB, '0x' + ABI.SEL.totalSupply);
-    const n = Number(ABI.decodeUint(sup));
+    const supply = '0x' + ABI.SEL.totalSupply;
+    const probed = await ethCall(ADDR.RGB, supply);
+    const n = Number(ABI.decodeUint(probed));
     if (!Number.isSafeInteger(n) || n < 0) throw new Error('RGB supply');
+    const calls = [{ to: ADDR.RGB, data: supply }];
+    for (let i = 1; i <= n; i++) calls.push({ to: ADDR.RGB, data: ABI.call(ABI.SEL.get, [BigInt(i)]) });
+    const data = ABI.encodeAggregate(calls.map(function (c) {
+      return { to: c.to, data: c.data, allow: true };
+    }));
+    const j = await rpc('eth_call', [{ to: ADDR.MULTI, data: data }, 'latest']);
+    if (j.error) throw new Error('RGB get');
+    const rows = ABI.decodeAggregate(j.result);
+    if (rows.length !== calls.length || !rows[0] || !rows[0].success) throw new Error('RGB get');
+    const seen = Number(ABI.decodeUint(rows[0].data));
+    if (seen !== n) throw new Error('RGB get');
     if (!n) return [];
-    const ids = [];
-    for (let i = 1; i <= n; i++) ids.push(BigInt(i));
-    const gets = await loadGets(ADDR.RGB, ids, null, 'RGB');
-    if (gets.length !== n) throw new Error('RGB get');
-    return gets.map(function (w) {
-      if (!w || w.length < 3) throw new Error('RGB get');
-      return { r: w[0], g: w[1], b: w[2] };
-    });
+    if (!globalThis.RUN || typeof globalThis.RUN.rgbWord !== 'function') throw new Error('RGB get');
+    const out = [];
+    for (let i = 1; i <= n; i++) {
+      const row = rows[i];
+      if (!row || !row.success) throw new Error('RGB get');
+      out.push(globalThis.RUN.rgbWord(ABI.wordsOf(row.data)));
+    }
+    return out;
   }
 
   async function rgbMinted(r, g, b) {

@@ -85,6 +85,13 @@
     return status;
   }
 
+  function rgbWord(words) {
+    if (!words || words.length < 3 || words[0] === 0n || words[1] === 0n || words[2] === 0n) {
+      throw new Error('RGB get');
+    }
+    return { r: words[0], g: words[1], b: words[2] };
+  }
+
   function rgbPlane(rows, r, g, b) {
     const R = BigInt(r);
     const G = BigInt(g);
@@ -192,6 +199,7 @@
     shouldResume: shouldResume,
     clearAnswer: clearAnswer,
     rgbMatch: rgbMatch,
+    rgbWord: rgbWord,
     rgbPlane: rgbPlane,
     batchNeed: batchNeed,
     shortBalance: shortBalance,

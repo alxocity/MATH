@@ -9,7 +9,7 @@
   const MSG_MATH = 2n * ROY_WEI;
   const MSG_RGB = 30n * ROY_WEI;
   const RGB_ROY = 10n * ROY_WEI;
-  const G_ADD = 175000n; // estimate, MATH.add
+  const G_ADD = 200000n; // MATH.add, measured 176856 for 8192+800
   const G_RGB = 340000n; // estimate, RGB.add, measured ~337k
   const MAX = (1n << 256n) - 1n;
   // Red silhouette only. R, G, and B ids are chosen by pickHeart, never fixed.

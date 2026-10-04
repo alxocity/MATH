@@ -457,11 +457,13 @@
       const hash = s.hash && /^0x[0-9a-fA-F]{64}$/.test(s.hash)
         ? ' <a href="https://etherscan.io/tx/' + s.hash + '" target="_blank" rel="noopener noreferrer">tx</a>'
         : '';
-      const err = s.status === 'failed' && s.error ? ' <span class="bad">' + esc(s.error) + '</span>' : '';
+      const err = (s.status === 'failed' || globalThis.RUN.isUnknown(s.status)) && s.error
+        ? ' <span class="bad">' + esc(s.error) + '</span>' : '';
       let btn = '';
       if (s.status === 'failed') btn = ' <button type="button" data-retry="1">retry</button>';
       else if (globalThis.RUN.isUnknown(s.status)) {
-        btn = ' <button type="button" data-check="1">check</button> <button type="button" data-clear="' + i + '">clear</button>';
+        btn = ' <button type="button" data-check="1">check</button>';
+        if (s.chain !== false) btn += ' <button type="button" data-clear="' + i + '">clear</button>';
       } else if (s.status === 'submitted') btn = ' <button type="button" data-check="1">check</button>';
       return '<div class="run">' + (i + 1) + '/' + rows.length + ' ' + esc(s.status || 'pending') + ' ' + esc(s.label) + hash + err + btn + '</div>';
     }).join('');
@@ -600,6 +602,7 @@
         error: s.error || '',
         result: null,
         uses: [],
+        chain: false,
         done: async function () { throw new Error('unchecked'); },
       };
     });
@@ -620,7 +623,10 @@
     if (!step || !globalThis.RUN.isUnknown(step.status)) return;
     let done;
     try { done = await step.done(); }
-    catch (e) { return; }
+    catch (e) {
+      markStep(step, { status: globalThis.RUN.UNKNOWN, error: 'could not read the chain' });
+      return;
+    }
     const next = globalThis.RUN.clearAnswer(step.status, done);
     if (next === step.status) return;
     markStep(step, { status: next, error: '' });
@@ -791,12 +797,13 @@
     return { value: tx && tx.value || 0, gas: gas };
   }
 
+  // eth_gasPrice, not maxFee. Rough pre-check before the wallet opens.
   async function afford(live) {
     const price = await ETH.gasPrice();
     state.gasPrice = price;
     const need = globalThis.RUN.batchNeed(live.map(function (s) { return callCost(s.tx()); }), price);
     const bal = await ETH.balance(state.account);
-    if (globalThis.RUN.shortBalance(bal, need)) return 'balance too low';
+    if (globalThis.RUN.shortBalance(bal, need)) return 'balance too low — rough pre-check';
     return '';
   }
 
