@@ -90,6 +90,7 @@
   }
 
   let toonHint = null;
+  let toonAccount = '';
   let catalog = null;
   let catalogJob = null;
   let toonFillGen = 0;
@@ -271,10 +272,17 @@
     previewToon();
   }
 
+  function shiftAccount() {
+    const who = state.account ? String(state.account).toLowerCase() : '';
+    if (who === toonAccount) return;
+    toonAccount = who;
+    toonHint = SUGGEST.stripToon(toonHint);
+  }
+
   function fillToon(advance) {
     const gen = ++toonFillGen;
+    shiftAccount();
     const example = !state.account;
-    if (toonHint && toonHint.example !== example) toonHint = null;
     const job = example ? loadCatalog() : Promise.resolve(null);
     job.then(function () {
       if (gen !== toonFillGen || !$('#tm')) return;
@@ -286,6 +294,7 @@
   }
 
   function toon(view) {
+    shiftAccount();
     const maths = listed(state.math, state.heldMath);
     const rgbs = listed(state.rgb, state.heldRgb);
     view.innerHTML =

@@ -497,27 +497,48 @@
     }), cur.sums);
   }
 
+  function freshSum(entry, hash, now) {
+    const row = globalThis.SUGGEST.sumEntry(hash, entry, now);
+    if (!row && state.pendingSums) state.pendingSums.delete(hash);
+    return row;
+  }
+
   function sumsObj() {
     const sums = {};
-    if (state.pendingSums) state.pendingSums.forEach(function (id, hash) { sums[String(hash)] = id.toString(); });
+    const now = Date.now();
+    if (state.pendingSums) state.pendingSums.forEach(function (entry, hash) {
+      const row = freshSum(entry, hash, now);
+      if (row) sums[hash] = row.id.toString();
+    });
     return sums;
   }
 
   function saveSums() {
     const cur = readRunStore();
-    writeRunStore(cur.steps, sumsObj());
+    const sums = {};
+    const now = Date.now();
+    if (state.pendingSums) state.pendingSums.forEach(function (entry, hash) {
+      const row = freshSum(entry, hash, now);
+      if (row) sums[hash] = { id: row.id.toString(), at: row.at };
+    });
+    writeRunStore(cur.steps, sums);
   }
 
   function loadSums() {
     const saved = readRunStore();
+    const now = Date.now();
     Object.keys(saved.sums).forEach(function (hash) {
-      try { state.pendingSums.set(hash, BigInt(saved.sums[hash])); } catch (e) { /* ignore */ }
+      const row = globalThis.SUGGEST.sumEntry(hash, saved.sums[hash], now);
+      if (row) state.pendingSums.set(hash, { id: row.id, at: row.at });
     });
   }
 
   function rememberSum(hash, id) {
     if (!state.pendingSums || !hash || id == null) return;
-    state.pendingSums.set(hash, id);
+    const now = Date.now();
+    const row = globalThis.SUGGEST.sumEntry(hash, { id: String(id), at: now }, now);
+    if (!row) return;
+    state.pendingSums.set(hash, { id: row.id, at: row.at });
     saveSums();
   }
 
