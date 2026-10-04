@@ -154,6 +154,8 @@ aside .who { margin: 0 0 8px; color: var(--dim); }
 .y { background: #e6c229; }
 .w { background: #f4f4f4; }
 .step { border-top: 1px solid var(--line); padding: 8px 0; }
+.run { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; border-top: 1px solid var(--line); padding: 8px 0; min-width: 0; }
+#batchNote { margin: 8px 0; max-width: 40rem; }
 .piece { display: flex; gap: 6px; align-items: center; margin: 4px 0; min-width: 0; max-width: 100%; }
 .piece input[type="text"] { width: min(18em, 100%); max-width: 100%; }
 label { color: var(--dim); max-width: 100%; }
@@ -202,7 +204,9 @@ footer a { color: var(--dim); }
   header, nav, footer { min-width: 0; max-width: 100%; }
   footer { padding: 8px 12px 16px; }
   footer a, a.out { min-height: 40px; min-width: 40px; display: inline-flex; align-items: center; }
+  #run a, #run button, #pending a, #pending button { min-height: 40px; min-width: 40px; display: inline-flex; align-items: center; }
 }
 @media (hover: none) {
   footer a, a.out, #tile { min-height: 40px; min-width: 40px; display: inline-flex; align-items: center; justify-content: center; }
+  #run a, #run button, #pending a, #pending button { min-height: 40px; min-width: 40px; display: inline-flex; align-items: center; }
 }

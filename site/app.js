@@ -60,6 +60,13 @@
     routeMode: 'cheapest',
     txLock: null,
     preview: '',
+    pendingHash: null,
+    pendingOk: null,
+    run: null,
+    runBusy: false,
+    runGen: 0,
+    runSend: null,
+    runTick: false,
   };
 
   function esc(s) {
@@ -308,30 +315,621 @@
     }
   }
 
+  const RUN_KEY = 'math.run.v1';
+  const TX_KEY = 'math.tx.v1';
+
+  function clip(msg) {
+    const s = String(msg || 'failed').replace(/\s+/g, ' ').trim();
+    return s.length > 160 ? s.slice(0, 160) : s;
+  }
+
+  function savePending(hash) {
+    try {
+      if (hash) sessionStorage.setItem(TX_KEY, hash);
+      else sessionStorage.removeItem(TX_KEY);
+    } catch (e) { /* ignore */ }
+  }
+
+  function loadPending() {
+    try { return sessionStorage.getItem(TX_KEY) || ''; } catch (e) { return ''; }
+  }
+
+  function paintPending() {
+    const old = $('#pending');
+    if (old) old.remove();
+    const hash = state.pendingHash;
+    if (!hash || !/^0x[0-9a-fA-F]{64}$/.test(hash)) return;
+    const box = $('#preview');
+    if (!box || !box.parentNode) return;
+    const el = document.createElement('div');
+    el.id = 'pending';
+    el.className = 'run';
+    el.innerHTML = 'submitted <a href="https://etherscan.io/tx/' + hash + '" target="_blank" rel="noopener noreferrer">tx</a> <button type="button" id="checkTx">check</button>';
+    box.parentNode.insertBefore(el, box.nextSibling);
+    const btn = $('#checkTx');
+    if (btn) btn.onclick = function () { checkPending(); };
+  }
+
+  function finishWatch(hash, rec, onOk) {
+    state.txLock = null;
+    state.pendingHash = null;
+    state.pendingOk = null;
+    savePending('');
+    const ok = globalThis.RUN.receiptOk(rec.status);
+    MOLD.say('mined', { status: ok ? 'ok' : 'reverted' });
+    if (ok && onOk) onOk();
+    const box = $('#preview');
+    if (box) box.textContent += '\n' + (ok ? 'confirmed' : 'failed reverted');
+    paintPending();
+  }
+
+  async function checkPending() {
+    const hash = state.pendingHash;
+    if (!hash) return;
+    let rec = null;
+    try { rec = await ETH.receipt(hash); } catch (e) {
+      MOLD.say('simFail', { err: clip(e.message || e) });
+      return;
+    }
+    if (!rec) {
+      MOLD.say('wait');
+      return;
+    }
+    finishWatch(hash, rec, state.pendingOk);
+  }
+
   function noteSent(hash, onOk) {
     state.txLock = hash;
+    state.pendingHash = hash;
+    state.pendingOk = onOk || null;
+    savePending(hash);
     MOLD.say('sent', { hash: short(hash) });
     const box = $('#preview');
     if (box) box.textContent = (state.preview || '') + '\nsubmitted ' + hash;
+    paintPending();
     watch(hash, onOk);
   }
 
   async function watch(hash, onOk) {
-    for (let i = 0; i < 40; i++) {
+    for (let i = 0; i < 30; i++) {
       await new Promise(function (r) { setTimeout(r, 4000); });
       if (state.txLock !== hash) return;
       let rec = null;
       try { rec = await ETH.receipt(hash); } catch (e) { rec = null; }
       if (!rec) continue;
-      state.txLock = null;
-      const ok = rec.status === '0x1';
-      MOLD.say('mined', { status: ok ? 'ok' : 'reverted' });
-      if (ok && onOk) onOk();
-      const box = $('#preview');
-      if (box) box.textContent += '\nmined ' + (ok ? 'ok' : 'reverted');
+      finishWatch(hash, rec, onOk);
       return;
     }
-    if (state.txLock === hash) state.txLock = null;
+    if (state.txLock !== hash) return;
+    state.txLock = null;
+    state.pendingHash = hash;
+    state.pendingOk = onOk || null;
+    savePending(hash);
+    MOLD.say('wait');
+    const box = $('#preview');
+    if (box) box.textContent += '\nstill pending';
+    paintPending();
+  }
+
+  function readRun() {
+    try {
+      const raw = sessionStorage.getItem(RUN_KEY);
+      const j = raw ? JSON.parse(raw) : null;
+      return j && Array.isArray(j.steps) ? j.steps : [];
+    } catch (e) { return []; }
+  }
+
+  function saveRun(steps) {
+    try {
+      sessionStorage.setItem(RUN_KEY, JSON.stringify({
+        steps: (steps || []).map(function (s) {
+          return {
+            label: s.label,
+            status: s.status || 'pending',
+            hash: s.hash || '',
+            calls: s.calls || '',
+            error: s.error || '',
+          };
+        }),
+      }));
+    } catch (e) { /* ignore */ }
+  }
+
+  function syncNote(steps) {
+    const note = $('#batchNote');
+    if (!note) return;
+    const list = steps || [];
+    const seeded = list.filter(function (s) {
+      return (s.status === 'confirmed' || s.status === 'submitted') && s.result != null;
+    }).map(function (s) { return String(s.result); });
+    const open = list.filter(function (s) { return s.status !== 'confirmed' && s.status !== 'submitted'; });
+    const first = (globalThis.RUN.splitCalls(open, seeded)[0]) || [];
+    note.hidden = first.length < 2;
+  }
+
+  function paintRun() {
+    const host = $('#run');
+    if (!host) return;
+    const rows = state.run || [];
+    host.innerHTML = rows.map(function (s, i) {
+      const hash = s.hash && /^0x[0-9a-fA-F]{64}$/.test(s.hash)
+        ? ' <a href="https://etherscan.io/tx/' + s.hash + '" target="_blank" rel="noopener noreferrer">tx</a>'
+        : '';
+      const err = s.status === 'failed' && s.error ? ' <span class="bad">' + esc(s.error) + '</span>' : '';
+      const btn = s.status === 'failed'
+        ? ' <button type="button" data-retry="1">retry</button>'
+        : (s.status === 'submitted' ? ' <button type="button" data-check="1">check</button>' : '');
+      return '<div class="run">' + (i + 1) + '/' + rows.length + ' ' + esc(s.status || 'pending') + ' ' + esc(s.label) + hash + err + btn + '</div>';
+    }).join('');
+    host.querySelectorAll('[data-retry]').forEach(function (b) {
+      b.onclick = function () { if (state.runSend) state.runSend(); };
+    });
+    host.querySelectorAll('[data-check]').forEach(function (b) {
+      b.onclick = function () {
+        state.runTick = true;
+        checkSubmitted().catch(function () {});
+      };
+    });
+  }
+
+  function mark(step, patch) {
+    if (!step) return;
+    Object.keys(patch).forEach(function (k) { step[k] = patch[k]; });
+    const row = (state.run || []).find(function (s) { return s.label === step.label; });
+    if (row && row !== step) Object.keys(patch).forEach(function (k) { row[k] = patch[k]; });
+    paintRun();
+    saveRun(state.run);
+    syncNote(state.run);
+  }
+
+  function confirm(step) {
+    if (!step || step.status === 'confirmed') return;
+    const fn = step.onOk;
+    mark(step, { status: 'confirmed', error: '' });
+    if (fn) fn();
+  }
+
+  async function confirmOwned(step) {
+    if (!step || step.status === 'confirmed') return true;
+    if (step.result == null) {
+      confirm(step);
+      return true;
+    }
+    let owner = null;
+    try { owner = await ETH.ownerOf(ADDR.MATH, step.result); }
+    catch (e) { return false; }
+    if (!owner) return false;
+    const mine = state.account && String(owner).toLowerCase() === String(state.account).toLowerCase();
+    if (mine) confirm(step);
+    else {
+      mark(step, { status: 'confirmed', error: '' });
+      state.supply.set(step.result, owner);
+    }
+    return true;
+  }
+
+  function fail(step, error) {
+    const msg = error || 'failed';
+    mark(step, { status: 'failed', error: msg });
+    if (msg === 'rejected') MOLD.say('rejected');
+    else if (msg === 'reverted') MOLD.say('mined', { status: 'reverted' });
+    else MOLD.say('simFail', { err: msg });
+  }
+
+  function withTimeout(p, ms) {
+    return new Promise(function (resolve, reject) {
+      const t = setTimeout(function () { reject(new Error('timeout')); }, ms);
+      Promise.resolve(p).then(function (v) {
+        clearTimeout(t);
+        resolve(v);
+      }, function (e) {
+        clearTimeout(t);
+        reject(e);
+      });
+    });
+  }
+
+  function sleepOrTick(ms) {
+    return new Promise(function (resolve) {
+      let left = ms;
+      const iv = setInterval(function () {
+        left -= 200;
+        if (state.runTick || left <= 0) {
+          state.runTick = false;
+          clearInterval(iv);
+          resolve();
+        }
+      }, 200);
+    });
+  }
+
+  function hydrateRun(steps, quiet) {
+    const signing = state.runBusy && (state.run || []).some(function (s) { return s.status === 'signing'; });
+    if (signing) {
+      paintRun();
+      syncNote(state.run);
+      return;
+    }
+    const saved = readRun();
+    const prev = {};
+    (state.run || []).forEach(function (s) { prev[s.label] = s; });
+    saved.forEach(function (s) { if (!prev[s.label]) prev[s.label] = s; });
+    const labels = {};
+    (steps || []).forEach(function (s) {
+      labels[s.label] = true;
+      const old = prev[s.label];
+      s.hash = (old && old.hash) || '';
+      s.calls = (old && old.calls) || '';
+      s.error = (old && old.error) || '';
+      let st = (old && old.status) || 'pending';
+      if (st === 'signing') st = 'pending';
+      s.status = st;
+    });
+    const stuck = (state.run || []).filter(function (s) {
+      return s.status === 'submitted' && s.label && !labels[s.label];
+    });
+    state.run = stuck.concat(steps || []);
+    paintRun();
+    syncNote(state.run);
+    saveRun(state.run);
+    if (!quiet && !state.runBusy) resumeIfSubmitted();
+  }
+
+  function paintSavedRun() {
+    if (!$('#run')) return;
+    if (state.run && state.run.length) {
+      paintRun();
+      syncNote(state.run);
+      return;
+    }
+    const saved = readRun();
+    if (!saved.length) return;
+    state.run = saved.map(function (s) {
+      return {
+        label: s.label,
+        status: s.status === 'signing' ? 'pending' : (s.status || 'pending'),
+        hash: s.hash || '',
+        calls: s.calls || '',
+        error: s.error || '',
+        result: null,
+        uses: [],
+        done: async function () { return false; },
+      };
+    });
+    paintRun();
+    resumeIfSubmitted();
+  }
+
+  function giveUpCalls(group) {
+    const note = 'batch status unavailable';
+    let any = false;
+    (group || []).forEach(function (s) {
+      if (!s || s.status !== 'submitted') return;
+      if (s.hash && /^0x[0-9a-fA-F]{64}$/.test(s.hash)) return;
+      mark(s, { status: 'failed', error: note });
+      any = true;
+    });
+    if (any) MOLD.say('simFail', { err: note });
+  }
+
+  async function checkCalls(id, group) {
+    if (!globalThis.ethereum) return 'unread';
+    let st;
+    try {
+      st = await withTimeout(ethereum.request({ method: 'wallet_getCallsStatus', params: [id] }), 8000);
+    } catch (e) {
+      if (globalThis.RUN.unsupported(e)) return 'unread';
+      return '';
+    }
+    const outcome = globalThis.RUN.callsOutcome(st && st.status);
+    const receipts = (st && st.receipts) || [];
+    if (receipts.length === group.length) {
+      group.forEach(function (s, i) {
+        const h = receipts[i] && (receipts[i].transactionHash || receipts[i].hash);
+        if (h) mark(s, { hash: h });
+      });
+    } else {
+      const h = receipts.map(function (r) { return r && (r.transactionHash || r.hash); }).find(Boolean);
+      if (h) group.forEach(function (s) { if (!s.hash) mark(s, { hash: h }); });
+    }
+    if (outcome === 'pending') return '';
+    if (outcome === 'confirmed') {
+      let waiting = false;
+      for (let i = 0; i < group.length; i++) {
+        const held = await confirmOwned(group[i]);
+        if (!held) waiting = true;
+      }
+      if (!waiting) MOLD.say('mined', { status: 'ok' });
+      return '';
+    }
+    group.forEach(function (s) { mark(s, { status: 'failed', error: 'reverted' }); });
+    MOLD.say('mined', { status: 'reverted' });
+    return '';
+  }
+
+  async function checkSubmitted() {
+    const steps = (state.run || []).filter(function (s) { return s.status === 'submitted'; });
+    const seen = {};
+    for (let i = 0; i < steps.length; i++) {
+      const step = steps[i];
+      if (step.status !== 'submitted') continue;
+      if (step.hash && /^0x[0-9a-fA-F]{64}$/.test(step.hash)) {
+        let rec = null;
+        try { rec = await ETH.receipt(step.hash); } catch (e) { return; }
+        if (!rec) continue;
+        if (!globalThis.RUN.receiptOk(rec.status)) {
+          fail(step, 'reverted');
+          continue;
+        }
+        confirm(step);
+        MOLD.say('mined', { status: 'ok' });
+      } else if (step.calls && !seen[step.calls]) {
+        seen[step.calls] = true;
+        const group = (state.run || []).filter(function (s) { return s.status === 'submitted' && s.calls === step.calls; });
+        const how = await checkCalls(step.calls, group);
+        if (how === 'unread') giveUpCalls(group);
+      }
+    }
+  }
+
+  async function watchOpen(gen) {
+    for (let i = 0; i < 30; i++) {
+      if (gen !== state.runGen) return;
+      await sleepOrTick(i === 0 ? 800 : 4000);
+      if (gen !== state.runGen) return;
+      await checkSubmitted();
+      if (!(state.run || []).some(function (s) { return s.status === 'submitted'; })) return;
+    }
+  }
+
+  function resumeIfSubmitted() {
+    if (state.runBusy || state.txLock) return;
+    const hasHash = (state.run || []).some(function (s) {
+      return s.status === 'submitted' && /^0x[0-9a-fA-F]{64}$/.test(s.hash || '');
+    });
+    if (!hasHash) return;
+    state.runGen += 1;
+    const gen = state.runGen;
+    state.runBusy = true;
+    state.txLock = 'run';
+    watchOpen(gen).finally(function () {
+      if (gen !== state.runGen) return;
+      state.runBusy = false;
+      if (state.txLock === 'run') state.txLock = null;
+    });
+  }
+
+  async function preflight(step, batch) {
+    if (step.blocked) return step.blockWhy || 'blocked holder';
+    const exists = await step.done();
+    if (exists) return 'skip';
+    if (step.ready) {
+      const why = await step.ready(batch);
+      if (why) return why;
+    }
+    if (globalThis.RUN.deferSim(step, batch)) return '';
+    const tx = step.tx();
+    const sim = await ETH.simulate(tx);
+    if (sim && sim.error) return ETH.reason(sim.error);
+    return '';
+  }
+
+  async function prepareBatch(batch) {
+    const live = [];
+    for (let i = 0; i < batch.length; i++) {
+      const step = batch[i];
+      let why;
+      try { why = await preflight(step, batch); }
+      catch (e) {
+        fail(step, clip(e && e.message ? e.message : e));
+        return null;
+      }
+      if (why === 'skip') {
+        mark(step, { status: 'confirmed', error: '' });
+        continue;
+      }
+      if (why) {
+        fail(step, why);
+        return live;
+      }
+      live.push(step);
+    }
+    return live;
+  }
+
+  async function pollReceipt(hash, gen) {
+    for (let i = 0; i < 30; i++) {
+      if (gen !== state.runGen) return null;
+      await sleepOrTick(4000);
+      if (gen !== state.runGen) return null;
+      let rec = null;
+      try { rec = await ETH.receipt(hash); } catch (e) { rec = null; }
+      if (rec) return rec;
+    }
+    return null;
+  }
+
+  async function sendSeq(batch, gen) {
+    const live = await prepareBatch(batch);
+    if (!live) return;
+    for (let i = 0; i < live.length; i++) {
+      if (gen !== state.runGen) return;
+      const step = live[i];
+      let again;
+      try { again = await preflight(step, live); }
+      catch (e) {
+        fail(step, clip(e && e.message ? e.message : e));
+        return;
+      }
+      if (again === 'skip') {
+        mark(step, { status: 'confirmed', error: '' });
+        continue;
+      }
+      if (again) {
+        fail(step, again);
+        return;
+      }
+      mark(step, { status: 'signing', error: '' });
+      let hash;
+      try { hash = await ETH.send(step.tx()); }
+      catch (e) {
+        fail(step, globalThis.RUN.rejected(e) ? 'rejected' : clip(e && e.message ? e.message : e));
+        return;
+      }
+      if (gen !== state.runGen) return;
+      mark(step, { status: 'submitted', hash: hash, error: '' });
+      MOLD.say('sent', { hash: short(hash) });
+      const rec = await pollReceipt(hash, gen);
+      if (gen !== state.runGen) return;
+      if (!rec) return;
+      if (!globalThis.RUN.receiptOk(rec.status)) {
+        fail(step, 'reverted');
+        return;
+      }
+      confirm(step);
+      MOLD.say('mined', { status: 'ok' });
+    }
+  }
+
+  async function sendBatch(batch, gen) {
+    const live = await prepareBatch(batch);
+    if (!live) return;
+    if (live.length < 2) return sendSeq(live, gen);
+    let caps = null;
+    try {
+      caps = await ethereum.request({ method: 'wallet_getCapabilities', params: [state.account] });
+    } catch (e) {
+      if (globalThis.RUN.rejected(e)) {
+        fail(live[0], 'rejected');
+        return;
+      }
+      caps = null;
+    }
+    if (gen !== state.runGen) return;
+    if (!globalThis.RUN.atomicReady(caps)) return sendSeq(live, gen);
+    if (live.some(function (s) { return globalThis.RUN.deferSim(s, live); })) {
+      let rows = null;
+      try {
+        rows = await ETH.simulateCalls(live.map(function (s) {
+          const tx = s.tx();
+          return { from: state.account, to: tx.to, data: tx.data, value: tx.value || '0x0' };
+        }));
+      } catch (e) {
+        if (globalThis.RUN.unsupported(e)) {
+          const note = globalThis.RUN.batchSimNote(live.length);
+          live.forEach(function (s) {
+            if (globalThis.RUN.deferSim(s, live)) mark(s, { status: 'failed', error: note });
+          });
+          MOLD.say('simFail', { err: note });
+          return;
+        }
+        fail(live[0], clip(e && e.message ? e.message : e));
+        return;
+      }
+      if (gen !== state.runGen) return;
+      for (let i = 0; i < rows.length; i++) {
+        if (globalThis.RUN.receiptOk(rows[i] && rows[i].status)) continue;
+        fail(live[i], ETH.reason(rows[i] && rows[i].error) || 'reverted');
+        return;
+      }
+    }
+    live.forEach(function (s) { mark(s, { status: 'signing', error: '' }); });
+    let res;
+    try {
+      res = await ethereum.request({
+        method: 'wallet_sendCalls',
+        params: [{
+          version: '2.0.0',
+          from: state.account,
+          chainId: '0x1',
+          atomicRequired: true,
+          calls: live.map(function (s) {
+            const tx = s.tx();
+            return { to: tx.to, data: tx.data, value: tx.value || '0x0' };
+          }),
+        }],
+      });
+    } catch (e) {
+      if (globalThis.RUN.unsupported(e)) {
+        live.forEach(function (s) { mark(s, { status: 'pending', error: '' }); });
+        return sendSeq(live, gen);
+      }
+      const msg = globalThis.RUN.rejected(e) ? 'rejected' : clip(e && e.message ? e.message : e);
+      live.forEach(function (s) { mark(s, { status: 'failed', error: msg }); });
+      if (msg === 'rejected') MOLD.say('rejected');
+      else MOLD.say('simFail', { err: msg });
+      return;
+    }
+    const id = globalThis.RUN.callsId(res);
+    if (!id) {
+      live.forEach(function (s) { mark(s, { status: 'failed', error: 'no calls id' }); });
+      MOLD.say('simFail', { err: 'no calls id' });
+      return;
+    }
+    live.forEach(function (s) { mark(s, { status: 'submitted', calls: id, error: '' }); });
+    MOLD.say('sent', { hash: short(id) });
+    await watchOpen(gen);
+  }
+
+  async function runSteps(steps, opt) {
+    if (!steps || !steps.length) return;
+    if (!globalThis.ethereum || !state.account) {
+      MOLD.say('noWallet');
+      return;
+    }
+    if (state.runBusy || state.txLock) {
+      MOLD.say('wait');
+      return;
+    }
+    state.runGen += 1;
+    const gen = state.runGen;
+    state.runBusy = true;
+    state.txLock = 'run';
+    try {
+      await ETH.ensureChain();
+      if (gen !== state.runGen) return;
+      hydrateRun(steps, true);
+      for (let i = 0; i < state.run.length; i++) {
+        const step = state.run[i];
+        if (step.status === 'submitted') continue;
+        let done = false;
+        try { done = await step.done(); }
+        catch (e) {
+          fail(step, clip(e && e.message ? e.message : e));
+          return;
+        }
+        if (done) mark(step, { status: 'confirmed', error: '' });
+        else if (step.status === 'confirmed' && step.result != null) mark(step, { status: 'pending', error: '' });
+      }
+      if (gen !== state.runGen) return;
+      if ((state.run || []).some(function (s) { return s.status === 'submitted'; })) {
+        MOLD.say('wait');
+        await watchOpen(gen);
+        return;
+      }
+      let work;
+      if (opt && opt.only) {
+        work = state.run.filter(function (s) { return s.label === opt.only && s.status !== 'confirmed'; });
+      } else {
+        const seeded = state.run.filter(function (s) { return s.status === 'confirmed' && s.result != null; }).map(function (s) { return String(s.result); });
+        const open = state.run.filter(function (s) { return s.status !== 'confirmed'; });
+        work = (globalThis.RUN.splitCalls(open, seeded)[0]) || [];
+      }
+      if (!work.length) return;
+      if (work.length > 1) await sendBatch(work, gen);
+      else await sendSeq(work, gen);
+    } catch (e) {
+      const msg = globalThis.RUN.rejected(e) ? 'rejected' : clip(e && e.message ? e.message : e);
+      const cur = (state.run || []).find(function (s) { return s.status === 'signing' || s.status === 'pending'; });
+      if (cur) fail(cur, msg);
+      else if (msg === 'rejected') MOLD.say('rejected');
+      else MOLD.say('simFail', { err: msg });
+    } finally {
+      if (gen === state.runGen) {
+        state.runBusy = false;
+        if (state.txLock === 'run') state.txLock = null;
+      }
+    }
   }
 
   async function sendStep(step, really) {
@@ -401,6 +999,7 @@
     });
     const view = $('#view');
     SITE[tab](view);
+    paintPending();
     if (quiet) return;
     if (tab === 'browse') MOLD.say('browse');
     if (tab === 'rgb') MOLD.say('rgb');
@@ -428,6 +1027,10 @@
     guardSend: guardSend,
     noteSent: noteSent,
     sendStep: sendStep,
+    runSteps: runSteps,
+    hydrateRun: hydrateRun,
+    paintRun: paintRun,
+    paintSavedRun: paintSavedRun,
     show: show,
     hit: hit,
     persistTexts: persistTexts,
@@ -770,6 +1373,8 @@
       state.indexState = 'loading';
       setStatus('loading index…');
     }
+    const pending = loadPending();
+    if (pending && /^0x[0-9a-fA-F]{64}$/.test(pending)) state.pendingHash = pending;
     const tab = (location.hash || '#browse').slice(1);
     show(['browse', 'mint', 'route', 'rgb', 'toon', 'about', 'mine'].indexOf(tab) === -1 ? 'browse' : tab);
     ETH.gasPrice().then(function (g) { state.gasPrice = g; }).catch(function () {});

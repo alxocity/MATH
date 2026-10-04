@@ -554,6 +554,23 @@
     return rpc('eth_call', [tx, 'latest']);
   }
 
+  // One block, calls in order, so a later mint can see an earlier one.
+  async function simulateCalls(calls) {
+    const j = await rpc('eth_simulateV1', [{
+      blockStateCalls: [{ calls: calls }],
+      validation: false,
+    }, 'latest']);
+    if (j.error) {
+      const err = new Error(j.error.message || 'simulate');
+      err.code = j.error.code;
+      throw err;
+    }
+    const block = Array.isArray(j.result) ? j.result[0] : null;
+    const rows = block && block.calls;
+    if (!rows || rows.length !== calls.length) throw new Error('simulate');
+    return rows;
+  }
+
   // Wallet popup. Callers must simulate and re-check existence first.
   async function send(tx) {
     if (!globalThis.ethereum) throw new Error('no wallet');
@@ -603,6 +620,7 @@
     readString: readString,
     ethCall: ethCall,
     simulate: simulate,
+    simulateCalls: simulateCalls,
     send: send,
     ensureChain: ensureChain,
     receipt: receipt,

@@ -93,6 +93,79 @@
     return src;
   }
 
+  function mathRun(step, produced) {
+    const uses = [step.a, step.b].filter(function (id) {
+      return produced.some(function (p) { return p === id; });
+    });
+    produced.push(step.result);
+    const note = payNote(step);
+    return {
+      label: step.a + ' + ' + step.b + ' = ' + step.result,
+      result: step.result,
+      uses: uses,
+      blocked: note === RULES.payout(),
+      blockWhy: note,
+      tx: function () { return S.mathTx(step.a, step.b); },
+      done: async function () { return !!(await ETH.ownerOf(ADDR.MATH, step.result)); },
+      ready: async function (batch) {
+        const producedNow = {};
+        (batch || []).forEach(function (row) {
+          if (row.result != null) producedNow[String(row.result)] = true;
+        });
+        async function need(id) {
+          if (producedNow[String(id)]) return true;
+          return !!(await ETH.ownerOf(ADDR.MATH, id));
+        }
+        if (!(await need(step.a)) || !(await need(step.b))) return 'an input is not minted yet';
+        return '';
+      },
+      onOk: function () { state.supply.set(step.result, S.me()); },
+    };
+  }
+
+  function queueRuns() {
+    const produced = [];
+    return state.queue.map(function (item) {
+      if (item.kind === 'math') return mathRun(item.step, produced);
+      const uses = [item.r, item.g, item.b].filter(function (id) {
+        return produced.some(function (p) { return p === id; });
+      });
+      return {
+        label: 'RGB.add ' + item.r + ', ' + item.g + ', ' + item.b,
+        result: null,
+        uses: uses,
+        tx: function () {
+          return {
+            from: state.account,
+            to: ADDR.RGB,
+            data: ABI.call(ABI.SEL.add3, [item.r, item.g, item.b]),
+            value: S.hex(P.MSG_RGB),
+          };
+        },
+        done: async function () { return false; },
+        ready: async function (batch) {
+          const producedNow = {};
+          (batch || []).forEach(function (row) {
+            if (row.result != null) producedNow[String(row.result)] = true;
+          });
+          const ids = [item.r, item.g, item.b];
+          for (let k = 0; k < ids.length; k++) {
+            if (producedNow[String(ids[k])]) continue;
+            if (!(await ETH.ownerOf(ADDR.MATH, ids[k]))) return 'a plane is not minted yet';
+          }
+          const why = rgbQueueWhy(item);
+          if (why) return why;
+          return '';
+        },
+      };
+    });
+  }
+
+  function sendAllQueue() {
+    state.runSend = function () { sendAllQueue(); };
+    S.runSteps(queueRuns());
+  }
+
   function paintQueue() {
     const host = $('#queue');
     if (!host) return;
@@ -122,6 +195,14 @@
     host.querySelectorAll('[data-send]').forEach(function (b) {
       b.onclick = function () { sendQueue(Number(b.dataset.send), true); };
     });
+    const btn = $('#sendQueueAll');
+    if (state.queue.length) S.hydrateRun(queueRuns());
+    else S.paintSavedRun();
+    if (btn) {
+      const open = (state.run || []).filter(function (s) { return s.status !== 'confirmed' && s.tx; });
+      btn.disabled = !state.queue.length || !open.length || !!(open[0] && open[0].blocked);
+      btn.onclick = sendAllQueue;
+    }
   }
 
   function planRgb() {
@@ -185,11 +266,11 @@
   async function sendQueue(i, really) {
     const item = state.queue[i];
     if (!item) return;
-    if (item.kind === 'math') {
-      await S.sendStep(item.step, really);
-      return;
-    }
     if (!really) {
+      if (item.kind === 'math') {
+        await S.sendStep(item.step, false);
+        return;
+      }
       const preview = 'RGB.add(' + item.r + ', ' + item.g + ', ' + item.b + ')\nto ' + ADDR.RGB + '\nvalue 0.03 ETH';
       state.preview = preview;
       try {
@@ -212,28 +293,10 @@
       }
       return;
     }
-    const preview = 'RGB.add(' + item.r + ', ' + item.g + ', ' + item.b + ')\nto ' + ADDR.RGB + '\nvalue 0.03 ETH';
-    state.preview = preview;
-    if ($('#preview')) $('#preview').textContent = preview + '\nre-checking planes.';
-    await S.guardSend(async function () {
-      const owners = await Promise.all([
-        ETH.ownerOf(ADDR.MATH, item.r),
-        ETH.ownerOf(ADDR.MATH, item.g),
-        ETH.ownerOf(ADDR.MATH, item.b),
-      ]);
-      if (owners.some(function (o) { return !o; })) throw new Error('a plane is not minted yet');
-      const tx = {
-        from: state.account,
-        to: ADDR.RGB,
-        data: ABI.call(ABI.SEL.add3, [item.r, item.g, item.b]),
-        value: S.hex(P.MSG_RGB),
-      };
-      const sim = await ETH.simulate(tx);
-      if (sim.error) throw new Error(ETH.reason(sim.error));
-      if ($('#preview')) $('#preview').textContent = preview + '\nsimulation ok. confirm in the wallet.';
-      const hash = await ETH.send(tx);
-      S.noteSent(hash);
-    });
+    const runs = queueRuns();
+    state.runSend = function () { sendAllQueue(); };
+    const label = runs[i] && runs[i].label;
+    await S.runSteps(runs, { only: label });
   }
 
   function paintTraits() {
@@ -270,8 +333,10 @@
       '<div class="row"><label>G <input id="pG" spellcheck="false" value="' + p.G + '"></label></div>' +
       '<div class="row"><label>B <input id="pB" spellcheck="false" value="' + p.B + '"></label></div>' +
       '<p id="rgbTraits" class="dim"></p><p id="rgbMeta"></p><div id="queue"></div>' +
-      '<div class="row"><button type="button" id="planRgb">plan routes</button></div>' +
-      '<div class="preview" id="preview">MATH mints, then RGB.add at 0.03 ETH. one click, one signature.' + S.mark('ⓘ', S.TIPS.fees) + '</div>';
+      '<p class="dim" id="batchNote" hidden>A batch may ask MetaMask for a one-time smart account upgrade (EIP-7702). That delegates this address for the calls. You approve it in the wallet. This page does not sign by itself.</p>' +
+      '<div id="run"></div>' +
+      '<div class="row"><button type="button" id="planRgb">plan routes</button><button type="button" id="sendQueueAll">send</button></div>' +
+      '<div class="preview" id="preview">MATH mints, then RGB.add at 0.03 ETH. send signs the next batch.' + S.mark('ⓘ', S.TIPS.fees) + '</div>';
     const grid = $('#cells');
     grid.innerHTML = S.cellsHtml(state.grid);
     paintTraits();
@@ -387,6 +452,7 @@
         } catch (e) { /* keep grid */ }
       });
     });
+    state.runSend = function () { sendAllQueue(); };
     $('#planRgb').onclick = planRgb;
     const issues = planeIssues(state.planes);
     $('#rgbMeta').innerHTML = issuesHtml(issues);
