@@ -1185,12 +1185,14 @@
   const TABS = ['browse', 'mint', 'route', 'rgb', 'toon', 'about', 'mine'];
 
   function show(tab, quiet) {
+    const prev = state.tab;
     const ae = document.activeElement;
     const focusId = ae && ae.id;
     const selStart = ae && typeof ae.selectionStart === 'number' ? ae.selectionStart : null;
     const selEnd = ae && typeof ae.selectionEnd === 'number' ? ae.selectionEnd : null;
     if (tab === 'mine' && !state.account) tab = 'browse';
     if (TABS.indexOf(tab) === -1) tab = 'browse';
+    const same = tab === prev;
     state.tab = tab;
     state.token = null;
     document.title = '1 + 1 = 2';
@@ -1201,7 +1203,7 @@
     SITE[tab](view);
     paintPending();
     if (location.hash !== '#' + tab) location.hash = tab;
-    if (focusId) {
+    if (same && focusId) {
       const next = document.getElementById(focusId);
       if (next && next !== ae) {
         next.focus();
@@ -1308,8 +1310,7 @@
         paintWho();
         syncMine();
         if (state.account) loadWallet();
-        if (state.tab === 'toon' || state.tab === 'mint' || state.tab === 'mine' || state.tab === 'browse') show(state.tab);
-        else if (state.tab === 'rgb' && SITE.fillRgb) SITE.fillRgb(false);
+        paintAccount(['toon', 'mine', 'browse']);
       });
       eth.on('chainChanged', onChain);
     }
@@ -1338,7 +1339,13 @@
     syncMine();
     MOLD.say('connect', { addr: ENS.label(state.account), mine: mineCount(), math: state.math.length });
     loadWallet();
-    if (state.tab === 'toon' || state.tab === 'mint' || state.tab === 'mine') show(state.tab);
+    paintAccount(['toon', 'mine']);
+  }
+
+  function paintAccount(showTabs) {
+    if (state.tab === 'mint' && SITE.fillMint) SITE.fillMint(false);
+    else if (state.tab === 'rgb' && SITE.fillRgb) SITE.fillRgb(false);
+    else if (showTabs.indexOf(state.tab) !== -1) show(state.tab);
   }
 
   async function loadHeld() {
