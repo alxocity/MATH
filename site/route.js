@@ -63,6 +63,7 @@
     host.innerHTML = state.routePieces.map(function (p, i) {
       const pin = state.routePinned.some(function (x) { return x === p; });
       return '<div class="piece"><input type="text" data-i="' + i + '" value="' + p + '" spellcheck="false">' +
+        globalThis.TOKEN.idLink('math', p) +
         '<label><input type="checkbox" class="pin" data-i="' + i + '"' + (pin ? ' checked' : '') + '> pin</label>' +
         '<button type="button" data-up="' + i + '">up</button>' +
         '<button type="button" data-dn="' + i + '">down</button>' +
@@ -117,7 +118,7 @@
           '<button type="button" data-sim="' + i + '">simulate</button>' + S.mark('ⓘ', S.TIPS.simulate) +
           '<button type="button" data-send="' + i + '"' + sendOff + '>send</button>';
         const noteMark = note === RULES.payout() ? S.mark('ⓘ', S.TIPS.blocked) : note === RULES.unchecked() ? S.mark('ⓘ', S.TIPS.unchecked) : '';
-        return '<div class="step">' + s.a + ' + ' + s.b + ' = ' + s.result +
+        return '<div class="step">' + globalThis.TOKEN.sumHtml(s.a, s.b, s.result) +
           (s.exists ? ' <span class="dim">exists</span>' : '') +
           (note ? ' <span class="' + (note === RULES.unchecked() ? 'dim' : 'bad') + '">' + S.esc(note) + '</span>' + noteMark : '') +
           '<div class="dim">pay ' + S.addr(s.payTo[0]) + ' ' + S.addr(s.payTo[1]) + ' royalty ' + S.fmt(s.royalty) + '</div>' +

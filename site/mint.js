@@ -56,7 +56,7 @@
       return;
     }
     const overflow = pair.n > P.MAX;
-    if (eq) eq.textContent = pair.a + ' + ' + pair.b + ' = ' + (overflow ? 'overflow' : pair.n);
+    if (eq) eq.innerHTML = globalThis.TOKEN.sumHtml(pair.a, pair.b, overflow ? null : pair.n);
     if (grid) grid.innerHTML = overflow ? '' : S.bitHtml(pair.n);
     const oa = state.supply.get(pair.a);
     const ob = state.supply.get(pair.b);
