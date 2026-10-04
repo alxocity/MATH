@@ -29,6 +29,8 @@
     blockedDone: false,
     heldMath: [],
     heldRgb: [],
+    heldToon: [],
+    arm: null,
     toonOwn: '',
     indexState: 'loading',
     holdersReady: false,
@@ -125,6 +127,28 @@
   function short(a) {
     if (!a) return '';
     return a.slice(0, 6) + '…' + a.slice(-4);
+  }
+
+  function addr(a) {
+    const n = ENS.normAddr(a);
+    if (!n) return esc(short(a));
+    ENS.want(n);
+    const text = ENS.cached(n) || short(n);
+    return '<button type="button" class="addr" data-addr="' + n + '" data-label="' + esc(text) + '">' + esc(text) + '</button>';
+  }
+
+  function paintWho() {
+    const who = $('#who');
+    if (!who) return;
+    if (!state.account) { who.textContent = ''; return; }
+    who.innerHTML = addr(state.account);
+    ENS.flush(paintWho);
+  }
+
+  function syncMine() {
+    const b = document.querySelector('[data-tab="mine"]');
+    if (b) b.hidden = !state.account;
+    if (!state.account && state.tab === 'mine') show('browse');
   }
 
   function me() {
@@ -362,6 +386,7 @@
   }
 
   function show(tab, quiet) {
+    if (tab === 'mine' && !state.account) tab = 'browse';
     state.tab = tab;
     location.hash = tab;
     document.querySelectorAll('nav button').forEach(function (b) {
@@ -384,6 +409,7 @@
     fmt: fmt,
     hex: hex,
     short: short,
+    addr: addr,
     me: me,
     ctx: ctx,
     setStatus: setStatus,
@@ -410,17 +436,17 @@
     eth.request({ method: 'eth_accounts' }).then(function (acc) {
       if (!acc || !acc[0]) return;
       state.account = acc[0];
-      const who = $('#who');
-      if (who) who.textContent = short(state.account);
+      paintWho();
+      syncMine();
       loadWallet();
     }).catch(function () {});
     if (eth.on) {
       eth.on('accountsChanged', function (acc) {
         state.account = acc && acc[0] ? acc[0] : null;
-        const who = $('#who');
-        if (who) who.textContent = state.account ? short(state.account) : '';
+        paintWho();
+        syncMine();
         if (state.account) loadWallet();
-        if (state.tab === 'toon' || state.tab === 'mint') show(state.tab);
+        if (state.tab === 'toon' || state.tab === 'mint' || state.tab === 'mine' || state.tab === 'browse') show(state.tab);
       });
       eth.on('chainChanged', onChain);
     }
@@ -445,18 +471,21 @@
       return;
     }
     state.account = acc[0];
-    $('#who').textContent = short(state.account);
-    MOLD.say('connect', { addr: short(state.account), mine: mineCount(), math: state.math.length });
+    paintWho();
+    syncMine();
+    MOLD.say('connect', { addr: ENS.label(state.account), mine: mineCount(), math: state.math.length });
     loadWallet();
-    if (state.tab === 'toon' || state.tab === 'mint') show(state.tab);
+    if (state.tab === 'toon' || state.tab === 'mint' || state.tab === 'mine') show(state.tab);
   }
 
   async function loadHeld() {
     try {
       const mathHeld = await ETH.owned(ADDR.MATH, state.account, 2500);
       const rgbHeld = await ETH.owned(ADDR.RGB, state.account, 2500);
+      const toonHeld = await ETH.owned(ADDR.TOON, state.account, 2500);
       state.heldMath = mathHeld.ids;
       state.heldRgb = rgbHeld.ids;
+      state.heldToon = toonHeld.ids;
     } catch (e) { /* index list still stands */ }
   }
 
@@ -474,7 +503,8 @@
     } catch (e) {
       state.wordNote = e.message;
       await loadHeld();
-      if (state.tab === 'toon') show('toon');
+      paintWho();
+      if (state.tab === 'toon' || state.tab === 'mine') show(state.tab);
       return;
     }
     try {
@@ -503,7 +533,8 @@
     state.snapFaces.forEach(function (text, id) { state.faceText.set(id, text); });
     persistTexts();
     await loadHeld();
-    if (state.tab === 'toon') show('toon');
+    paintWho();
+    if (state.tab === 'toon' || state.tab === 'mine') show(state.tab);
   }
 
   let loadGen = 0;
@@ -656,6 +687,21 @@
     document.querySelectorAll('nav button').forEach(function (b) {
       b.onclick = function () { show(b.dataset.tab); };
     });
+    document.addEventListener('click', function (ev) {
+      const b = ev.target.closest('.addr');
+      if (!b) return;
+      const full = b.dataset.addr;
+      if (b.classList.contains('open')) {
+        b.classList.remove('open');
+        b.textContent = b.dataset.label;
+      } else {
+        b.classList.add('open');
+        b.textContent = full;
+      }
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(full).catch(function () {});
+      }
+    });
     $('#connect').onclick = function () { connect().catch(function (e) { setStatus(e.message); }); };
     $('#refresh').onclick = function () { refresh(); };
     MOLD.mount($('#mold'), function (s) {
@@ -695,7 +741,7 @@
       setStatus('loading index…');
     }
     const tab = (location.hash || '#browse').slice(1);
-    show(['browse', 'mint', 'route', 'rgb', 'toon', 'about'].indexOf(tab) === -1 ? 'browse' : tab);
+    show(['browse', 'mint', 'route', 'rgb', 'toon', 'about', 'mine'].indexOf(tab) === -1 ? 'browse' : tab);
     ETH.gasPrice().then(function (g) { state.gasPrice = g; }).catch(function () {});
     watchEthereum();
     refresh();

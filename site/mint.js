@@ -65,17 +65,21 @@
     const lines = [];
     if (!oa) lines.push('a is not in the loaded index');
     if (!ob) lines.push('b is not in the loaded index');
-    if (exists) lines.push('exists, owner ' + state.supply.get(pair.n));
+    const existsLine = exists ? 'exists, owner ' + S.addr(state.supply.get(pair.n)) + '<br>' : '';
     if (note === RULES.payout() || note === RULES.unchecked()) lines.push(note);
     const net = (oa && oa === S.me() ? 0n : P.ROY_WEI) + (ob && ob === S.me() ? 0n : P.ROY_WEI) + P.G_ADD * state.gasPrice;
-    lines.push('pays ' + (oa ? S.short(oa) : '?') + ' and ' + (ob ? S.short(ob) : '?'));
+    const pay = 'pays ' + (oa ? S.addr(oa) : '?') + ' and ' + (ob ? S.addr(ob) : '?');
     lines.push('msg.value 0.002, net about ' + S.fmt(net) + ' ETH after refunds and gas');
     if (meta) meta.innerHTML = lines.map(function (l) {
       let html = S.esc(l);
       if (l === RULES.payout()) html += S.mark('ⓘ', S.TIPS.blocked);
       if (l === RULES.unchecked()) html += S.mark('ⓘ', S.TIPS.unchecked);
       return html;
-    }).join('<br>') + S.mark('ⓘ', S.TIPS.fees);
+    }).join('<br>') + '<br>' + existsLine + pay + S.mark('ⓘ', S.TIPS.fees);
+    if (oa) ENS.want(oa);
+    if (ob) ENS.want(ob);
+    if (exists) ENS.want(state.supply.get(pair.n));
+    ENS.flush(function () { if (state.tab === 'mint' && $('#mintMeta')) paintMint(false); });
     const preview = mintPreview(pair.a, pair.b, pair.n, oa, ob);
     state.preview = preview;
     if ($('#preview')) $('#preview').textContent = preview;

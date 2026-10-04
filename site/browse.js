@@ -16,8 +16,10 @@
       } else {
         const word = tok.word != null && state.wordText.get(tok.word) || '';
         const face = tok.face != null && state.faceText.get(tok.face) || '';
-        const blob = (tok.owner + ' ' + word + ' ' + face).toLowerCase();
-        if (!blob.includes(f.q.toLowerCase())) return false;
+        const q = f.q.toLowerCase();
+        const text = (word + ' ' + face).toLowerCase();
+        const resolved = ENS.isName(q) ? ENS.forwardCached(q) : '';
+        if (!text.includes(q) && !ENS.ownerHit(tok.owner, q, ENS.cached(tok.owner), resolved)) return false;
       }
     }
     const pop = P.popcount(id > P.MAX ? id & P.MAX : id);
@@ -83,7 +85,7 @@
       }
       const tag = tags.filter(Boolean).join(' ');
       return '<article class="card"><div>' + (state.kind === 'toon' ? title : t.id) + (tag ? ' <span class="dim">' + S.esc(tag) + '</span>' : '') + marks.join('') + '</div>' +
-        '<div class="dim">' + S.esc(S.short(t.owner)) + '</div>' + extra + grid +
+        '<div class="dim">' + S.addr(t.owner) + '</div>' + extra + grid +
         '<img alt="" data-svg="' + state.kind + ':' + t.id + '"></article>';
     }).join('') || '<p class="dim">' + (state.math.length || state.rgb.length || state.toon.length ? 'nothing in this filter.' : (state.indexState === 'error' ? 'index not loaded. refresh.' : 'loading index…')) + '</p>';
     if (pager) {
@@ -96,6 +98,8 @@
       if (next) next.onclick = function () { state.page++; paintCards(); };
     }
     loadSvgs(slice.map(function (t) { return t.id; }));
+    slice.forEach(function (t) { ENS.want(t.owner); });
+    ENS.flush(function () { if (state.tab === 'browse' && $('#cards')) paintCards(); });
   }
 
   async function loadSvgs(ids) {
@@ -140,7 +144,7 @@
       '<button type="button" data-kind="toon"' + (state.kind === 'toon' ? ' class="on"' : '') + '>TOON ' + state.toon.length + '</button>' +
       '</div>' +
       '<div class="row">' +
-      '<input id="q" placeholder="id or owner" value="' + S.esc(f.q) + '">' +
+      '<input id="q" placeholder="id, owner, name" value="' + S.esc(f.q) + '">' +
       '<label>pop <input id="popMin" size="4" value="' + S.esc(f.popMin) + '"></label>' +
       '<label>..<input id="popMax" size="4" value="' + S.esc(f.popMax) + '"></label>' +
       '<label><input type="checkbox" id="pal"' + (f.pal ? ' checked' : '') + '> pal</label>' +
@@ -170,7 +174,19 @@
       state.page = 0;
       paintCards();
     }
-    ['q', 'popMin', 'popMax'].forEach(function (id) { $('#' + id).addEventListener('input', read); });
+    let nameWait = 0;
+    function readSoon() {
+      read();
+      const q = state.filter.q.trim().toLowerCase();
+      if (!ENS.isName(q) || ENS.hasForward(q)) return;
+      clearTimeout(nameWait);
+      nameWait = setTimeout(function () {
+        ENS.resolveForward(q).then(function () {
+          if (state.tab === 'browse' && state.filter.q.trim().toLowerCase() === q) paintCards();
+        });
+      }, 250);
+    }
+    ['q', 'popMin', 'popMax'].forEach(function (id) { $('#' + id).addEventListener('input', readSoon); });
     ['pal', 'pow', 'used', 'sort'].forEach(function (id) { $('#' + id).addEventListener('change', read); });
     paintCards();
   }
