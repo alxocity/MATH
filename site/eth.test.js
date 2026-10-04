@@ -168,7 +168,11 @@ function jsonResponse(payload) {
   assert.strictEqual(failed.unknown.size, 2);
   const failedResult = ETH.scanResult(failed);
   assert.strictEqual(failedResult.blockedDone, false);
-  down.forEach(function (a) { assert.ok(failedResult.blocked.has(a)); });
+  assert.strictEqual(failedResult.blocked.size, 0);
+  down.forEach(function (a) {
+    assert.ok(!failedResult.blocked.has(a));
+    assert.ok(failedResult.unknown.has(a));
+  });
   const before = localStorage.getItem('math.site.v1');
   assert.strictEqual(ETH.cacheScan({
     block: '1',

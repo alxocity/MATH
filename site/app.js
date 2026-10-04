@@ -21,9 +21,15 @@
     usedFace: new Set(),
     usedRgb: new Set(),
     usedMath: new Set(),
+    rgbBy: { r: new Map(), g: new Map(), b: new Map() },
+    toonBy: { word: new Map(), face: new Map(), rgb: new Map(), math: new Map() },
     channels: new Map(),
     blocked: new Set(),
+    unknown: new Set(),
     blockedDone: false,
+    heldMath: [],
+    heldRgb: [],
+    toonOwn: '',
     indexState: 'loading',
     holdersReady: false,
     heartPick: null,
@@ -61,13 +67,13 @@
   }
 
   const TIPS = {
-    blocked: "can't receive the 0.001 ETH payout. MATH (2019) pays with transfer's 2300 gas. a contract wallet needs more, so its MATH is not an input and the plan routes around it.",
+    blocked: "can't receive the 0.001 ETH payout. MATH (2019) pays with transfer's 2300 gas. some contract wallets need more, so their MATH is not an input and the plan routes around them.",
     unchecked: "the payout check couldn't reach a node. holder not confirmed. simulate before sending.",
     planes: 'lit pixels per channel. a bit count, not the token id.',
     fees: 'MATH add is 0.002 ETH, 0.001 to each input owner. RGB is 0.03 ETH, 0.01 to each channel owner. TOON is free.',
     used: 'used as R, G, or B. each MATH id once per channel, ever.',
     simulate: 'dry run via eth_call. no gas, nothing signed. with no wallet it runs from a placeholder address.',
-    mints: 'fewest MATH.add steps to build the target from existing tokens. cheapest mode may take more.',
+    mints: 'planned steps to build the target from existing tokens.',
   };
 
   function mark(glyph, label) {
@@ -99,6 +105,7 @@
       supply: state.supply,
       user: me(),
       blocked: state.blocked,
+      unknown: state.unknown,
       gasWei: P.G_ADD * state.gasPrice,
       mode: state.routeMode,
     };
@@ -129,11 +136,15 @@
     state.usedR = new Set();
     state.usedG = new Set();
     state.usedB = new Set();
+    state.rgbBy = { r: new Map(), g: new Map(), b: new Map() };
     state.channels = new Map();
     state.rgb.forEach(function (t) {
       state.usedR.add(t.r);
       state.usedG.add(t.g);
       state.usedB.add(t.b);
+      state.rgbBy.r.set(t.r, t.id);
+      state.rgbBy.g.set(t.g, t.id);
+      state.rgbBy.b.set(t.b, t.id);
       ['r', 'g', 'b'].forEach(function (ch) {
         const id = t[ch];
         if (!state.channels.has(id)) state.channels.set(id, new Set());
@@ -144,14 +155,20 @@
     state.usedFace = new Set();
     state.usedRgb = new Set();
     state.usedMath = new Set();
+    state.toonBy = { word: new Map(), face: new Map(), rgb: new Map(), math: new Map() };
     state.toon.forEach(function (t) {
       state.usedWord.add(t.word);
       state.usedFace.add(t.face);
       state.usedRgb.add(t.rgb);
       state.usedMath.add(t.id);
+      state.toonBy.word.set(t.word, t.id);
+      state.toonBy.face.set(t.face, t.id);
+      state.toonBy.rgb.set(t.rgb, t.id);
+      state.toonBy.math.set(t.id, t.id);
     });
     state.wordText = inv.words || new Map();
     state.faceText = inv.faces || new Map();
+    state.unknown = new Set();
     if (inv.blocked) state.blocked = inv.blocked;
     if (inv.blockedDone) state.blockedDone = true;
   }
@@ -255,11 +272,37 @@
     if (state.txLock === hash) state.txLock = null;
   }
 
-  async function sendStep(step) {
+  async function sendStep(step, really) {
     const preview = 'MATH.add(' + step.a + ', ' + step.b + ')\nto ' + ADDR.MATH + '\nvalue 0.002 ETH\nmint ' + step.result +
       '\npay ' + step.payTo[0] + '\npay ' + step.payTo[1];
     state.preview = preview;
     const box = $('#preview');
+    const note = globalThis.RULES.preferNote(
+      globalThis.RULES.holderNote(step.payTo[0], state.blocked, state.unknown),
+      globalThis.RULES.holderNote(step.payTo[1], state.blocked, state.unknown)
+    );
+    if (!really) {
+      try {
+        const tx = mathTx(step.a, step.b);
+        if (!state.account) tx.from = '0x0000000000000000000000000000000000000001';
+        const sim = await ETH.simulate(tx);
+        if (sim.error) {
+          if (box) box.textContent = preview + '\nsimulation reverted: ' + ETH.reason(sim.error);
+          MOLD.say('simFail', { err: ETH.reason(sim.error) });
+          return;
+        }
+        if (box) box.textContent = preview + '\nsimulation ok.';
+        MOLD.say('simOk');
+      } catch (e) {
+        if (box) box.textContent = preview + '\n' + e.message;
+      }
+      return;
+    }
+    if (note === globalThis.RULES.payout()) {
+      hit(note);
+      if (box) box.textContent = preview + '\n' + note;
+      return;
+    }
     if (box) box.textContent = preview + '\nre-checking owners and existence.';
     await guardSend(async function () {
       const oa = await ETH.ownerOf(ADDR.MATH, step.a);
@@ -274,6 +317,17 @@
       const hash = await ETH.send(tx);
       noteSent(hash, function () { state.supply.set(step.result, me()); });
     });
+  }
+
+  let lastRule = '';
+
+  function hit(reason) {
+    const next = reason || '';
+    if (next === lastRule) return;
+    lastRule = next;
+    if (!next) return;
+    const said = globalThis.RULES.mold(next);
+    if (said) MOLD.say(said.key, said.vars);
   }
 
   function show(tab, quiet) {
@@ -310,6 +364,7 @@
     noteSent: noteSent,
     sendStep: sendStep,
     show: show,
+    hit: hit,
     persistTexts: persistTexts,
   };
   globalThis.SITE = SITE;
@@ -328,6 +383,15 @@
     if (state.tab === 'toon' || state.tab === 'mint') show(state.tab);
   }
 
+  async function loadHeld() {
+    try {
+      const mathHeld = await ETH.owned(ADDR.MATH, state.account, 2500);
+      const rgbHeld = await ETH.owned(ADDR.RGB, state.account, 2500);
+      state.heldMath = mathHeld.ids;
+      state.heldRgb = rgbHeld.ids;
+    } catch (e) { /* index list still stands */ }
+  }
+
   async function loadWallet() {
     if (!state.account) return;
     let word;
@@ -341,6 +405,7 @@
       state.faceNote = face.truncated ? face.ids.length + ' of ' + face.total : String(face.total);
     } catch (e) {
       state.wordNote = e.message;
+      await loadHeld();
       if (state.tab === 'toon') show('toon');
       return;
     }
@@ -369,6 +434,7 @@
     state.snapWords.forEach(function (text, id) { state.wordText.set(id, text); });
     state.snapFaces.forEach(function (text, id) { state.faceText.set(id, text); });
     persistTexts();
+    await loadHeld();
     if (state.tab === 'toon') show('toon');
   }
 
@@ -385,6 +451,7 @@
   function paintIndex() {
     setStatus('block ' + state.block);
     if (state.tab === 'browse' || state.tab === 'toon') show(state.tab);
+    else if (state.tab === 'mint' && $('#send')) SITE.paintMint(false);
     else if (state.tab === 'rgb' && $('#rgbMeta') && state.planes) {
       $('#rgbMeta').innerHTML = SITE.issuesHtml(SITE.planeIssues(state.planes));
     }
@@ -397,6 +464,7 @@
       usedG: state.usedG,
       usedB: state.usedB,
       blocked: state.blocked,
+      unknown: state.unknown,
       user: me(),
       gasWei: 0n,
       mode: 'fewest',
@@ -492,6 +560,7 @@
       const scan = ETH.scanResult(await ETH.scanBlocked(owners, progress));
       if (gen !== loadGen) return;
       state.blocked = scan.blocked;
+      state.unknown = scan.unknown;
       state.blockedDone = scan.blockedDone;
       state.holdersReady = true;
       prepareHeart();

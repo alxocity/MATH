@@ -6,31 +6,107 @@
   const P = globalThis.PLAN;
   const ABI = globalThis.ABI;
   const ADDR = ETH.ADDR;
+  const RULES = globalThis.RULES;
 
-  function opt(ids, used, label) {
+  function opt(ids, kind, label) {
     return ids.map(function (id) {
-      const spent = used.has(id);
-      return '<option value="' + id + '"' + (spent ? ' disabled' : '') + '>' + S.esc(label(id)) + (spent ? ' used' : '') + '</option>';
+      const reason = RULES.toonPart(kind, id, state.toonBy[kind]);
+      return '<option value="' + id + '"' + (reason ? ' class="spent"' : '') + '>' +
+        S.esc(label(id)) + (reason ? ' — ' + S.esc(reason) : '') + '</option>';
     }).join('');
   }
 
-  function toon(view) {
+  function spentReason() {
+    const rows = [['tm', 'math'], ['tw', 'word'], ['tf', 'face'], ['tr', 'rgb']];
+    for (let i = 0; i < rows.length; i++) {
+      const el = $('#' + rows[i][0]);
+      if (!el || !el.value) continue;
+      const reason = RULES.toonPart(rows[i][1], el.value, state.toonBy[rows[i][1]]);
+      if (reason) return reason;
+    }
+    return '';
+  }
+
+  function listed(rows, held) {
     const m = S.me();
-    const maths = state.math.filter(function (t) { return t.owner === m; }).map(function (t) { return t.id; });
-    const rgbs = state.rgb.filter(function (t) { return t.owner === m; }).map(function (t) { return t.id; });
+    const ids = [];
+    const seen = new Set();
+    rows.forEach(function (t) {
+      if (t.owner !== m) return;
+      const s = t.id.toString();
+      if (seen.has(s)) return;
+      seen.add(s);
+      ids.push(t.id);
+    });
+    (held || []).forEach(function (id) {
+      const s = id.toString();
+      if (seen.has(s)) return;
+      seen.add(s);
+      ids.push(id);
+    });
+    return ids;
+  }
+
+  let ownGen = 0;
+
+  function toonWhy(pick) {
+    const spent = spentReason();
+    if (spent) return spent;
+    if (!state.account) return RULES.connectWallet();
+    if (!pick) return '';
+    if (state.toonOwn) return state.toonOwn;
+    return RULES.toonPart('math', pick.math, state.toonBy.math) ||
+      RULES.toonPart('word', pick.word, state.toonBy.word) ||
+      RULES.toonPart('face', pick.face, state.toonBy.face) ||
+      RULES.toonPart('rgb', pick.rgb, state.toonBy.rgb);
+  }
+
+  async function confirmOwn(pick) {
+    const gen = ++ownGen;
+    let owners;
+    try {
+      owners = await Promise.all([
+        ETH.ownerOf(ADDR.MATH, pick.math),
+        ETH.ownerOf(ADDR.WORD, pick.word),
+        ETH.ownerOf(ADDR.FACE, pick.face),
+        ETH.ownerOf(ADDR.RGB, pick.rgb),
+      ]);
+    } catch (e) {
+      return;
+    }
+    if (gen !== ownGen) return;
+    const who = S.me();
+    state.toonOwn = owners.every(function (o) { return o === who; }) ? '' : RULES.notYours();
+    paintToonWhy();
+    if (state.toonOwn) S.hit(state.toonOwn);
+  }
+
+  function paintToonWhy() {
+    const why = toonWhy(toonPick());
+    const btn = $('#sendToon');
+    const el = $('#toonWhy');
+    if (btn) btn.disabled = !!why;
+    if (el) el.textContent = why;
+  }
+
+  function toon(view) {
+    const maths = listed(state.math, state.heldMath);
+    const rgbs = listed(state.rgb, state.heldRgb);
     view.innerHTML =
-      '<div class="row"><label>MATH <select id="tm"><option value="">—</option>' + opt(maths, state.usedMath, function (id) { return id; }) + '</select></label></div>' +
-      '<div class="row"><label>WORD <select id="tw"><option value="">—</option>' + opt(state.words, state.usedWord, function (id) { return state.wordText.get(BigInt(id)) || id; }) + '</select></label>' +
+      '<div class="row"><label>MATH <select id="tm"><option value="">—</option>' + opt(maths, 'math', function (id) { return id; }) + '</select></label></div>' +
+      '<div class="row"><label>WORD <select id="tw"><option value="">—</option>' + opt(state.words, 'word', function (id) { return state.wordText.get(BigInt(id)) || id; }) + '</select></label>' +
       '<span class="dim">' + S.esc(state.wordNote) + '</span></div>' +
-      '<div class="row"><label>FACE <select id="tf"><option value="">—</option>' + opt(state.faces, state.usedFace, function (id) { return state.faceText.get(BigInt(id)) || id; }) + '</select></label>' +
+      '<div class="row"><label>FACE <select id="tf"><option value="">—</option>' + opt(state.faces, 'face', function (id) { return state.faceText.get(BigInt(id)) || id; }) + '</select></label>' +
       '<span class="dim">' + S.esc(state.faceNote) + '</span></div>' +
-      '<div class="row"><label>RGB <select id="tr"><option value="">—</option>' + opt(rgbs, state.usedRgb, rgbLabel) + '</select></label></div>' +
+      '<div class="row"><label>RGB <select id="tr"><option value="">—</option>' + opt(rgbs, 'rgb', rgbLabel) + '</select></label></div>' +
       '<div id="toonPrev"></div>' +
-      '<div class="preview" id="preview">TOON.add has no fee. you must own all four. used word, face, and rgb stay grey.' + S.mark('ⓘ', S.TIPS.fees) + '</div>' +
-      '<div class="row"><button type="button" id="simToon">simulate</button>' + S.mark('ⓘ', S.TIPS.simulate) + '<button type="button" id="sendToon">send add</button></div>';
+      '<div class="preview" id="preview">TOON.add has no fee. you must own all four. grey picks say why.' + S.mark('ⓘ', S.TIPS.fees) + '</div>' +
+      '<div class="row"><button type="button" id="simToon">simulate</button>' + S.mark('ⓘ', S.TIPS.simulate) + '<button type="button" id="sendToon">send add</button>' +
+      '<span id="toonWhy" class="bad"></span></div>';
     ['tm', 'tw', 'tf', 'tr'].forEach(function (id) { $('#' + id).addEventListener('change', previewToon); });
     $('#simToon').onclick = function () { sendToon(false); };
     $('#sendToon').onclick = function () { sendToon(true); };
+    paintToonWhy();
     if (!state.account) MOLD.say('noWallet');
   }
 
@@ -50,6 +126,13 @@
   }
 
   async function previewToon() {
+    const pick = toonPick();
+    state.toonOwn = '';
+    if (pick && state.account && !spentReason()) confirmOwn(pick);
+    const why = toonWhy(pick);
+    paintToonWhy();
+    S.hit(why);
+    if (why) return;
     const word = $('#tw').value;
     const face = $('#tf').value;
     const rgb = $('#tr').value;
@@ -94,16 +177,18 @@
 
   async function sendToon(really) {
     const pick = toonPick();
+    if (pick && state.account && !spentReason()) await confirmOwn(pick);
+    const why = toonWhy(pick);
+    S.hit(why);
     const preview = pick
       ? 'TOON.add(' + pick.math + ', ' + pick.word + ', ' + pick.face + ', ' + pick.rgb + ')\n' +
         (state.wordText.get(pick.word) || pick.word) + ' · ' + (state.faceText.get(pick.face) || pick.face) +
         '\nto ' + ADDR.TOON + '\nvalue 0'
       : 'pick four tokens.';
     state.preview = preview;
-    if ($('#preview')) $('#preview').textContent = preview;
-    if (!pick) return;
+    if ($('#preview')) $('#preview').textContent = why ? preview + '\n' + why : preview;
+    if (why || !pick) return;
     if (!really) {
-      if (!state.account) { MOLD.say('noWallet'); return; }
       try {
         const tx = toonTx(pick);
         const sim = await ETH.simulate(tx);

@@ -42,6 +42,7 @@ input[type="range"] { padding: 0; }
 nav button.on, button.on { border-color: var(--y); color: var(--y); }
 button { cursor: pointer; }
 button:disabled { opacity: 0.4; cursor: default; }
+option:disabled, option.spent { color: var(--dim); }
 main { padding: 16px 18px 48px; max-width: 920px; }
 aside {
   border-left: 1px solid var(--line);

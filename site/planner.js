@@ -44,13 +44,12 @@
     return c;
   }
 
-  // Short ids stay whole. A long MATH id is a 6-hex hash, so two nearby values do not share a label.
+  // Short ids stay whole. A longer one keeps both ends, so you can find it. Four digits still collide.
   function channelTag(n) {
     const s = BigInt(n).toString();
-    if (s.length <= 8) return s;
-    let x = 2166136261;
-    for (let i = 0; i < s.length; i++) x = Math.imul(x ^ s.charCodeAt(i), 16777619);
-    return '#' + (x >>> 0).toString(16).padStart(8, '0').slice(0, 6);
+    const keep = 5;
+    if (s.length <= keep * 2) return s;
+    return s.slice(0, keep) + '…' + s.slice(-keep);
   }
 
   function isPow2(n) {
@@ -130,7 +129,12 @@
       supply.set(BigInt(id), String(owner).toLowerCase());
     });
     const blocked = new Set();
-    ctx.blocked.forEach(function (a) { blocked.add(String(a).toLowerCase()); });
+    function take(set) {
+      if (!set) return;
+      set.forEach(function (a) { blocked.add(String(a).toLowerCase()); });
+    }
+    take(ctx.blocked);
+    take(ctx.unknown);
     return {
       supply: supply,
       user: String(ctx.user || '0x0000000000000000000000000000000000000000').toLowerCase(),

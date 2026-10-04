@@ -70,7 +70,7 @@
       let extra = '';
       let grid = S.bitHtml(t.id);
       if (state.kind === 'rgb') {
-        extra = '<div class="dim">r ' + P.channelTag(t.r) + ' · g ' + P.channelTag(t.g) + ' · b ' + P.channelTag(t.b) + '</div>';
+        extra = '<div class="dim">R ' + P.channelTag(t.r) + ' · G ' + P.channelTag(t.g) + ' · B ' + P.channelTag(t.b) + '</div>';
         grid = S.cellsHtml(P.planesToRows(t.r, t.g, t.b)).replace(/<button/g, '<i').replace(/<\/button>/g, '</i>');
       }
       if (state.kind === 'toon') {

@@ -3,6 +3,14 @@
   const state = S.state;
   const $ = S.$;
   const P = globalThis.PLAN;
+  const RULES = globalThis.RULES;
+
+  function stepNote(s) {
+    return RULES.preferNote(
+      RULES.holderNote(s.payTo[0], state.blocked, state.unknown),
+      RULES.holderNote(s.payTo[1], state.blocked, state.unknown)
+    );
+  }
 
   function paintRoute() {
     const host = $('#pieces');
@@ -58,16 +66,24 @@
       ', msg.value ' + S.fmt(built.msgValue) + ', net ~' + S.fmt(built.net) + warn);
     if (steps) {
       steps.innerHTML = built.steps.map(function (s, i) {
-        const blocked = state.blocked.has(s.payTo[0]) || state.blocked.has(s.payTo[1]);
+        const note = stepNote(s);
+        const sendOff = note === RULES.payout() ? ' disabled' : '';
+        const buttons = s.exists ? '' :
+          '<button type="button" data-sim="' + i + '">simulate</button>' + S.mark('ⓘ', S.TIPS.simulate) +
+          '<button type="button" data-send="' + i + '"' + sendOff + '>send</button>';
+        const noteMark = note === RULES.payout() ? S.mark('ⓘ', S.TIPS.blocked) : note === RULES.unchecked() ? S.mark('ⓘ', S.TIPS.unchecked) : '';
         return '<div class="step">' + s.a + ' + ' + s.b + ' = ' + s.result +
           (s.exists ? ' <span class="dim">exists</span>' : '') +
-          (blocked ? ' <span class="bad">blocked holder</span>' + S.mark('ⓘ', S.TIPS.blocked) : '') +
+          (note ? ' <span class="' + (note === RULES.unchecked() ? 'dim' : 'bad') + '">' + S.esc(note) + '</span>' + noteMark : '') +
           '<div class="dim">pay ' + S.esc(S.short(s.payTo[0])) + ' ' + S.esc(S.short(s.payTo[1])) + ' royalty ' + S.fmt(s.royalty) + '</div>' +
-          (s.exists ? '' : '<button type="button" data-step="' + i + '">simulate + send</button>' + S.mark('ⓘ', S.TIPS.simulate)) +
+          buttons +
           '</div>';
       }).join('') || '<p class="dim">already minted.</p>';
-      steps.querySelectorAll('[data-step]').forEach(function (b) {
-        b.onclick = function () { S.sendStep(built.steps[Number(b.dataset.step)]); };
+      steps.querySelectorAll('[data-sim]').forEach(function (b) {
+        b.onclick = function () { S.sendStep(built.steps[Number(b.dataset.sim)], false); };
+      });
+      steps.querySelectorAll('[data-send]').forEach(function (b) {
+        b.onclick = function () { S.sendStep(built.steps[Number(b.dataset.send)], true); };
       });
     }
     const box = $('#preview');
@@ -104,6 +120,7 @@
       state.routeBuilt = built;
       state.preview = '';
       MOLD.say('route', { mints: built.mints, net: S.fmt(built.net) });
+      if (built.steps.some(function (s) { return stepNote(s) === RULES.payout(); })) S.hit(RULES.payout());
     } catch (e) {
       state.routeBuilt = null;
       state.routePieces = [];

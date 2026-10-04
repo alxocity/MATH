@@ -53,10 +53,12 @@ assert.strictEqual(P.channelTag(1n), '1');
 assert.strictEqual(P.channelTag(2n), '2');
 assert.strictEqual(P.channelTag(4n), '4');
 assert.strictEqual(P.channelTag(8n), '8');
+assert.strictEqual(P.channelTag(100000000n), '100000000');
 const nearA = 101331771248505046160055760990721661926188008979951677663145697618389970780160n;
 const nearB = 101331771248505046160055760990721661926188010277708979948948604697532247900160n;
+assert.strictEqual(P.channelTag(nearA), '10133…80160');
+assert.strictEqual(P.channelTag(nearB), '10133…00160');
 assert.notStrictEqual(P.channelTag(nearA), P.channelTag(nearB));
-assert.ok(P.channelTag(nearA).charAt(0) === '#');
 
 const user = '0xabcabcabcabcabcabcabcabcabcabcabcabcabca';
 const stranger = '0xdefdefdefdefdefdefdefdefdefdefdefdefdefd';
@@ -93,6 +95,12 @@ leavesOk(few15);
 assert.strictEqual(few15.mints, 4);
 assert.strictEqual(few15.royalty, P.ROY_WEI);
 assert.ok(few15.pieces.includes(8n));
+
+const viaUnknown = P.plan(15n, Object.assign(ctx('fewest'), {
+  blocked: new Set(),
+  unknown: new Set([blockedOwner]),
+}));
+leavesOk(viaUnknown);
 
 const cheap15 = P.plan(15n, ctx('cheapest'));
 leavesOk(cheap15);
