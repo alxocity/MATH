@@ -28,23 +28,7 @@
   }
 
   function listed(rows, held) {
-    const m = S.me();
-    const ids = [];
-    const seen = new Set();
-    rows.forEach(function (t) {
-      if (t.owner !== m) return;
-      const s = t.id.toString();
-      if (seen.has(s)) return;
-      seen.add(s);
-      ids.push(t.id);
-    });
-    (held || []).forEach(function (id) {
-      const s = id.toString();
-      if (seen.has(s)) return;
-      seen.add(s);
-      ids.push(id);
-    });
-    return ids;
+    return globalThis.LIST.ownedRows(rows, held, S.me()).map(function (t) { return t.id; });
   }
 
   let ownGen = 0;
@@ -87,6 +71,15 @@
     const el = $('#toonWhy');
     if (btn) btn.disabled = !!why;
     if (el) el.textContent = why;
+  }
+
+  function paintPartLinks() {
+    const math = $('#tm') && $('#tm').value;
+    const rgb = $('#tr') && $('#tr').value;
+    const ml = $('#tmLink');
+    const rl = $('#trLink');
+    if (ml) ml.innerHTML = math ? globalThis.TOKEN.idLink('math', math) : '';
+    if (rl) rl.innerHTML = rgb ? globalThis.TOKEN.idLink('rgb', rgb) : '';
   }
 
   let toonHint = null;
@@ -176,100 +169,104 @@
     const tf = $('#tf');
     const tr = $('#tr');
     if (!tm || !tw || !tf || !tr) return;
-    if (toonHint) {
-      restoreUser(tm, toonHint.ownMath, toonHint.math);
-      restoreUser(tw, toonHint.ownWord, toonHint.word);
-      restoreUser(tf, toonHint.ownFace, toonHint.face);
-      restoreUser(tr, toonHint.ownRgb, toonHint.rgb);
-    }
-    const example = !state.account;
-    const free = {
-      math: SUGGEST.fieldFree(tm.value, toonHint && toonHint.ownMath ? toonHint.math : null),
-      word: SUGGEST.fieldFree(tw.value, toonHint && toonHint.ownWord ? toonHint.word : null),
-      face: SUGGEST.fieldFree(tf.value, toonHint && toonHint.ownFace ? toonHint.face : null),
-      rgb: SUGGEST.fieldFree(tr.value, toonHint && toonHint.ownRgb ? toonHint.rgb : null),
-    };
-    if (!free.math && !free.word && !free.face && !free.rgb) {
-      paintToonHint(false, '');
-      if (tm.value && tw.value && tf.value && tr.value) previewToon();
-      return;
-    }
-    const ctx = toonCtx();
-    const toonValues = { math: tm.value, word: tw.value, face: tf.value, rgb: tr.value };
-    const toonOwns = toonHint && {
-      math: !!toonHint.ownMath, word: !!toonHint.ownWord, face: !!toonHint.ownFace, rgb: !!toonHint.ownRgb,
-    };
-    const shown = toonHint && {
-      math: toonHint.ownMath ? toonHint.math : tm.value,
-      word: toonHint.ownWord ? toonHint.word : tw.value,
-      face: toonHint.ownFace ? toonHint.face : tf.value,
-      rgb: toonHint.ownRgb ? toonHint.rgb : tr.value,
-    };
-    const toonFilled = shown && shown.math && shown.word && shown.face && shown.rgb;
-    if (!advance && SUGGEST.keepParts(toonHint, toonValues, toonOwns, toonFilled && SUGGEST.toonTuple(ctx, { lock: shown }))) {
-      if (free.math && toonHint.ownMath) choose(tm, toonHint.math);
-      if (free.word && toonHint.ownWord) choose(tw, toonHint.word);
-      if (free.face && toonHint.ownFace) choose(tf, toonHint.face);
-      if (free.rgb && toonHint.ownRgb) choose(tr, toonHint.rgb);
-      const pure = tm.value === String(toonHint.math) && tw.value === String(toonHint.word) &&
-        tf.value === String(toonHint.face) && tr.value === String(toonHint.rgb);
-      paintToonHint(example && pure, '');
-      if (free.math || free.word || free.face || free.rgb) previewToon();
-      return;
-    }
-    let cursor = null;
-    if (advance && toonHint &&
-      (free.math || tm.value === String(toonHint.math)) &&
-      (free.word || tw.value === String(toonHint.word)) &&
-      (free.face || tf.value === String(toonHint.face)) &&
-      (free.rgb || tr.value === String(toonHint.rgb))) {
-      try {
-        cursor = {
-          math: BigInt(toonHint.math),
-          word: BigInt(toonHint.word),
-          face: BigInt(toonHint.face),
-          rgb: BigInt(toonHint.rgb),
-        };
-      } catch (e) { cursor = null; }
-    }
-    const next = SUGGEST.toonTuple(ctx, {
-      cursor: cursor,
-      lock: {
-        math: free.math ? null : tm.value,
-        word: free.word ? null : tw.value,
-        face: free.face ? null : tf.value,
-        rgb: free.rgb ? null : tr.value,
-      },
-    });
-    if (!next) {
-      const stale = toonHint && !SUGGEST.toonTuple(ctx, { lock: hintLock(toonHint) });
-      if (stale) {
-        if (free.math) tm.value = '';
-        if (free.word) tw.value = '';
-        if (free.face) tf.value = '';
-        if (free.rgb) tr.value = '';
-        toonHint = null;
+    try {
+      if (toonHint) {
+        restoreUser(tm, toonHint.ownMath, toonHint.math);
+        restoreUser(tw, toonHint.ownWord, toonHint.word);
+        restoreUser(tf, toonHint.ownFace, toonHint.face);
+        restoreUser(tr, toonHint.ownRgb, toonHint.rgb);
       }
-      paintToonHint(false, advance && toonHint ? 'nothing else' : 'nothing to suggest');
-      return;
+      const example = !state.account;
+      const free = {
+        math: SUGGEST.fieldFree(tm.value, toonHint && toonHint.ownMath ? toonHint.math : null),
+        word: SUGGEST.fieldFree(tw.value, toonHint && toonHint.ownWord ? toonHint.word : null),
+        face: SUGGEST.fieldFree(tf.value, toonHint && toonHint.ownFace ? toonHint.face : null),
+        rgb: SUGGEST.fieldFree(tr.value, toonHint && toonHint.ownRgb ? toonHint.rgb : null),
+      };
+      if (!free.math && !free.word && !free.face && !free.rgb) {
+        paintToonHint(false, '');
+        if (tm.value && tw.value && tf.value && tr.value) previewToon();
+        return;
+      }
+      const ctx = toonCtx();
+      const toonValues = { math: tm.value, word: tw.value, face: tf.value, rgb: tr.value };
+      const toonOwns = toonHint && {
+        math: !!toonHint.ownMath, word: !!toonHint.ownWord, face: !!toonHint.ownFace, rgb: !!toonHint.ownRgb,
+      };
+      const shown = toonHint && {
+        math: toonHint.ownMath ? toonHint.math : tm.value,
+        word: toonHint.ownWord ? toonHint.word : tw.value,
+        face: toonHint.ownFace ? toonHint.face : tf.value,
+        rgb: toonHint.ownRgb ? toonHint.rgb : tr.value,
+      };
+      const toonFilled = shown && shown.math && shown.word && shown.face && shown.rgb;
+      if (!advance && SUGGEST.keepParts(toonHint, toonValues, toonOwns, toonFilled && SUGGEST.toonTuple(ctx, { lock: shown }))) {
+        if (free.math && toonHint.ownMath) choose(tm, toonHint.math);
+        if (free.word && toonHint.ownWord) choose(tw, toonHint.word);
+        if (free.face && toonHint.ownFace) choose(tf, toonHint.face);
+        if (free.rgb && toonHint.ownRgb) choose(tr, toonHint.rgb);
+        const pure = tm.value === String(toonHint.math) && tw.value === String(toonHint.word) &&
+          tf.value === String(toonHint.face) && tr.value === String(toonHint.rgb);
+        paintToonHint(example && pure, '');
+        if (free.math || free.word || free.face || free.rgb) previewToon();
+        return;
+      }
+      let cursor = null;
+      if (advance && toonHint &&
+        (free.math || tm.value === String(toonHint.math)) &&
+        (free.word || tw.value === String(toonHint.word)) &&
+        (free.face || tf.value === String(toonHint.face)) &&
+        (free.rgb || tr.value === String(toonHint.rgb))) {
+        try {
+          cursor = {
+            math: BigInt(toonHint.math),
+            word: BigInt(toonHint.word),
+            face: BigInt(toonHint.face),
+            rgb: BigInt(toonHint.rgb),
+          };
+        } catch (e) { cursor = null; }
+      }
+      const next = SUGGEST.toonTuple(ctx, {
+        cursor: cursor,
+        lock: {
+          math: free.math ? null : tm.value,
+          word: free.word ? null : tw.value,
+          face: free.face ? null : tf.value,
+          rgb: free.rgb ? null : tr.value,
+        },
+      });
+      if (!next) {
+        const stale = toonHint && !SUGGEST.toonTuple(ctx, { lock: hintLock(toonHint) });
+        if (stale) {
+          if (free.math) tm.value = '';
+          if (free.word) tw.value = '';
+          if (free.face) tf.value = '';
+          if (free.rgb) tr.value = '';
+          toonHint = null;
+        }
+        paintToonHint(false, advance && toonHint ? 'nothing else' : 'nothing to suggest');
+        return;
+      }
+      if (free.math) choose(tm, next.math);
+      if (free.word) choose(tw, next.word);
+      if (free.face) choose(tf, next.face);
+      if (free.rgb) choose(tr, next.rgb);
+      toonHint = {
+        math: tm.value,
+        word: tw.value,
+        face: tf.value,
+        rgb: tr.value,
+        ownMath: !!free.math,
+        ownWord: !!free.word,
+        ownFace: !!free.face,
+        ownRgb: !!free.rgb,
+        example: example,
+      };
+      paintToonHint(example && free.math && free.word && free.face && free.rgb, '');
+      previewToon();
+    } finally {
+      paintPartLinks();
     }
-    if (free.math) choose(tm, next.math);
-    if (free.word) choose(tw, next.word);
-    if (free.face) choose(tf, next.face);
-    if (free.rgb) choose(tr, next.rgb);
-    toonHint = {
-      math: tm.value,
-      word: tw.value,
-      face: tf.value,
-      rgb: tr.value,
-      ownMath: !!free.math,
-      ownWord: !!free.word,
-      ownFace: !!free.face,
-      ownRgb: !!free.rgb,
-      example: example,
-    };
-    paintToonHint(example && free.math && free.word && free.face && free.rgb, '');
-    previewToon();
   }
 
   function shiftAccount() {
@@ -298,12 +295,12 @@
     const maths = listed(state.math, state.heldMath);
     const rgbs = listed(state.rgb, state.heldRgb);
     view.innerHTML =
-      '<div class="row"><label class="num">MATH <select id="tm"><option value="">—</option>' + opt(maths, 'math', function (id) { return id; }) + '</select></label></div>' +
+      '<div class="row"><label class="num">MATH <select id="tm"><option value="">—</option>' + opt(maths, 'math', function (id) { return id; }) + '</select> <span id="tmLink"></span></label></div>' +
       '<div class="row"><label class="num">WORD <select id="tw"><option value="">—</option>' + opt(state.words, 'word', function (id) { return state.wordText.get(BigInt(id)) || id; }) + '</select></label>' +
       '<span class="dim">' + S.esc(state.wordNote) + '</span></div>' +
       '<div class="row"><label class="num">FACE <select id="tf"><option value="">—</option>' + opt(state.faces, 'face', function (id) { return state.faceText.get(BigInt(id)) || id; }) + '</select></label>' +
       '<span class="dim">' + S.esc(state.faceNote) + '</span></div>' +
-      '<div class="row"><label class="num">RGB <select id="tr"><option value="">—</option>' + opt(rgbs, 'rgb', rgbLabel) + '</select></label></div>' +
+      '<div class="row"><label class="num">RGB <select id="tr"><option value="">—</option>' + opt(rgbs, 'rgb', rgbLabel) + '</select> <span id="trLink"></span></label></div>' +
       '<div class="row"><button type="button" id="suggest">suggest another</button><span id="hintNote" class="dim"></span></div>' +
       '<div id="toonPrev"><p class="dim toon-wait">pick four.</p></div>' +
       '<div class="preview" id="preview">TOON.add has no fee. you must own all four. grey picks say why.' + S.mark('ⓘ', S.TIPS.fees) + '</div>' +
@@ -321,6 +318,7 @@
         if (el && el.textContent === 'example' && toonHint &&
           ($('#tm').value !== toonHint.math || $('#tw').value !== toonHint.word ||
            $('#tf').value !== toonHint.face || $('#tr').value !== toonHint.rgb)) el.textContent = '';
+        paintPartLinks();
         previewToon();
       });
     });
@@ -353,6 +351,7 @@
         choose(el, v);
       });
     }
+    paintPartLinks();
     if (!state.account) MOLD.say('noWallet');
     fillToon(false);
   }

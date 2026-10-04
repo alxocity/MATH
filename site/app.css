@@ -139,7 +139,12 @@ label.num input, label.num select { flex: 1 1 auto; min-width: 0; width: 100%; }
 }
 #cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 190px), 1fr)); gap: 12px; min-width: 0; }
 .card { border: 1px solid var(--line); padding: 8px; min-width: 0; }
-.card img { width: 100%; background: var(--tile); border: 1px solid var(--tile-line); image-rendering: pixelated; display: block; margin-top: 6px; }
+.card img, .token { width: 100%; background: var(--tile); border: 1px solid var(--tile-line); image-rendering: pixelated; display: block; margin-top: 6px; }
+.token { width: min(100%, 350px); height: auto; }
+.traits { display: flex; flex-wrap: wrap; gap: 4px 12px; margin: 8px 0; }
+.traits b { font-weight: 500; color: var(--dim); }
+button.share { color: var(--dim); }
+.card button.share { background: transparent; border-color: transparent; padding: 0 6px; min-width: 2em; min-height: 2em; }
 .bits, .cells { display: grid; gap: 1px; width: 100%; max-width: 16rem; }
 .bits { grid-template-columns: repeat(16, minmax(0, 1fr)); }
 .bits i { width: 100%; aspect-ratio: 1; background: #1b1b18; display: block; }

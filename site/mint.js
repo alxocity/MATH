@@ -56,7 +56,7 @@
       return;
     }
     const overflow = pair.n > P.MAX;
-    if (eq) eq.textContent = pair.a + ' + ' + pair.b + ' = ' + (overflow ? 'overflow' : pair.n);
+    if (eq) eq.innerHTML = globalThis.TOKEN.sumHtml(pair.a, pair.b, overflow ? null : pair.n);
     if (grid) grid.innerHTML = overflow ? '' : S.bitHtml(pair.n);
     const oa = state.supply.get(pair.a);
     const ob = state.supply.get(pair.b);
@@ -134,22 +134,7 @@
   }
 
   function ownedMath() {
-    const who = S.me();
-    const ids = [];
-    const seen = new Set();
-    function add(id) {
-      let x;
-      try { x = BigInt(id); } catch (e) { return; }
-      const k = x.toString();
-      if (seen.has(k)) return;
-      seen.add(k);
-      ids.push(x);
-    }
-    state.math.forEach(function (t) {
-      if (t.owner && t.owner.toLowerCase() === who) add(t.id);
-    });
-    state.heldMath.forEach(add);
-    return ids;
+    return globalThis.LIST.ownedRows(state.math, state.heldMath, S.me()).map(function (t) { return t.id; });
   }
 
   function mathCtx() {

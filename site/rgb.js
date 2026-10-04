@@ -180,14 +180,14 @@
         const note = payNote(step);
         const sendOff = note === RULES.payout() ? ' disabled' : '';
         const noteMark = note === RULES.payout() ? S.mark('ⓘ', S.TIPS.blocked) : note === RULES.unchecked() ? S.mark('ⓘ', S.TIPS.unchecked) : '';
-        return '<div class="step">' + (i + 1) + '. ' + step.a + ' + ' + step.b + ' = ' + step.result +
+        return '<div class="step">' + (i + 1) + '. ' + globalThis.TOKEN.sumHtml(step.a, step.b, step.result) +
           (note ? ' <span class="' + (note === RULES.unchecked() ? 'dim' : 'bad') + '">' + S.esc(note) + '</span>' + noteMark : '') +
           ' <button type="button" data-sim="' + i + '">simulate</button>' + S.mark('ⓘ', S.TIPS.simulate) +
           '<button type="button" data-send="' + i + '"' + sendOff + '>send</button></div>';
       }
       const why = rgbQueueWhy(tx);
       const used = why && why.indexOf('already used') !== -1 ? S.mark('ⓘ', S.TIPS.used) : '';
-      return '<div class="step">' + (i + 1) + '. RGB.add ' + tx.r + ', ' + tx.g + ', ' + tx.b +
+      return '<div class="step">' + (i + 1) + '. RGB.add ' + globalThis.TOKEN.planesHtml(tx.r, tx.g, tx.b) +
         ' value 0.03' + S.mark('ⓘ', S.TIPS.fees) +
         (why ? ' <span class="bad">' + S.esc(why) + '</span>' + used :
           ' <button type="button" data-sim="' + i + '">simulate</button>' + S.mark('ⓘ', S.TIPS.simulate) +
