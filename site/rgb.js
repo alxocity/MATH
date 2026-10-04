@@ -354,13 +354,21 @@
       if (meta) meta.innerHTML = issuesHtml(planeIssues(state.planes));
       return;
     }
-    if (!advance && rgbHint && rgbHint.ownR && rgbHint.ownG && rgbHint.ownB && rgbReady(rgbHint)) {
-      if (rFree) rEl.value = String(rgbHint.r);
-      if (gFree) gEl.value = String(rgbHint.g);
-      if (bFree) bEl.value = String(rgbHint.b);
+    const shown = rgbHint && {
+      r: rgbHint.ownR ? rgbHint.r : rEl.value,
+      g: rgbHint.ownG ? rgbHint.g : gEl.value,
+      b: rgbHint.ownB ? rgbHint.b : bEl.value,
+    };
+    const rgbValues = { r: rEl.value, g: gEl.value, b: bEl.value };
+    const rgbOwns = rgbHint && { r: !!rgbHint.ownR, g: !!rgbHint.ownG, b: !!rgbHint.ownB };
+    const rgbFilled = shown && String(shown.r).trim() && String(shown.g).trim() && String(shown.b).trim();
+    if (!advance && SUGGEST.keepParts(rgbHint, rgbValues, rgbOwns, rgbFilled && rgbReady(shown))) {
+      if (rgbHint.ownR && rFree) rEl.value = String(rgbHint.r);
+      if (rgbHint.ownG && gFree) gEl.value = String(rgbHint.g);
+      if (rgbHint.ownB && bFree) bEl.value = String(rgbHint.b);
       const pure = rEl.value === String(rgbHint.r) && gEl.value === String(rgbHint.g) && bEl.value === String(rgbHint.b);
       paintRgbHint(example && pure, '');
-      if (rFree || gFree || bFree) rEl.dispatchEvent(new Event('change'));
+      rEl.dispatchEvent(new Event('change'));
       return;
     }
     const ids = [];

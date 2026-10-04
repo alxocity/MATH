@@ -142,6 +142,14 @@ assert.strictEqual(S.hintFree('536', { value: '536', example: true }, true, fals
 assert.strictEqual(S.hintFree('9', exampleHint, true, false), false);
 assert.strictEqual(S.hintFree('1', exampleHint, false, true), false);
 assert.strictEqual(S.hintFree('5', { value: '5', example: true }, false, false), false);
+
+const armed = { r: '65537', g: '6', b: '7' };
+const armedOwns = { r: false, g: true, b: true };
+assert.strictEqual(S.keepParts(armed, { r: '65537', g: '6', b: '7' }, armedOwns, true), true);
+assert.strictEqual(S.keepParts(armed, { r: '9', g: '6', b: '7' }, armedOwns, true), true);
+assert.strictEqual(S.keepParts(armed, { r: '65537', g: '1', b: '7' }, armedOwns, true), false);
+assert.strictEqual(S.keepParts(armed, armed, armedOwns, false), false);
+assert.strictEqual(S.keepParts(null, armed, armedOwns, true), false);
 assert.strictEqual(S.hintFree('1', exampleHint, true, true), true);
 assert.strictEqual(S.hintFree('1', null, false, false), false);
 

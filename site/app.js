@@ -1338,7 +1338,7 @@
 
   function paintIndex() {
     setStatus('block ' + state.block);
-    if (state.tab === 'browse' || state.tab === 'toon') show(state.tab);
+    if (state.tab === 'browse' || state.tab === 'toon' || state.tab === 'mine') show(state.tab);
     else if (state.tab === 'mint' && SITE.fillMint) SITE.fillMint(false);
     else if (state.tab === 'rgb' && SITE.fillRgb) SITE.fillRgb(false);
   }
