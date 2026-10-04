@@ -176,23 +176,29 @@
     if (!aEl || !bEl) return;
     const example = !state.account;
     if (mathHint && mathHint.example !== example) mathHint = null;
-    const aFree = SUGGEST.fieldFree(aEl.value, mathHint && mathHint.a);
-    const bFree = SUGGEST.fieldFree(bEl.value, mathHint && mathHint.b);
+    const aFree = SUGGEST.fieldFree(aEl.value, mathHint && mathHint.ownA ? mathHint.a : null);
+    const bFree = SUGGEST.fieldFree(bEl.value, mathHint && mathHint.ownB ? mathHint.b : null);
     const ctx = mathCtx();
     if (!aFree && !bFree) {
       paintHint(false, '');
       paintMint(false);
       return;
     }
-    if (!advance && mathHint && SUGGEST.mathOk(ctx, mathHint.a, mathHint.b)) {
+    if (!advance && mathHint && mathHint.ownA && mathHint.ownB && SUGGEST.mathOk(ctx, mathHint.a, mathHint.b)) {
       if (aFree) aEl.value = String(mathHint.a);
       if (bFree) bEl.value = String(mathHint.b);
       paintHint(example, '');
       paintMint(false);
       return;
     }
+    let cursor = null;
+    if (advance && mathHint &&
+      (aFree || aEl.value === String(mathHint.a)) &&
+      (bFree || bEl.value === String(mathHint.b))) {
+      try { cursor = { a: BigInt(mathHint.a), b: BigInt(mathHint.b) }; } catch (e) { cursor = null; }
+    }
     const next = SUGGEST.mathPair(ctx, {
-      cursor: advance && mathHint ? { a: BigInt(mathHint.a), b: BigInt(mathHint.b) } : null,
+      cursor: cursor,
       lockA: aFree ? null : aEl.value,
       lockB: bFree ? null : bEl.value,
     });
@@ -209,8 +215,14 @@
     }
     if (aFree) aEl.value = next.a.toString();
     if (bFree) bEl.value = next.b.toString();
-    mathHint = { a: aEl.value, b: bEl.value, example: example };
-    paintHint(example && aEl.value === mathHint.a && bEl.value === mathHint.b, '');
+    mathHint = {
+      a: aEl.value,
+      b: bEl.value,
+      ownA: aFree,
+      ownB: bFree,
+      example: example,
+    };
+    paintHint(example && aFree && bFree, '');
     paintMint(false);
   }
 

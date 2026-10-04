@@ -343,26 +343,29 @@
     const bEl = $('#pB');
     if (!rEl || !gEl || !bEl) return;
     const example = !state.account;
-    const rFree = rgbFree(rEl.value, rgbHint && rgbHint.r);
-    const gFree = rgbFree(gEl.value, rgbHint && rgbHint.g);
-    const bFree = rgbFree(bEl.value, rgbHint && rgbHint.b);
+    const rFree = rgbFree(rEl.value, rgbHint && rgbHint.ownR ? rgbHint.r : null);
+    const gFree = rgbFree(gEl.value, rgbHint && rgbHint.ownG ? rgbHint.g : null);
+    const bFree = rgbFree(bEl.value, rgbHint && rgbHint.ownB ? rgbHint.b : null);
     if (!rFree && !gFree && !bFree) {
       paintRgbHint(false, '');
       return;
     }
-    if (!advance && rgbReady(rgbHint)) {
+    if (!advance && rgbHint && rgbHint.ownR && rgbHint.ownG && rgbHint.ownB && rgbReady(rgbHint)) {
       if (rFree) rEl.value = String(rgbHint.r);
       if (gFree) gEl.value = String(rgbHint.g);
       if (bFree) bEl.value = String(rgbHint.b);
-      rgbHint.example = example;
-      paintRgbHint(example, '');
-      rEl.dispatchEvent(new Event('change'));
+      const pure = rEl.value === String(rgbHint.r) && gEl.value === String(rgbHint.g) && bEl.value === String(rgbHint.b);
+      paintRgbHint(example && pure, '');
+      if (rFree || gFree || bFree) rEl.dispatchEvent(new Event('change'));
       return;
     }
     const ids = [];
     state.supply.forEach(function (owner, id) { ids.push(id); });
     let avoid = null;
-    if (advance && rgbHint) {
+    if (advance && rgbHint &&
+      (rFree || rEl.value === String(rgbHint.r)) &&
+      (gFree || gEl.value === String(rgbHint.g)) &&
+      (bFree || bEl.value === String(rgbHint.b))) {
       try { avoid = { r: BigInt(rgbHint.r), g: BigInt(rgbHint.g), b: BigInt(rgbHint.b) }; }
       catch (e) { avoid = null; }
     }
@@ -393,8 +396,16 @@
     if (rFree) rEl.value = next.r.toString();
     if (gFree) gEl.value = next.g.toString();
     if (bFree) bEl.value = next.b.toString();
-    rgbHint = { r: rEl.value, g: gEl.value, b: bEl.value, example: example };
-    paintRgbHint(example, '');
+    rgbHint = {
+      r: rEl.value,
+      g: gEl.value,
+      b: bEl.value,
+      ownR: !!rFree,
+      ownG: !!gFree,
+      ownB: !!bFree,
+      example: example,
+    };
+    paintRgbHint(example && rFree && gFree && bFree, '');
     rEl.dispatchEvent(new Event('change'));
   }
 
