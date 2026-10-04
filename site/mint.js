@@ -232,8 +232,14 @@
       if (!el || el.textContent !== 'example' || !mathHint) return;
       if ($('#a').value !== String(mathHint.a) || $('#b').value !== String(mathHint.b)) el.textContent = '';
     };
-    $('#a').addEventListener('input', draw);
-    $('#b').addEventListener('input', draw);
+    function typed(ownKey) {
+      return function (ev) {
+        if (ev.isTrusted && mathHint) mathHint[ownKey] = false;
+        draw();
+      };
+    }
+    $('#a').addEventListener('input', typed('ownA'));
+    $('#b').addEventListener('input', typed('ownB'));
     $('#suggest').onclick = function () { fillMint(true); };
     $('#sim').onclick = function () { paintMint(true, true); };
     $('#send').onclick = function () {

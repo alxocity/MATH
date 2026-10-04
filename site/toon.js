@@ -242,7 +242,11 @@
           if (free.word) tw.value = '';
           if (free.face) tf.value = '';
           if (free.rgb) tr.value = '';
-          toonHint = null;
+          toonHint.math = free.math ? '' : tm.value;
+          toonHint.word = free.word ? '' : tw.value;
+          toonHint.face = free.face ? '' : tf.value;
+          toonHint.rgb = free.rgb ? '' : tr.value;
+          if (!toonHint.math && !toonHint.word && !toonHint.face && !toonHint.rgb) toonHint = null;
         }
         paintToonHint(false, advance && toonHint ? 'nothing else' : 'nothing to suggest');
         return;
@@ -310,7 +314,12 @@
     const pickOwn = { tm: 'ownMath', tw: 'ownWord', tf: 'ownFace', tr: 'ownRgb' };
     ['tm', 'tw', 'tf', 'tr'].forEach(function (id) {
       $('#' + id).addEventListener('change', function (ev) {
-        if (ev.isTrusted && toonHint) {
+        if (ev.isTrusted) {
+          if (!toonHint) toonHint = {
+            math: '', word: '', face: '', rgb: '',
+            ownMath: true, ownWord: true, ownFace: true, ownRgb: true,
+            example: !state.account,
+          };
           toonHint[pickKey[id]] = $('#' + id).value;
           toonHint[pickOwn[id]] = false;
         }

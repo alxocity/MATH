@@ -142,6 +142,12 @@ assert.strictEqual(S.hintFree('536', { value: '536', example: true }, true, fals
 assert.strictEqual(S.hintFree('9', exampleHint, true, false), false);
 assert.strictEqual(S.hintFree('1', exampleHint, false, true), false);
 assert.strictEqual(S.hintFree('5', { value: '5', example: true }, false, false), false);
+assert.strictEqual(S.hintFree('7', { value: '1', example: true }, true, false), false);
+assert.strictEqual(S.hintFree('7', { value: '7', example: true }, false, false), false);
+assert.strictEqual(S.fieldFree('7', null), false);
+const pinned = S.mathPair(owned, { lockA: '1' });
+assert.strictEqual(pinned.a, 1n);
+assert.notStrictEqual(pinned.a, 1536n);
 
 const armed = { r: '65537', g: '6', b: '7' };
 const armedOwns = { r: false, g: true, b: true };
