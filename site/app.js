@@ -76,9 +76,37 @@
     mints: 'planned steps to build the target from existing tokens.',
   };
 
+  let tipSeq = 0;
+
   function mark(glyph, label) {
     const t = esc(label);
-    return '<span class="mark" role="img" title="' + t + '" aria-label="' + t + '">' + glyph + '</span>';
+    const id = 't' + (++tipSeq);
+    return '<span class="mark"><button type="button" class="mark-hit" aria-describedby="' + id + '">' + glyph +
+      '</button><span class="tip" id="' + id + '" role="tooltip">' + t + '</span></span>';
+  }
+
+  function bindTips() {
+    document.addEventListener('click', function (ev) {
+      const hit = ev.target.closest('.mark-hit');
+      const markEl = hit && hit.closest('.mark');
+      document.querySelectorAll('.mark.open').forEach(function (el) {
+        if (el !== markEl) el.classList.remove('open');
+      });
+      if (!markEl) {
+        const ae = document.activeElement;
+        if (ae && ae.classList && ae.classList.contains('mark-hit')) ae.blur();
+        return;
+      }
+      ev.preventDefault();
+      markEl.classList.toggle('open');
+      if (!markEl.classList.contains('open')) hit.blur();
+    });
+    document.addEventListener('keydown', function (ev) {
+      if (ev.key !== 'Escape') return;
+      document.querySelectorAll('.mark.open').forEach(function (el) { el.classList.remove('open'); });
+      const ae = document.activeElement;
+      if (ae && ae.classList && ae.classList.contains('mark-hit')) ae.blur();
+    });
   }
 
   function fmt(wei) {
@@ -206,7 +234,7 @@
     for (let y = 0; y < 16; y++) {
       for (let x = 0; x < 16; x++) {
         const ch = rows[y][x];
-        html += '<button type="button" class="' + ch + '" data-i="' + (y * 16 + x) + '" title="' + ch + '"></button>';
+        html += '<button type="button" class="' + ch + '" data-i="' + (y * 16 + x) + '"></button>';
       }
     }
     return html + '</span>';
@@ -369,13 +397,50 @@
   };
   globalThis.SITE = SITE;
 
+  let boundEth = null;
+
+  function bindEthereum() {
+    const eth = globalThis.ethereum;
+    if (!eth || eth === boundEth) return;
+    boundEth = eth;
+    eth.request({ method: 'eth_chainId' }).then(onChain).catch(function () {});
+    eth.request({ method: 'eth_accounts' }).then(function (acc) {
+      if (!acc || !acc[0]) return;
+      state.account = acc[0];
+      const who = $('#who');
+      if (who) who.textContent = short(state.account);
+      loadWallet();
+    }).catch(function () {});
+    if (eth.on) {
+      eth.on('accountsChanged', function (acc) {
+        state.account = acc && acc[0] ? acc[0] : null;
+        const who = $('#who');
+        if (who) who.textContent = state.account ? short(state.account) : '';
+        if (state.account) loadWallet();
+        if (state.tab === 'toon' || state.tab === 'mint') show(state.tab);
+      });
+      eth.on('chainChanged', onChain);
+    }
+  }
+
+  function watchEthereum() {
+    bindEthereum();
+    window.addEventListener('ethereum#initialized', bindEthereum);
+    setTimeout(bindEthereum, 1000);
+  }
+
   async function connect() {
     if (!globalThis.ethereum) {
       MOLD.say('noWallet');
       setStatus('no wallet');
       return;
     }
+    bindEthereum();
     const acc = await ethereum.request({ method: 'eth_requestAccounts' });
+    if (!acc || !acc[0]) {
+      setStatus('no wallet');
+      return;
+    }
     state.account = acc[0];
     $('#who').textContent = short(state.account);
     MOLD.say('connect', { addr: short(state.account), mine: mineCount(), math: state.math.length });
@@ -584,6 +649,7 @@
   }
 
   function boot() {
+    bindTips();
     document.querySelectorAll('nav button').forEach(function (b) {
       b.onclick = function () { show(b.dataset.tab); };
     });
@@ -628,24 +694,7 @@
     const tab = (location.hash || '#browse').slice(1);
     show(['browse', 'mint', 'route', 'rgb', 'toon', 'about'].indexOf(tab) === -1 ? 'browse' : tab);
     ETH.gasPrice().then(function (g) { state.gasPrice = g; }).catch(function () {});
-    if (globalThis.ethereum) {
-      ethereum.request({ method: 'eth_chainId' }).then(onChain).catch(function () {});
-      ethereum.request({ method: 'eth_accounts' }).then(function (acc) {
-        if (acc && acc[0]) {
-          state.account = acc[0];
-          $('#who').textContent = short(state.account);
-          loadWallet();
-        }
-      }).catch(function () {});
-      if (ethereum.on) {
-        ethereum.on('accountsChanged', function (acc) {
-          state.account = acc && acc[0] ? acc[0] : null;
-          $('#who').textContent = state.account ? short(state.account) : '';
-          if (state.account) loadWallet();
-        });
-        ethereum.on('chainChanged', onChain);
-      }
-    }
+    watchEthereum();
     refresh();
   }
 

@@ -264,28 +264,51 @@
       '<p id="rgbTraits" class="dim"></p><p id="rgbMeta"></p><div id="queue"></div>' +
       '<div class="row"><button type="button" id="planRgb">plan routes</button></div>' +
       '<div class="preview" id="preview">MATH mints, then RGB.add at 0.03 ETH. one click, one signature.' + S.mark('ⓘ', S.TIPS.fees) + '</div>';
-    $('#cells').innerHTML = S.cellsHtml(state.grid);
+    const grid = $('#cells');
+    grid.innerHTML = S.cellsHtml(state.grid);
     paintTraits();
-    $('#cells').onclick = function (ev) {
-      const btn = ev.target.closest('button');
-      if (!btn) return;
+    let stroke = '';
+    function put(btn, ch) {
+      if (!btn || btn.className === ch) return false;
       const i = Number(btn.dataset.i);
       const y = Math.floor(i / 16);
       const x = i % 16;
-      const cur = P.PAL.indexOf(state.grid[y][x]);
-      const next = P.PAL[(cur + 1) % P.PAL.length];
       const row = state.grid[y].split('');
-      row[x] = next;
+      row[x] = ch;
       state.grid[y] = row.join('');
-      btn.className = next;
+      btn.className = ch;
+      return true;
+    }
+    function syncGrid() {
       syncPlanes();
       writePlaneInputs();
       paintTraits();
       const issues = planeIssues(state.planes);
-      $('#rgbMeta').innerHTML = issuesHtml(issues);
+      const meta = $('#rgbMeta');
+      if (meta) meta.innerHTML = issuesHtml(issues);
+      return issues;
+    }
+    grid.addEventListener('pointerdown', function (ev) {
+      const btn = ev.target.closest('button');
+      if (!btn || ev.button > 0) return;
+      ev.preventDefault();
+      const cur = P.PAL.indexOf(btn.className);
+      stroke = P.PAL[(cur + 1) % P.PAL.length];
+      put(btn, stroke);
+      const issues = syncGrid();
       const rule = issues.find(function (s) { return RULES.mold(s); });
       S.hit(rule || '');
-    };
+      try { grid.setPointerCapture(ev.pointerId); } catch (e) { /* already gone */ }
+    }, { passive: false });
+    grid.addEventListener('pointermove', function (ev) {
+      if (!stroke) return;
+      const el = document.elementFromPoint(ev.clientX, ev.clientY);
+      const btn = el && el.closest && el.closest('#cells button');
+      if (put(btn, stroke)) syncGrid();
+    });
+    function endStroke() { stroke = ''; }
+    grid.addEventListener('pointerup', endStroke);
+    grid.addEventListener('pointercancel', endStroke);
     $('#heart').onclick = function () { S.applyHeart(false); };
     $('#shuffle').onclick = function () { S.applyHeart(true); };
     $('#file').onchange = function () {
