@@ -15,6 +15,16 @@
     'https://eth.drpc.org',
     'https://mainnet.gateway.tenderly.co',
   ];
+  function extraRpc(raw) {
+    const extra = String(raw == null ? '' : raw).trim();
+    if (!extra) return '';
+    if (!/^https:\/\//i.test(extra)) throw new Error('ETH_RPC_URL');
+    return extra;
+  }
+  if (typeof process !== 'undefined' && process.env && process.env.ETH_RPC_URL) {
+    const extra = extraRpc(process.env.ETH_RPC_URL);
+    if (extra) RPCS.unshift(extra);
+  }
   const CACHE = 'math.site.v1';
   const ABI = globalThis.ABI;
 
@@ -586,6 +596,7 @@
   globalThis.ETH = {
     ADDR: ADDR,
     RPCS: RPCS,
+    extraRpc: extraRpc,
     rpcRetryable: rpcRetryable,
     reason: reason,
     ownerOf: ownerOf,

@@ -86,8 +86,11 @@
   }
 
   function decodeAddr(data) {
-    const h = String(data).replace(/^0x/, '').padStart(64, '0');
-    return '0x' + h.slice(-40).toLowerCase();
+    let h = String(data == null ? '' : data).replace(/^0x/, '').toLowerCase();
+    if (h.length % 2) throw new Error('addr');
+    const word = h.length <= 64 ? h.padStart(64, '0') : h.slice(-64);
+    if (!/^0{24}[0-9a-f]{40}$/.test(word)) throw new Error('addr');
+    return '0x' + word.slice(24);
   }
 
   function decodeString(data) {
