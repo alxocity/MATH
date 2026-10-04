@@ -131,4 +131,62 @@ assert.deepStrictEqual(toon2, { math: 9n, word: 1n, face: 3n, rgb: 7n });
 assert.strictEqual(S.toonTuple(toonCtx, { cursor: toon2 }), null);
 assert.strictEqual(S.toonTuple(toonCtx, { lock: { word: '2' } }), null);
 
+assert.strictEqual(S.channelFree('0', null, false), true);
+assert.strictEqual(S.channelFree('0', null, true), false);
+assert.strictEqual(S.channelFree('1084', null, false), false);
+assert.strictEqual(S.channelFree('', null, true), true);
+
+const exampleHint = { value: '1', example: true };
+assert.strictEqual(S.hintFree('1', exampleHint, true, false), true);
+assert.strictEqual(S.hintFree('536', { value: '536', example: true }, true, false), true);
+assert.strictEqual(S.hintFree('9', exampleHint, true, false), false);
+assert.strictEqual(S.hintFree('1', exampleHint, false, true), false);
+assert.strictEqual(S.hintFree('1', exampleHint, true, true), true);
+assert.strictEqual(S.hintFree('1', null, false, false), false);
+
+const skipped = Object.assign({}, owned, { skip: new Set([4n]) });
+assert.deepStrictEqual([S.mathPair(skipped, {}).a, S.mathPair(skipped, {}).b], [2n, 3n]);
+const planeSkip = S.rgbTriple({
+  ids: ids,
+  supply: supply([[1n, user], [2n, user], [3n, user]]),
+  blocked: new Set(),
+  by: { r: new Map(), g: new Map(), b: new Map() },
+  skip: new Set([1n]),
+}, { rand: function () { return 0; } });
+assert.ok(planeSkip.r !== 1n && planeSkip.g !== 1n && planeSkip.b !== 1n);
+
+const busy = S.busyIds([
+  { kind: 'math', step: { result: 4n } },
+  { kind: 'rgb', r: 8n, g: 9n, b: 10n },
+  { status: 'submitted', result: 11n },
+  { status: 'confirmed', result: 12n },
+  { status: 'failed', result: 18n },
+  { label: '1 + 2 = 13', status: 'pending' },
+  { label: 'RGB.add 14, 15, 16', status: 'submitted' },
+  { sum: 17n },
+]);
+[4n, 8n, 9n, 10n, 11n, 13n, 14n, 15n, 16n, 17n].forEach(function (id) {
+  assert.ok(busy.has(id), String(id));
+});
+assert.strictEqual(busy.has(12n), false);
+assert.strictEqual(busy.has(18n), false);
+
+let scans = 0;
+const wide = supply([[1n, stranger], [4n, stranger], [6n, stranger]]);
+const origEach = wide.forEach.bind(wide);
+wide.forEach = function (fn) { scans++; return origEach(fn); };
+const wideCtx = {
+  supply: wide,
+  user: '0x0000000000000000000000000000000000000000',
+  blocked: new Set(),
+  gasWei: 0n,
+  example: true,
+};
+S.mathPair(wideCtx, {});
+S.mathPair(wideCtx, { cursor: { a: 1n, b: 1n } });
+assert.strictEqual(scans, 1);
+wide.set(8n, stranger);
+S.mathPair(wideCtx, {});
+assert.strictEqual(scans, 2);
+
 console.log('suggest.test.js ok');

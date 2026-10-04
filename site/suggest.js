@@ -12,6 +12,21 @@
     return suggested != null && v === String(suggested);
   }
 
+  // Zero is a blank channel until the grid is drawn, typed, or filled from a picture.
+  function channelFree(value, suggested, touched) {
+    const v = String(value == null ? '' : value).trim();
+    if (!touched && v === '0') return true;
+    return fieldFree(value, suggested);
+  }
+
+  // Connecting drops the example flag. Those numbers are still ours when they match.
+  function hintFree(value, hint, own, exampleNow) {
+    if (hint && hint.example !== exampleNow) {
+      return String(value == null ? '' : value).trim() === String(hint.value);
+    }
+    return fieldFree(value, hint && own ? hint.value : null);
+  }
+
   function asId(v) {
     if (v == null || String(v).trim() === '') return null;
     try {
@@ -33,7 +48,7 @@
   function mathRoute(ctx, a, b) {
     if (a <= 0n || b <= 0n || b > P.MAX - a) return null;
     const sum = a + b;
-    if (ctx.supply.has(sum)) return null;
+    if (ctx.supply.has(sum) || (ctx.skip && ctx.skip.has(sum))) return null;
     const oa = ctx.supply.get(a);
     const ob = ctx.supply.get(b);
     if (oa == null || ob == null) return null;
@@ -43,6 +58,8 @@
     if (!route.steps.length || route.mints !== 1 || route.steps[0].exists) return null;
     return route;
   }
+
+  let examplePool = null;
 
   function mathPool(ctx) {
     const ids = [];
@@ -59,8 +76,17 @@
       seen.add(k);
       ids.push(x);
     }
-    if (ctx.example) ctx.supply.forEach(function (owner, id) { add(id); });
-    else (ctx.owned || []).forEach(add);
+    if (ctx.example) {
+      const size = ctx.supply.size;
+      if (examplePool && examplePool.supply === ctx.supply && examplePool.blocked === ctx.blocked && examplePool.size === size) {
+        return examplePool.ids;
+      }
+      ctx.supply.forEach(function (owner, id) { add(id); });
+      ids.sort(byId);
+      examplePool = { supply: ctx.supply, blocked: ctx.blocked, size: size, ids: ids };
+      return ids;
+    }
+    (ctx.owned || []).forEach(add);
     ids.sort(byId);
     return ids;
   }
@@ -109,6 +135,7 @@
       const x = asId(id);
       if (x == null) return;
       if (only != null && x !== only) return;
+      if (ctx.skip && ctx.skip.has(x)) return;
       const owner = ctx.supply && ctx.supply.get(x);
       if (owner == null || blocked(ctx.blocked, owner)) return;
       if (RULES.rgbChannel(channel, x, by)) return;
@@ -223,8 +250,42 @@
     return null;
   }
 
+  function settled(status) {
+    return status === 'confirmed' || status === 'failed' || status === 'reverted';
+  }
+
+  function busyIds(rows) {
+    const skip = new Set();
+    function add(v) {
+      const id = asId(v);
+      if (id != null) skip.add(id);
+    }
+    (rows || []).forEach(function (row) {
+      if (!row || settled(row.status)) return;
+      add(row.result);
+      add(row.sum);
+      add(row.r);
+      add(row.g);
+      add(row.b);
+      if (row.step) add(row.step.result);
+      const label = String(row.label || '');
+      const math = /^(\d+) \+ (\d+) = (\d+)$/.exec(label);
+      if (math) add(math[3]);
+      const rgb = /^RGB\.add (\d+), (\d+), (\d+)$/.exec(label);
+      if (rgb) {
+        add(rgb[1]);
+        add(rgb[2]);
+        add(rgb[3]);
+      }
+    });
+    return skip;
+  }
+
   return {
     fieldFree: fieldFree,
+    channelFree: channelFree,
+    hintFree: hintFree,
+    busyIds: busyIds,
     mathPair: mathPair,
     mathOk: mathOk,
     rgbTriple: rgbTriple,

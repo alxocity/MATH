@@ -133,6 +133,9 @@
       return {
         label: 'RGB.add ' + item.r + ', ' + item.g + ', ' + item.b,
         result: null,
+        r: item.r,
+        g: item.g,
+        b: item.b,
         uses: uses,
         tx: function () {
           return {
@@ -318,8 +321,7 @@
   let rgbHint = null;
 
   function rgbFree(value, suggested) {
-    if (String(value == null ? '' : value).trim() === '0') return true;
-    return SUGGEST.fieldFree(value, suggested);
+    return SUGGEST.channelFree(value, suggested, state.planesTouched);
   }
 
   function rgbReady(hint) {
@@ -348,6 +350,8 @@
     const bFree = rgbFree(bEl.value, rgbHint && rgbHint.ownB ? rgbHint.b : null);
     if (!rFree && !gFree && !bFree) {
       paintRgbHint(false, '');
+      const meta = $('#rgbMeta');
+      if (meta) meta.innerHTML = issuesHtml(planeIssues(state.planes));
       return;
     }
     if (!advance && rgbHint && rgbHint.ownR && rgbHint.ownG && rgbHint.ownB && rgbReady(rgbHint)) {
@@ -374,6 +378,7 @@
       supply: state.supply,
       blocked: state.blocked,
       by: state.rgbBy,
+      skip: S.openMints(),
     }, {
       rand: Math.random,
       avoid: avoid,
@@ -445,6 +450,7 @@
     let stroke = '';
     function put(btn, ch) {
       if (!btn || btn.className === ch) return false;
+      state.planesTouched = true;
       const i = Number(btn.dataset.i);
       const y = Math.floor(i / 16);
       const x = i % 16;
@@ -499,6 +505,7 @@
     $('#file').onchange = function () {
       const file = $('#file').files && $('#file').files[0];
       if (!file) return;
+      state.planesTouched = true;
       const img = new Image();
       img.onload = function () {
         state.sample = sampleImage(img);
@@ -508,6 +515,7 @@
     };
     $('#apply').onclick = function () {
       if (!state.sample) return;
+      state.planesTouched = true;
       const px = new Float32Array(state.sample);
       const thr = [Number($('#thrR').value) / 100, Number($('#thrG').value) / 100, Number($('#thrB').value) / 100];
       const dither = $('#dither').checked;
@@ -538,7 +546,11 @@
       S.show('rgb');
     };
     ['pR', 'pG', 'pB'].forEach(function (id) {
-      $('#' + id).addEventListener('change', function () {
+      $('#' + id).addEventListener('input', function (ev) {
+        if (ev.isTrusted) state.planesTouched = true;
+      });
+      $('#' + id).addEventListener('change', function (ev) {
+        if (ev.isTrusted) state.planesTouched = true;
         try {
           const R = BigInt($('#pR').value.trim());
           const G = BigInt($('#pG').value.trim());
