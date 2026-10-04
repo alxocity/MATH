@@ -164,12 +164,23 @@
     return { math: hint.math, word: hint.word, face: hint.face, rgb: hint.rgb };
   }
 
+  function restoreUser(el, own, value) {
+    if (!el || own || value == null || String(value) === '' || el.value) return;
+    choose(el, value);
+  }
+
   function applyToon(advance) {
     const tm = $('#tm');
     const tw = $('#tw');
     const tf = $('#tf');
     const tr = $('#tr');
     if (!tm || !tw || !tf || !tr) return;
+    if (toonHint) {
+      restoreUser(tm, toonHint.ownMath, toonHint.math);
+      restoreUser(tw, toonHint.ownWord, toonHint.word);
+      restoreUser(tf, toonHint.ownFace, toonHint.face);
+      restoreUser(tr, toonHint.ownRgb, toonHint.rgb);
+    }
     const example = !state.account;
     const free = {
       math: SUGGEST.fieldFree(tm.value, toonHint && toonHint.ownMath ? toonHint.math : null),
@@ -179,15 +190,26 @@
     };
     if (!free.math && !free.word && !free.face && !free.rgb) {
       paintToonHint(false, '');
+      if (tm.value && tw.value && tf.value && tr.value) previewToon();
       return;
     }
     const ctx = toonCtx();
-    if (!advance && toonHint && toonHint.ownMath && toonHint.ownWord && toonHint.ownFace && toonHint.ownRgb &&
-      SUGGEST.toonTuple(ctx, { lock: hintLock(toonHint) })) {
-      if (free.math) choose(tm, toonHint.math);
-      if (free.word) choose(tw, toonHint.word);
-      if (free.face) choose(tf, toonHint.face);
-      if (free.rgb) choose(tr, toonHint.rgb);
+    const toonValues = { math: tm.value, word: tw.value, face: tf.value, rgb: tr.value };
+    const toonOwns = toonHint && {
+      math: !!toonHint.ownMath, word: !!toonHint.ownWord, face: !!toonHint.ownFace, rgb: !!toonHint.ownRgb,
+    };
+    const shown = toonHint && {
+      math: toonHint.ownMath ? toonHint.math : tm.value,
+      word: toonHint.ownWord ? toonHint.word : tw.value,
+      face: toonHint.ownFace ? toonHint.face : tf.value,
+      rgb: toonHint.ownRgb ? toonHint.rgb : tr.value,
+    };
+    const toonFilled = shown && shown.math && shown.word && shown.face && shown.rgb;
+    if (!advance && SUGGEST.keepParts(toonHint, toonValues, toonOwns, toonFilled && SUGGEST.toonTuple(ctx, { lock: shown }))) {
+      if (free.math && toonHint.ownMath) choose(tm, toonHint.math);
+      if (free.word && toonHint.ownWord) choose(tw, toonHint.word);
+      if (free.face && toonHint.ownFace) choose(tf, toonHint.face);
+      if (free.rgb && toonHint.ownRgb) choose(tr, toonHint.rgb);
       const pure = tm.value === String(toonHint.math) && tw.value === String(toonHint.word) &&
         tf.value === String(toonHint.face) && tr.value === String(toonHint.rgb);
       paintToonHint(example && pure, '');
@@ -278,8 +300,14 @@
       '<div class="preview" id="preview">TOON.add has no fee. you must own all four. grey picks say why.' + S.mark('ⓘ', S.TIPS.fees) + '</div>' +
       '<div class="row"><button type="button" id="simToon">simulate</button>' + S.mark('ⓘ', S.TIPS.simulate) + '<button type="button" id="sendToon">send add</button>' +
       '<span id="toonWhy" class="bad"></span></div>';
+    const pickKey = { tm: 'math', tw: 'word', tf: 'face', tr: 'rgb' };
+    const pickOwn = { tm: 'ownMath', tw: 'ownWord', tf: 'ownFace', tr: 'ownRgb' };
     ['tm', 'tw', 'tf', 'tr'].forEach(function (id) {
-      $('#' + id).addEventListener('change', function () {
+      $('#' + id).addEventListener('change', function (ev) {
+        if (ev.isTrusted && toonHint) {
+          toonHint[pickKey[id]] = $('#' + id).value;
+          toonHint[pickOwn[id]] = false;
+        }
         const el = $('#hintNote');
         if (el && el.textContent === 'example' && toonHint &&
           ($('#tm').value !== toonHint.math || $('#tw').value !== toonHint.word ||
@@ -307,6 +335,14 @@
         el.value = v;
         previewToon();
       }
+    }
+    if (toonHint) {
+      [['tm', 'math'], ['tw', 'word'], ['tf', 'face'], ['tr', 'rgb']].forEach(function (row) {
+        const el = $('#' + row[0]);
+        const v = toonHint[row[1]];
+        if (!el || el.value || v == null || String(v) === '') return;
+        choose(el, v);
+      });
     }
     if (!state.account) MOLD.say('noWallet');
     fillToon(false);

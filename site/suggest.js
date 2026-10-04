@@ -254,6 +254,18 @@
     return status === 'confirmed' || status === 'failed' || status === 'reverted';
   }
 
+  // Keep a suggestion when every field we filled still matches and the pick is still valid.
+  // A field the user set (owns[k] false) stays locked and does not force a new roll.
+  function keepParts(hint, values, owns, valid) {
+    if (!hint || !owns) return false;
+    const keys = Object.keys(owns);
+    for (let i = 0; i < keys.length; i++) {
+      const k = keys[i];
+      if (owns[k] && String(values[k] == null ? '' : values[k]) !== String(hint[k])) return false;
+    }
+    return !!valid;
+  }
+
   function flightSums(steps, sums) {
     const rows = (steps || []).slice();
     if (sums) Object.keys(sums).forEach(function (hash) {
@@ -295,6 +307,7 @@
     hintFree: hintFree,
     busyIds: busyIds,
     flightSums: flightSums,
+    keepParts: keepParts,
     mathPair: mathPair,
     mathOk: mathOk,
     rgbTriple: rgbTriple,
