@@ -44,7 +44,7 @@
     return c;
   }
 
-  // Short ids stay whole. A longer one keeps both ends, so you can find it. Four digits still collide.
+  // ids sharing both 5-digit ends would collide
   function channelTag(n) {
     const s = BigInt(n).toString();
     const keep = 5;
