@@ -54,4 +54,13 @@ delete round.blocked;
 delete round.blockedDone;
 assert.strictEqual(snap.sameBody(raw, round), true);
 
+assert.strictEqual(ABI.decodeAddr('0x' + '00'.repeat(12) + 'ab'.repeat(20)), '0x' + 'ab'.repeat(20));
+assert.strictEqual(ABI.decodeAddr('0x' + 'ab'.repeat(20)), '0x' + 'ab'.repeat(20));
+assert.throws(function () {
+  ABI.decodeAddr('0x' + '01' + '00'.repeat(11) + 'ab'.repeat(20));
+}, /addr/);
+assert.strictEqual(ETH.extraRpc(' https://rpc.example/x '), 'https://rpc.example/x');
+assert.strictEqual(ETH.extraRpc(''), '');
+assert.throws(function () { ETH.extraRpc('http://rpc.example'); }, /ETH_RPC_URL/);
+
 console.log('snapshot.test.js ok');

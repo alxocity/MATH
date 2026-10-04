@@ -8,37 +8,40 @@ on:
   workflow_dispatch:
 
 permissions:
-  contents: write
-  pages: write
-  id-token: write
+  contents: read
 
+# Refresh stays off the Pages group. Deploy joins pages.yml so the two deploys cannot overlap.
 concurrency:
   group: snapshot
   cancel-in-progress: false
 
 jobs:
   refresh:
+    if: github.ref == 'refs/heads/master'
     runs-on: ubuntu-latest
-    environment:
-      name: github-pages
-      url: ${{ steps.deploy.outputs.page_url }}
+    permissions:
+      contents: write
+    outputs:
+      changed: ${{ steps.commit.outputs.changed }}
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
         with:
+          ref: master
+          fetch-depth: 0
           persist-credentials: false
       - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
         with:
           node-version: '22'
-      - name: refresh site/index.json
-        env:
-          ETH_RPC_URL: ${{ secrets.ETH_RPC_URL }}
-        run: node script/snapshot.js
-      - name: commit when the snapshot changed
+      - name: refresh and commit
         id: commit
         env:
+          ETH_RPC_URL: ${{ secrets.ETH_RPC_URL }}
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           set -eu
+          git fetch origin master
+          git rebase origin/master
+          node script/snapshot.js
           if git diff --quiet -- site/index.json; then
             echo "changed=false" >> "$GITHUB_OUTPUT"
             echo "no data change"
@@ -47,14 +50,34 @@ jobs:
           git add -- site/index.json
           git -c user.name="github-actions[bot]" -c user.email="41898282+github-actions[bot]@users.noreply.github.com" \
             commit -m "Refresh the site snapshot."
+          git fetch origin master
+          git -c user.name="github-actions[bot]" -c user.email="41898282+github-actions[bot]@users.noreply.github.com" \
+            rebase origin/master
           git push "https://x-access-token:${GITHUB_TOKEN}@github.com/${GITHUB_REPOSITORY}.git" HEAD:master
           echo "changed=true" >> "$GITHUB_OUTPUT"
+
+  deploy:
+    needs: refresh
+    if: github.ref == 'refs/heads/master' && needs.refresh.outputs.changed == 'true'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pages: write
+      id-token: write
+    concurrency:
+      group: pages
+      cancel-in-progress: false
+    environment:
+      name: github-pages
+      url: ${{ steps.deploy.outputs.page_url }}
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          ref: master
+          persist-credentials: false
       - uses: actions/configure-pages@983d7736d9b0ae728b81ab479565c72886d7745b # v5.0.0
-        if: steps.commit.outputs.changed == 'true'
       - uses: actions/upload-pages-artifact@56afc609e74202658d3ffba0e8f6dda462b719fa # v3.0.1
-        if: steps.commit.outputs.changed == 'true'
         with:
           path: site
       - id: deploy
-        if: steps.commit.outputs.changed == 'true'
         uses: actions/deploy-pages@d6db90164ac5ed86f2b6aed7e0febac5b3c0c03e # v4.0.5
