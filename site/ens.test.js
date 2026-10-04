@@ -45,6 +45,12 @@ assert.deepStrictEqual(named.map(function (row) { return row[0]; }), [
   'toonrender.alxocity.eth',
 ]);
 assert.strictEqual(ENS.normAddr(named[3][1]), '0xb3ca13a2722cab48c8d9068bd67656efe2d5e376');
+const day = 24 * 60 * 60 * 1000;
+const now = Date.now();
+assert.strictEqual(ENS.forwardFresh(mathAddr, now - 6 * day, now), true);
+assert.strictEqual(ENS.forwardFresh(mathAddr, now - 8 * day, now), false);
+assert.strictEqual(ENS.forwardFresh('', now - 12 * 60 * 60 * 1000, now), true);
+assert.strictEqual(ENS.forwardFresh('', now - 2 * day, now), false);
 
 const vitalik = '0xd8da6bf26964af9d7eed9e03e53415d37aa96045';
 assert.strictEqual(ENS.ownerHit(vitalik, 'd8da', '', ''), true);
@@ -157,6 +163,8 @@ assert.strictEqual(ENS.decodeAddr(addrReturn(vitalik)), vitalik);
     forward: {
       'ok.eth': { a: ok, at: now },
       'old.eth': { a: old, at: now - 8 * day },
+      'miss.eth': { a: '', at: now },
+      'stale-miss.eth': { a: '', at: now - 2 * day },
     },
   });
   delete require.cache[require.resolve('./ens')];
@@ -171,6 +179,27 @@ assert.strictEqual(ENS.decodeAddr(addrReturn(vitalik)), vitalik);
   assert.strictEqual(ENS2.cached(legacy), '');
   assert.strictEqual(ENS2.forwardCached('ok.eth'), ok);
   assert.strictEqual(ENS2.hasForward('old.eth'), false);
+  assert.strictEqual(ENS2.hasForward('miss.eth'), true);
+  assert.strictEqual(ENS2.forwardCached('miss.eth'), '');
+  assert.strictEqual(ENS2.hasForward('stale-miss.eth'), false);
+
+  let calls = 0;
+  ETH.ethCall = async function () {
+    calls += 1;
+    return agg([
+      { ok: true, data: addrReturn(mathAddr) },
+      { ok: false, data: '0x' },
+    ]);
+  };
+  const batch = await ENS.resolveForwards(['math.alxocity.eth', 'rgb.alxocity.eth']);
+  assert.strictEqual(calls, 1);
+  assert.strictEqual(batch['math.alxocity.eth'], mathAddr.toLowerCase());
+  assert.strictEqual(batch['rgb.alxocity.eth'], '');
+  const packed = JSON.parse(store['math.ens.v1']);
+  assert.strictEqual(packed.forward['rgb.alxocity.eth'].a, '');
+  await ENS.resolveForwards(['math.alxocity.eth', 'rgb.alxocity.eth']);
+  assert.strictEqual(calls, 1);
+  ETH.ethCall = realCall;
 
   ENS.want(vitalik);
   await ENS.flush();

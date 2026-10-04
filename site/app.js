@@ -153,8 +153,10 @@
     return esc(name) + ' ' + esc(short(a));
   }
 
-  function paintContractNames() {
-    const bits = ENS.contractNames(ADDR).map(function (row) {
+  function paintContractNames(repaint) {
+    const bits = ENS.contractNames(ADDR).filter(function (row) {
+      return row[0].indexOf('render') === -1;
+    }).map(function (row) {
       const name = ENS.matchedName(row[0], row[1], ENS.forwardCached(row[0]));
       if (!name) return '';
       return name + ' ' + short(row[1]);
@@ -169,17 +171,23 @@
         const tile = $('#tile');
         if (tile && tile.parentNode) tile.parentNode.insertBefore(host, tile);
       }
-      if (host) host.textContent = bits.join(' ');
+      if (host) host.textContent = bits.join(' · ');
     }
-    if (state.tab === 'about' && $('#view') && SITE.about) SITE.about($('#view'));
+    if (repaint && state.tab === 'about' && $('#view') && SITE.about) SITE.about($('#view'));
   }
 
   function watchContractNames() {
-    paintContractNames();
-    ENS.contractNames(ADDR).forEach(function (row) {
-      if (ENS.matchedName(row[0], row[1], ENS.forwardCached(row[0]))) return;
-      ENS.resolveForward(row[0]).then(function () { paintContractNames(); }, function () {});
+    paintContractNames(false);
+    const rows = ENS.contractNames(ADDR).filter(function (row) {
+      return !ENS.hasForward(row[0]);
     });
+    if (!rows.length) return;
+    ENS.resolveForwards(rows.map(function (row) { return row[0]; })).then(function (got) {
+      const hit = rows.some(function (row) {
+        return !!ENS.matchedName(row[0], row[1], got && got[String(row[0]).toLowerCase()]);
+      });
+      if (hit) paintContractNames(true);
+    }, function () {});
   }
 
   function addr(a) {
