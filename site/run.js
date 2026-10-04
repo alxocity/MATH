@@ -28,6 +28,22 @@
     return status === 'ready' || status === 'supported';
   }
 
+  // Skip a lone eth_call only when a used id is still going to be minted by an
+  // unsent step in this batch. A mined step is not unsent, so the next call is simulated.
+  function deferSim(step, batch) {
+    const produced = new Set();
+    (batch || []).forEach(function (s) {
+      if (!s || s === step || s.result == null) return;
+      if (s.status === 'confirmed' || s.status === 'submitted') return;
+      produced.add(String(s.result));
+    });
+    return (step.uses || []).some(function (id) { return produced.has(String(id)); });
+  }
+
+  function batchSimNote(n) {
+    return 'steps 2–' + n + " can't be simulated until step 1 is minted";
+  }
+
   function callsId(res) {
     if (!res) return '';
     if (typeof res === 'string') return res;
@@ -69,6 +85,8 @@
   const api = {
     splitCalls: splitCalls,
     atomicReady: atomicReady,
+    deferSim: deferSim,
+    batchSimNote: batchSimNote,
     callsId: callsId,
     receiptOk: receiptOk,
     callsOutcome: callsOutcome,

@@ -489,12 +489,44 @@
     if (fn) fn();
   }
 
+  async function confirmOwned(step) {
+    if (!step || step.status === 'confirmed') return true;
+    if (step.result == null) {
+      confirm(step);
+      return true;
+    }
+    let owner = null;
+    try { owner = await ETH.ownerOf(ADDR.MATH, step.result); }
+    catch (e) { return false; }
+    if (!owner) return false;
+    const mine = state.account && String(owner).toLowerCase() === String(state.account).toLowerCase();
+    if (mine) confirm(step);
+    else {
+      mark(step, { status: 'confirmed', error: '' });
+      state.supply.set(step.result, owner);
+    }
+    return true;
+  }
+
   function fail(step, error) {
     const msg = error || 'failed';
     mark(step, { status: 'failed', error: msg });
     if (msg === 'rejected') MOLD.say('rejected');
     else if (msg === 'reverted') MOLD.say('mined', { status: 'reverted' });
     else MOLD.say('simFail', { err: msg });
+  }
+
+  function withTimeout(p, ms) {
+    return new Promise(function (resolve, reject) {
+      const t = setTimeout(function () { reject(new Error('timeout')); }, ms);
+      Promise.resolve(p).then(function (v) {
+        clearTimeout(t);
+        resolve(v);
+      }, function (e) {
+        clearTimeout(t);
+        reject(e);
+      });
+    });
   }
 
   function sleepOrTick(ms) {
@@ -568,13 +600,26 @@
     resumeIfSubmitted();
   }
 
+  function giveUpCalls(group) {
+    const note = 'batch status unavailable';
+    let any = false;
+    (group || []).forEach(function (s) {
+      if (!s || s.status !== 'submitted') return;
+      if (s.hash && /^0x[0-9a-fA-F]{64}$/.test(s.hash)) return;
+      mark(s, { status: 'failed', error: note });
+      any = true;
+    });
+    if (any) MOLD.say('simFail', { err: note });
+  }
+
   async function checkCalls(id, group) {
-    if (!globalThis.ethereum) return;
+    if (!globalThis.ethereum) return 'unread';
     let st;
     try {
-      st = await ethereum.request({ method: 'wallet_getCallsStatus', params: [id] });
+      st = await withTimeout(ethereum.request({ method: 'wallet_getCallsStatus', params: [id] }), 8000);
     } catch (e) {
-      return;
+      if (globalThis.RUN.unsupported(e)) return 'unread';
+      return '';
     }
     const outcome = globalThis.RUN.callsOutcome(st && st.status);
     const receipts = (st && st.receipts) || [];
@@ -587,14 +632,19 @@
       const h = receipts.map(function (r) { return r && (r.transactionHash || r.hash); }).find(Boolean);
       if (h) group.forEach(function (s) { if (!s.hash) mark(s, { hash: h }); });
     }
-    if (outcome === 'pending') return;
+    if (outcome === 'pending') return '';
     if (outcome === 'confirmed') {
-      group.forEach(confirm);
-      MOLD.say('mined', { status: 'ok' });
-      return;
+      let waiting = false;
+      for (let i = 0; i < group.length; i++) {
+        const held = await confirmOwned(group[i]);
+        if (!held) waiting = true;
+      }
+      if (!waiting) MOLD.say('mined', { status: 'ok' });
+      return '';
     }
     group.forEach(function (s) { mark(s, { status: 'failed', error: 'reverted' }); });
     MOLD.say('mined', { status: 'reverted' });
+    return '';
   }
 
   async function checkSubmitted() {
@@ -616,7 +666,8 @@
       } else if (step.calls && !seen[step.calls]) {
         seen[step.calls] = true;
         const group = (state.run || []).filter(function (s) { return s.status === 'submitted' && s.calls === step.calls; });
-        await checkCalls(step.calls, group);
+        const how = await checkCalls(step.calls, group);
+        if (how === 'unread') giveUpCalls(group);
       }
     }
   }
@@ -656,7 +707,7 @@
       const why = await step.ready(batch);
       if (why) return why;
     }
-    if (step.uses && step.uses.length) return '';
+    if (globalThis.RUN.deferSim(step, batch)) return '';
     const tx = step.tx();
     const sim = await ETH.simulate(tx);
     if (sim && sim.error) return ETH.reason(sim.error);
@@ -756,6 +807,32 @@
     }
     if (gen !== state.runGen) return;
     if (!globalThis.RUN.atomicReady(caps)) return sendSeq(live, gen);
+    if (live.some(function (s) { return globalThis.RUN.deferSim(s, live); })) {
+      let rows = null;
+      try {
+        rows = await ETH.simulateCalls(live.map(function (s) {
+          const tx = s.tx();
+          return { from: state.account, to: tx.to, data: tx.data, value: tx.value || '0x0' };
+        }));
+      } catch (e) {
+        if (globalThis.RUN.unsupported(e)) {
+          const note = globalThis.RUN.batchSimNote(live.length);
+          live.forEach(function (s) {
+            if (globalThis.RUN.deferSim(s, live)) mark(s, { status: 'failed', error: note });
+          });
+          MOLD.say('simFail', { err: note });
+          return;
+        }
+        fail(live[0], clip(e && e.message ? e.message : e));
+        return;
+      }
+      if (gen !== state.runGen) return;
+      for (let i = 0; i < rows.length; i++) {
+        if (globalThis.RUN.receiptOk(rows[i] && rows[i].status)) continue;
+        fail(live[i], ETH.reason(rows[i] && rows[i].error) || 'reverted');
+        return;
+      }
+    }
     live.forEach(function (s) { mark(s, { status: 'signing', error: '' }); });
     let res;
     try {

@@ -49,6 +49,20 @@ assert.strictEqual(RUN.atomicReady({ '0x1': { atomic: { status: 'unsupported' } 
 assert.strictEqual(RUN.atomicReady({}), false);
 assert.strictEqual(RUN.atomicReady(null), false);
 
+const pending = { result: 3n, uses: [], status: 'pending' };
+const next = { result: 6n, uses: [3n], status: 'pending' };
+const alone = { result: 9n, uses: [3n], status: 'pending' };
+assert.strictEqual(RUN.deferSim(next, [pending, next]), true);
+assert.strictEqual(RUN.deferSim(pending, [pending, next]), false);
+assert.strictEqual(RUN.deferSim(alone, [alone]), false);
+pending.status = 'confirmed';
+assert.strictEqual(RUN.deferSim(next, [pending, next]), false);
+pending.status = 'submitted';
+assert.strictEqual(RUN.deferSim(next, [pending, next]), false);
+pending.status = 'pending';
+assert.strictEqual(RUN.deferSim({ result: 4n, uses: [], status: 'pending' }, [pending]), false);
+assert.strictEqual(RUN.batchSimNote(3), "steps 2–3 can't be simulated until step 1 is minted");
+
 assert.strictEqual(RUN.receiptOk('0x1'), true);
 assert.strictEqual(RUN.receiptOk('0x01'), true);
 assert.strictEqual(RUN.receiptOk('1'), true);
