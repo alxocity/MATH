@@ -172,27 +172,34 @@
     if (!tm || !tw || !tf || !tr) return;
     const example = !state.account;
     const free = {
-      math: SUGGEST.fieldFree(tm.value, toonHint && toonHint.math),
-      word: SUGGEST.fieldFree(tw.value, toonHint && toonHint.word),
-      face: SUGGEST.fieldFree(tf.value, toonHint && toonHint.face),
-      rgb: SUGGEST.fieldFree(tr.value, toonHint && toonHint.rgb),
+      math: SUGGEST.fieldFree(tm.value, toonHint && toonHint.ownMath ? toonHint.math : null),
+      word: SUGGEST.fieldFree(tw.value, toonHint && toonHint.ownWord ? toonHint.word : null),
+      face: SUGGEST.fieldFree(tf.value, toonHint && toonHint.ownFace ? toonHint.face : null),
+      rgb: SUGGEST.fieldFree(tr.value, toonHint && toonHint.ownRgb ? toonHint.rgb : null),
     };
     if (!free.math && !free.word && !free.face && !free.rgb) {
       paintToonHint(false, '');
       return;
     }
     const ctx = toonCtx();
-    if (!advance && toonHint && SUGGEST.toonTuple(ctx, { lock: hintLock(toonHint) })) {
+    if (!advance && toonHint && toonHint.ownMath && toonHint.ownWord && toonHint.ownFace && toonHint.ownRgb &&
+      SUGGEST.toonTuple(ctx, { lock: hintLock(toonHint) })) {
       if (free.math) choose(tm, toonHint.math);
       if (free.word) choose(tw, toonHint.word);
       if (free.face) choose(tf, toonHint.face);
       if (free.rgb) choose(tr, toonHint.rgb);
-      paintToonHint(example, '');
-      previewToon();
+      const pure = tm.value === String(toonHint.math) && tw.value === String(toonHint.word) &&
+        tf.value === String(toonHint.face) && tr.value === String(toonHint.rgb);
+      paintToonHint(example && pure, '');
+      if (free.math || free.word || free.face || free.rgb) previewToon();
       return;
     }
     let cursor = null;
-    if (advance && toonHint) {
+    if (advance && toonHint &&
+      (free.math || tm.value === String(toonHint.math)) &&
+      (free.word || tw.value === String(toonHint.word)) &&
+      (free.face || tf.value === String(toonHint.face)) &&
+      (free.rgb || tr.value === String(toonHint.rgb))) {
       try {
         cursor = {
           math: BigInt(toonHint.math),
@@ -227,8 +234,18 @@
     if (free.word) choose(tw, next.word);
     if (free.face) choose(tf, next.face);
     if (free.rgb) choose(tr, next.rgb);
-    toonHint = { math: tm.value, word: tw.value, face: tf.value, rgb: tr.value, example: example };
-    paintToonHint(example, '');
+    toonHint = {
+      math: tm.value,
+      word: tw.value,
+      face: tf.value,
+      rgb: tr.value,
+      ownMath: !!free.math,
+      ownWord: !!free.word,
+      ownFace: !!free.face,
+      ownRgb: !!free.rgb,
+      example: example,
+    };
+    paintToonHint(example && free.math && free.word && free.face && free.rgb, '');
     previewToon();
   }
 
