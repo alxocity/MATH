@@ -309,6 +309,16 @@
     function endStroke() { stroke = ''; }
     grid.addEventListener('pointerup', endStroke);
     grid.addEventListener('pointercancel', endStroke);
+    grid.addEventListener('click', function (ev) {
+      if (ev.detail !== 0) return;
+      const btn = ev.target.closest('button');
+      if (!btn) return;
+      const cur = P.PAL.indexOf(btn.className);
+      put(btn, P.PAL[(cur + 1) % P.PAL.length]);
+      const issues = syncGrid();
+      const rule = issues.find(function (s) { return RULES.mold(s); });
+      S.hit(rule || '');
+    });
     $('#heart').onclick = function () { S.applyHeart(false); };
     $('#shuffle').onclick = function () { S.applyHeart(true); };
     $('#file').onchange = function () {
