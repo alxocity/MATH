@@ -143,6 +143,7 @@
   }
 
   const tones = new Map();
+  const toneWait = new Map();
   let prevGen = 0;
 
   function rgbPlanes(id) {
@@ -163,7 +164,9 @@
   function readTone(id) {
     const key = BigInt(id);
     if (tones.has(key)) return Promise.resolve(tones.get(key));
-    return Promise.all([
+    const pending = toneWait.get(key);
+    if (pending) return pending;
+    const job = Promise.all([
       ETH.ethCall(ADDR.FACE, ABI.call(ABI.SEL.getBackgroundColor, [key])),
       ETH.ethCall(ADDR.FACE, ABI.call(ABI.SEL.getTextColor, [key])),
     ]).then(function (pair) {
@@ -171,6 +174,9 @@
       tones.set(key, tone);
       return tone;
     });
+    job.then(function () { toneWait.delete(key); }, function () { toneWait.delete(key); });
+    toneWait.set(key, job);
+    return job;
   }
 
   function quiet(p) {
@@ -178,7 +184,9 @@
   }
 
   function showSvg(host, planes, face, tone) {
-    const xml = TOONR.svg(planes.r, planes.g, planes.b, face || '', tone ? tone.bg : 0n, tone ? tone.fg : 0n);
+    const fg = tone ? tone.fg : 0n;
+    let xml = TOONR.svg(planes.r, planes.g, planes.b, face || '', tone ? tone.bg : 0n, fg);
+    if (!tone) xml = xml.replace('#' + TOONR.textHex(fg), '#' + TOONR.lightHex(fg));
     host.innerHTML = '<img class="toon" alt="toon" src="' + S.svgUrl(xml) + '">' +
       (tone ? '' : '<p class="dim">colors unavailable</p>');
   }

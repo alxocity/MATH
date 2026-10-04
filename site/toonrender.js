@@ -14,6 +14,11 @@
     return (Number(BigInt(n)) - 5).toString(16).padStart(6, '0');
   }
 
+  function lightHex(n) {
+    const hex = textHex(n);
+    return hex.indexOf('-') === -1 ? hex : 'e7e2d4';
+  }
+
   function xml(s) {
     return String(s).replace(/[&<>]/g, function (c) {
       return c === '&' ? '&amp;' : c === '<' ? '&lt;' : '&gt;';
@@ -48,5 +53,5 @@
       '</text></svg>';
   }
 
-  return { toneHex: toneHex, textHex: textHex, xml: xml, pixels: pixels, svg: svg };
+  return { toneHex: toneHex, textHex: textHex, lightHex: lightHex, xml: xml, pixels: pixels, svg: svg };
 });
