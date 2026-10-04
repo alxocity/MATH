@@ -150,6 +150,19 @@
   }
 
   let mathHint = null;
+  let mathAccount = '';
+
+  function shiftMint(aEl, bEl) {
+    const who = state.account ? String(state.account).toLowerCase() : '';
+    if (who === mathAccount) return;
+    mathAccount = who;
+    if (!mathHint) return;
+    if (mathHint.ownA) aEl.value = '';
+    if (mathHint.ownB) bEl.value = '';
+    if (mathHint.ownA) mathHint.a = '';
+    if (mathHint.ownB) mathHint.b = '';
+    if (!mathHint.a && !mathHint.b) mathHint = null;
+  }
 
   function paintHint(example, note) {
     const el = $('#hintNote');
@@ -161,6 +174,7 @@
     const aEl = $('#a');
     const bEl = $('#b');
     if (!aEl || !bEl) return;
+    shiftMint(aEl, bEl);
     const example = !state.account;
     const dropped = !!(mathHint && mathHint.example !== example);
     const aFree = SUGGEST.hintFree(aEl.value, mathHint && { value: mathHint.a, example: mathHint.example }, !!(mathHint && mathHint.ownA), example);
