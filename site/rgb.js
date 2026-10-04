@@ -142,7 +142,7 @@
             value: S.hex(P.MSG_RGB),
           };
         },
-        done: async function () { return false; },
+        done: async function () { return ETH.rgbMinted(item.r, item.g, item.b); },
         ready: async function (batch) {
           const producedNow = {};
           (batch || []).forEach(function (row) {
@@ -199,8 +199,13 @@
     if (state.queue.length) S.hydrateRun(queueRuns());
     else S.paintSavedRun();
     if (btn) {
-      const open = (state.run || []).filter(function (s) { return s.status !== 'confirmed' && s.tx; });
-      btn.disabled = !state.queue.length || !open.length || !!(open[0] && open[0].blocked);
+      const open = (state.run || []).filter(function (s) {
+        return s.tx && s.status !== 'confirmed' && s.status !== 'submitted' && !globalThis.RUN.isUnknown(s.status);
+      });
+      const flying = (state.run || []).some(function (s) {
+        return s.status === 'submitted' || globalThis.RUN.isUnknown(s.status);
+      });
+      btn.disabled = !state.queue.length || flying || !open.length || !!(open[0] && open[0].blocked);
       btn.onclick = sendAllQueue;
     }
   }

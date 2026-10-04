@@ -49,6 +49,7 @@ assert.strictEqual(ETH.rpcRetryable(200, { code: 3, message: 'execution reverted
 assert.strictEqual(ETH.rpcRetryable(200, { code: -32003, message: 'out of gas: gas required exceeds: 23300' }), false);
 assert.strictEqual(ETH.rpcRetryable(429, null), true);
 assert.strictEqual(ETH.rpcRetryable(200, { code: -32603, message: 'Internal error' }), true);
+assert.strictEqual(ETH.rpcRetryable(200, { code: -32601, message: 'Method not found' }), true);
 
 const longer = { math: [1, 2], rgb: [], toon: [], blockedDone: false };
 const scanned = { math: [1], rgb: [], toon: [], blockedDone: true };

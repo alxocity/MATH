@@ -61,7 +61,42 @@ pending.status = 'submitted';
 assert.strictEqual(RUN.deferSim(next, [pending, next]), false);
 pending.status = 'pending';
 assert.strictEqual(RUN.deferSim({ result: 4n, uses: [], status: 'pending' }, [pending]), false);
+pending.status = RUN.UNKNOWN;
+assert.strictEqual(RUN.deferSim(next, [pending, next]), false);
+pending.status = 'pending';
 assert.strictEqual(RUN.batchSimNote(3), "steps 2–3 can't be simulated until step 1 is minted");
+
+assert.strictEqual(RUN.UNKNOWN, 'status unknown — check your wallet');
+assert.notStrictEqual(RUN.UNKNOWN, 'failed');
+assert.strictEqual(RUN.isUnknown(RUN.UNKNOWN), true);
+assert.strictEqual(RUN.isUnknown('failed'), false);
+assert.strictEqual(RUN.isUnknown('submitted'), false);
+
+const callsOnly = { status: 'submitted', calls: '0xbatch', hash: '', error: 'old' };
+const unheard = RUN.settleUnheard([callsOnly], false);
+assert.notStrictEqual(unheard[0], callsOnly);
+assert.strictEqual(unheard[0].status, RUN.UNKNOWN);
+assert.notStrictEqual(unheard[0].status, 'failed');
+assert.strictEqual(unheard[0].error, '');
+assert.strictEqual(callsOnly.status, 'submitted');
+assert.strictEqual(RUN.settleUnheard([callsOnly], true)[0].status, 'submitted');
+const hashed = { status: 'submitted', calls: '0xbatch', hash: '0x' + 'ab'.repeat(32) };
+assert.strictEqual(RUN.settleUnheard([hashed], false)[0].status, 'submitted');
+assert.strictEqual(RUN.settleUnheard([{ status: 'submitted', hash: '', calls: '' }], false)[0].status, 'submitted');
+assert.strictEqual(RUN.settleUnheard([{ status: 'failed', calls: '0xbatch' }], false)[0].status, 'failed');
+
+assert.strictEqual(RUN.shouldResume({ status: 'submitted', calls: 'id' }), true);
+assert.strictEqual(RUN.shouldResume({ status: RUN.UNKNOWN, calls: 'id' }), true);
+assert.strictEqual(RUN.shouldResume({ status: 'submitted', hash: '0x' + '11'.repeat(32) }), true);
+assert.strictEqual(RUN.shouldResume({ status: 'failed', calls: 'id' }), false);
+assert.strictEqual(RUN.shouldResume({ status: 'submitted', hash: '', calls: '' }), false);
+assert.strictEqual(RUN.shouldResume(null), false);
+
+assert.strictEqual(RUN.rgbMatch([{ r: 1n, g: 2n, b: 3n }], 1n, 2n, 3n), true);
+assert.strictEqual(RUN.rgbMatch([{ r: 9n, g: 9n, b: 9n }, { r: '1', g: '2', b: '3' }], 1, 2, 3), true);
+assert.strictEqual(RUN.rgbMatch([{ r: 1n, g: 2n, b: 4n }], 1n, 2n, 3n), false);
+assert.strictEqual(RUN.rgbMatch([], 1n, 2n, 3n), false);
+assert.strictEqual(RUN.rgbMatch(null, 1n, 2n, 3n), false);
 
 assert.strictEqual(RUN.receiptOk('0x1'), true);
 assert.strictEqual(RUN.receiptOk('0x01'), true);

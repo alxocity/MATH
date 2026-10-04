@@ -440,9 +440,11 @@
     if (!note) return;
     const list = steps || [];
     const seeded = list.filter(function (s) {
-      return (s.status === 'confirmed' || s.status === 'submitted') && s.result != null;
+      return (s.status === 'confirmed' || s.status === 'submitted' || globalThis.RUN.isUnknown(s.status)) && s.result != null;
     }).map(function (s) { return String(s.result); });
-    const open = list.filter(function (s) { return s.status !== 'confirmed' && s.status !== 'submitted'; });
+    const open = list.filter(function (s) {
+      return s.status !== 'confirmed' && s.status !== 'submitted' && !globalThis.RUN.isUnknown(s.status);
+    });
     const first = (globalThis.RUN.splitCalls(open, seeded)[0]) || [];
     note.hidden = first.length < 2;
   }
@@ -458,7 +460,8 @@
       const err = s.status === 'failed' && s.error ? ' <span class="bad">' + esc(s.error) + '</span>' : '';
       const btn = s.status === 'failed'
         ? ' <button type="button" data-retry="1">retry</button>'
-        : (s.status === 'submitted' ? ' <button type="button" data-check="1">check</button>' : '');
+        : (s.status === 'submitted' || globalThis.RUN.isUnknown(s.status)
+          ? ' <button type="button" data-check="1">check</button>' : '');
       return '<div class="run">' + (i + 1) + '/' + rows.length + ' ' + esc(s.status || 'pending') + ' ' + esc(s.label) + hash + err + btn + '</div>';
     }).join('');
     host.querySelectorAll('[data-retry]').forEach(function (b) {
@@ -498,7 +501,7 @@
     let owner = null;
     try { owner = await ETH.ownerOf(ADDR.MATH, step.result); }
     catch (e) { return false; }
-    if (!owner) return false;
+    if (!owner || /^0x0{40}$/.test(String(owner).toLowerCase())) return false;
     const mine = state.account && String(owner).toLowerCase() === String(state.account).toLowerCase();
     if (mine) confirm(step);
     else {
@@ -566,7 +569,7 @@
       s.status = st;
     });
     const stuck = (state.run || []).filter(function (s) {
-      return s.status === 'submitted' && s.label && !labels[s.label];
+      return (s.status === 'submitted' || globalThis.RUN.isUnknown(s.status)) && s.label && !labels[s.label];
     });
     state.run = stuck.concat(steps || []);
     paintRun();
@@ -619,7 +622,7 @@
       st = await withTimeout(ethereum.request({ method: 'wallet_getCallsStatus', params: [id] }), 8000);
     } catch (e) {
       if (globalThis.RUN.unsupported(e)) return 'unread';
-      return '';
+      return 'timeout';
     }
     const outcome = globalThis.RUN.callsOutcome(st && st.status);
     const receipts = (st && st.receipts) || [];
@@ -632,7 +635,12 @@
       const h = receipts.map(function (r) { return r && (r.transactionHash || r.hash); }).find(Boolean);
       if (h) group.forEach(function (s) { if (!s.hash) mark(s, { hash: h }); });
     }
-    if (outcome === 'pending') return '';
+    if (outcome === 'pending') {
+      group.forEach(function (s) {
+        if (globalThis.RUN.isUnknown(s.status)) mark(s, { status: 'submitted', error: '' });
+      });
+      return '';
+    }
     if (outcome === 'confirmed') {
       let waiting = false;
       for (let i = 0; i < group.length; i++) {
@@ -647,15 +655,20 @@
     return '';
   }
 
+  function inFlight(step) {
+    return !!(step && (step.status === 'submitted' || globalThis.RUN.isUnknown(step.status)));
+  }
+
   async function checkSubmitted() {
-    const steps = (state.run || []).filter(function (s) { return s.status === 'submitted'; });
+    const steps = (state.run || []).filter(inFlight);
     const seen = {};
+    let heard = false;
     for (let i = 0; i < steps.length; i++) {
       const step = steps[i];
-      if (step.status !== 'submitted') continue;
+      if (!inFlight(step)) continue;
       if (step.hash && /^0x[0-9a-fA-F]{64}$/.test(step.hash)) {
         let rec = null;
-        try { rec = await ETH.receipt(step.hash); } catch (e) { return; }
+        try { rec = await ETH.receipt(step.hash); } catch (e) { continue; }
         if (!rec) continue;
         if (!globalThis.RUN.receiptOk(rec.status)) {
           fail(step, 'reverted');
@@ -665,29 +678,41 @@
         MOLD.say('mined', { status: 'ok' });
       } else if (step.calls && !seen[step.calls]) {
         seen[step.calls] = true;
-        const group = (state.run || []).filter(function (s) { return s.status === 'submitted' && s.calls === step.calls; });
+        const group = (state.run || []).filter(function (s) { return inFlight(s) && s.calls === step.calls; });
         const how = await checkCalls(step.calls, group);
         if (how === 'unread') giveUpCalls(group);
+        else if (how !== 'timeout') heard = true;
       }
     }
+    return heard ? 'heard' : '';
+  }
+
+  function markUnheard() {
+    const next = globalThis.RUN.settleUnheard(state.run, false);
+    (state.run || []).forEach(function (s, i) {
+      const row = next[i];
+      if (!row || row.status === s.status) return;
+      mark(s, { status: row.status, error: '' });
+    });
   }
 
   async function watchOpen(gen) {
+    let heard = false;
     for (let i = 0; i < 30; i++) {
       if (gen !== state.runGen) return;
       await sleepOrTick(i === 0 ? 800 : 4000);
       if (gen !== state.runGen) return;
-      await checkSubmitted();
-      if (!(state.run || []).some(function (s) { return s.status === 'submitted'; })) return;
+      const how = await checkSubmitted();
+      if (how === 'heard') heard = true;
+      if (!(state.run || []).some(inFlight)) return;
     }
+    if (gen !== state.runGen || heard) return;
+    markUnheard();
   }
 
   function resumeIfSubmitted() {
     if (state.runBusy || state.txLock) return;
-    const hasHash = (state.run || []).some(function (s) {
-      return s.status === 'submitted' && /^0x[0-9a-fA-F]{64}$/.test(s.hash || '');
-    });
-    if (!hasHash) return;
+    if (!(state.run || []).some(function (s) { return globalThis.RUN.shouldResume(s); })) return;
     state.runGen += 1;
     const gen = state.runGen;
     state.runBusy = true;
@@ -797,7 +822,7 @@
     if (live.length < 2) return sendSeq(live, gen);
     let caps = null;
     try {
-      caps = await ethereum.request({ method: 'wallet_getCapabilities', params: [state.account] });
+      caps = await withTimeout(ethereum.request({ method: 'wallet_getCapabilities', params: [state.account] }), 8000);
     } catch (e) {
       if (globalThis.RUN.rejected(e)) {
         fail(live[0], 'rejected');
@@ -815,14 +840,7 @@
           return { from: state.account, to: tx.to, data: tx.data, value: tx.value || '0x0' };
         }));
       } catch (e) {
-        if (globalThis.RUN.unsupported(e)) {
-          const note = globalThis.RUN.batchSimNote(live.length);
-          live.forEach(function (s) {
-            if (globalThis.RUN.deferSim(s, live)) mark(s, { status: 'failed', error: note });
-          });
-          MOLD.say('simFail', { err: note });
-          return;
-        }
+        if (globalThis.RUN.unsupported(e)) return sendSeq(live, gen);
         fail(live[0], clip(e && e.message ? e.message : e));
         return;
       }
@@ -891,28 +909,33 @@
       hydrateRun(steps, true);
       for (let i = 0; i < state.run.length; i++) {
         const step = state.run[i];
-        if (step.status === 'submitted') continue;
+        const flying = inFlight(step);
         let done = false;
         try { done = await step.done(); }
         catch (e) {
+          if (flying) continue;
           fail(step, clip(e && e.message ? e.message : e));
           return;
         }
         if (done) mark(step, { status: 'confirmed', error: '' });
-        else if (step.status === 'confirmed' && step.result != null) mark(step, { status: 'pending', error: '' });
+        else if (!flying && step.status === 'confirmed' && step.result != null) mark(step, { status: 'pending', error: '' });
       }
       if (gen !== state.runGen) return;
-      if ((state.run || []).some(function (s) { return s.status === 'submitted'; })) {
+      if ((state.run || []).some(inFlight)) {
         MOLD.say('wait');
         await watchOpen(gen);
         return;
       }
       let work;
       if (opt && opt.only) {
-        work = state.run.filter(function (s) { return s.label === opt.only && s.status !== 'confirmed'; });
+        work = state.run.filter(function (s) {
+          return s.label === opt.only && s.status !== 'confirmed' && !inFlight(s);
+        });
       } else {
-        const seeded = state.run.filter(function (s) { return s.status === 'confirmed' && s.result != null; }).map(function (s) { return String(s.result); });
-        const open = state.run.filter(function (s) { return s.status !== 'confirmed'; });
+        const seeded = state.run.filter(function (s) {
+          return (s.status === 'confirmed' || inFlight(s)) && s.result != null;
+        }).map(function (s) { return String(s.result); });
+        const open = state.run.filter(function (s) { return s.status !== 'confirmed' && !inFlight(s); });
         work = (globalThis.RUN.splitCalls(open, seeded)[0]) || [];
       }
       if (!work.length) return;

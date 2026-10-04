@@ -139,8 +139,13 @@
     S.hydrateRun(runs);
     const sendAll = $('#sendRoute');
     if (sendAll) {
-      const open = (state.run || []).filter(function (s) { return s.status !== 'confirmed' && s.tx; });
-      sendAll.disabled = !open.length || !!(open[0] && open[0].blocked);
+      const open = (state.run || []).filter(function (s) {
+        return s.tx && s.status !== 'confirmed' && s.status !== 'submitted' && !globalThis.RUN.isUnknown(s.status);
+      });
+      const flying = (state.run || []).some(function (s) {
+        return s.status === 'submitted' || globalThis.RUN.isUnknown(s.status);
+      });
+      sendAll.disabled = flying || !open.length || !!(open[0] && open[0].blocked);
       sendAll.onclick = function () { sendRoute(); };
     }
     const box = $('#preview');

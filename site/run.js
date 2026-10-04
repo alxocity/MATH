@@ -28,16 +28,52 @@
     return status === 'ready' || status === 'supported';
   }
 
+  // A hashless batch whose status reads all timed out. Not a failure: retry would
+  // send RGB.add again at 0.03 ETH for a batch that may already have landed.
+  const UNKNOWN = 'status unknown — check your wallet';
+
+  function isUnknown(status) {
+    return status === UNKNOWN;
+  }
+
   // Skip a lone eth_call only when a used id is still going to be minted by an
-  // unsent step in this batch. A mined step is not unsent, so the next call is simulated.
+  // unsent step in this batch. A mined, submitted, or unheard step is not unsent.
   function deferSim(step, batch) {
     const produced = new Set();
     (batch || []).forEach(function (s) {
       if (!s || s === step || s.result == null) return;
-      if (s.status === 'confirmed' || s.status === 'submitted') return;
+      if (s.status === 'confirmed' || s.status === 'submitted' || s.status === UNKNOWN) return;
       produced.add(String(s.result));
     });
     return (step.uses || []).some(function (id) { return produced.has(String(id)); });
+  }
+
+  // After the status watch gives up, hashless calls stay unknown. A heard watch,
+  // a real tx hash, or a step with no calls id is left as it is.
+  function settleUnheard(steps, heard) {
+    if (heard) return steps;
+    return (steps || []).map(function (s) {
+      if (!s || s.status !== 'submitted') return s;
+      if (s.hash && /^0x[0-9a-fA-F]{64}$/.test(s.hash)) return s;
+      if (!s.calls) return s;
+      return Object.assign({}, s, { status: UNKNOWN, error: '' });
+    });
+  }
+
+  function shouldResume(step) {
+    if (!step) return false;
+    if (step.status !== 'submitted' && step.status !== UNKNOWN) return false;
+    if (step.hash && /^0x[0-9a-fA-F]{64}$/.test(step.hash)) return true;
+    return !!step.calls;
+  }
+
+  function rgbMatch(rows, r, g, b) {
+    const R = BigInt(r);
+    const G = BigInt(g);
+    const B = BigInt(b);
+    return (rows || []).some(function (row) {
+      return row && BigInt(row.r) === R && BigInt(row.g) === G && BigInt(row.b) === B;
+    });
   }
 
   function batchSimNote(n) {
@@ -92,6 +128,11 @@
     callsOutcome: callsOutcome,
     rejected: rejected,
     unsupported: unsupported,
+    UNKNOWN: UNKNOWN,
+    isUnknown: isUnknown,
+    settleUnheard: settleUnheard,
+    shouldResume: shouldResume,
+    rgbMatch: rgbMatch,
   };
   globalThis.RUN = api;
   if (typeof module === 'object' && module.exports) module.exports = api;

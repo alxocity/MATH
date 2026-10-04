@@ -34,7 +34,7 @@
     if (!error) return false;
     const msg = String(error.message || '');
     if (error.code === 3 || /execution reverted/i.test(msg)) return false;
-    if (error.code === -32603 || error.code === -32005) return true;
+    if (error.code === -32603 || error.code === -32005 || error.code === -32601) return true;
     return /rate|limit|timeout|busy|temporarily|internal error|unauthorized|unavailable|overloaded/i.test(msg);
   }
 
@@ -56,7 +56,11 @@
         });
         if (res.status === 429 || res.status >= 500) throw new Error('http ' + res.status);
         const j = await res.json();
-        if (rpcRetryable(res.status, j.error)) throw new Error((j.error && j.error.message) || 'rpc');
+        if (rpcRetryable(res.status, j.error)) {
+          const err = new Error((j.error && j.error.message) || 'rpc');
+          if (j.error && j.error.code != null) err.code = j.error.code;
+          throw err;
+        }
         return j;
       } catch (e) {
         last = e;
@@ -550,6 +554,25 @@
     });
   }
 
+  // RGB.r_to_id is not a public getter. get(id) is. A short read throws
+  // so a missing row is not treated as "this triple is free to mint again".
+  async function rgbMinted(r, g, b) {
+    const sup = await ethCall(ADDR.RGB, '0x' + ABI.SEL.totalSupply);
+    const n = Number(ABI.decodeUint(sup));
+    if (!Number.isSafeInteger(n) || n < 0) throw new Error('RGB supply');
+    if (!n) return false;
+    const ids = await loadIds(ADDR.RGB, n, null, 'RGB');
+    if (ids.length !== n) throw new Error('RGB supply');
+    const gets = await loadGets(ADDR.RGB, ids, null, 'RGB');
+    if (gets.length !== ids.length) throw new Error('RGB get');
+    const rows = gets.map(function (w) {
+      if (!w || w.length < 3) throw new Error('RGB get');
+      return { r: w[0], g: w[1], b: w[2] };
+    });
+    if (!globalThis.RUN || typeof globalThis.RUN.rgbMatch !== 'function') throw new Error('RGB match');
+    return globalThis.RUN.rgbMatch(rows, r, g, b);
+  }
+
   async function simulate(tx) {
     return rpc('eth_call', [tx, 'latest']);
   }
@@ -619,6 +642,7 @@
     tokenSVGs: tokenSVGs,
     readString: readString,
     ethCall: ethCall,
+    rgbMinted: rgbMinted,
     simulate: simulate,
     simulateCalls: simulateCalls,
     send: send,
