@@ -132,19 +132,109 @@
     });
   }
 
+  function ownedMath() {
+    const who = S.me();
+    const ids = [];
+    const seen = new Set();
+    function add(id) {
+      let x;
+      try { x = BigInt(id); } catch (e) { return; }
+      const k = x.toString();
+      if (seen.has(k)) return;
+      seen.add(k);
+      ids.push(x);
+    }
+    state.math.forEach(function (t) {
+      if (t.owner && t.owner.toLowerCase() === who) add(t.id);
+    });
+    state.heldMath.forEach(add);
+    return ids;
+  }
+
+  function mathCtx() {
+    return {
+      supply: state.supply,
+      user: S.me(),
+      blocked: state.blocked,
+      gasWei: P.G_ADD * state.gasPrice,
+      owned: ownedMath(),
+      example: !state.account,
+    };
+  }
+
+  let mathHint = null;
+
+  function paintHint(example, note) {
+    const el = $('#hintNote');
+    if (!el) return;
+    el.textContent = note || (example ? 'example' : '');
+  }
+
+  function fillMint(advance) {
+    const aEl = $('#a');
+    const bEl = $('#b');
+    if (!aEl || !bEl) return;
+    const example = !state.account;
+    if (mathHint && mathHint.example !== example) mathHint = null;
+    const aFree = SUGGEST.fieldFree(aEl.value, mathHint && mathHint.a);
+    const bFree = SUGGEST.fieldFree(bEl.value, mathHint && mathHint.b);
+    const ctx = mathCtx();
+    if (!aFree && !bFree) {
+      paintHint(false, '');
+      paintMint(false);
+      return;
+    }
+    if (!advance && mathHint && SUGGEST.mathOk(ctx, mathHint.a, mathHint.b)) {
+      if (aFree) aEl.value = String(mathHint.a);
+      if (bFree) bEl.value = String(mathHint.b);
+      paintHint(example, '');
+      paintMint(false);
+      return;
+    }
+    const next = SUGGEST.mathPair(ctx, {
+      cursor: advance && mathHint ? { a: BigInt(mathHint.a), b: BigInt(mathHint.b) } : null,
+      lockA: aFree ? null : aEl.value,
+      lockB: bFree ? null : bEl.value,
+    });
+    if (!next) {
+      const stale = mathHint && !SUGGEST.mathOk(ctx, mathHint.a, mathHint.b);
+      if (stale) {
+        if (aFree) aEl.value = '';
+        if (bFree) bEl.value = '';
+        mathHint = null;
+      }
+      paintHint(false, advance && mathHint ? 'nothing else' : 'nothing to suggest');
+      paintMint(false);
+      return;
+    }
+    if (aFree) aEl.value = next.a.toString();
+    if (bFree) bEl.value = next.b.toString();
+    mathHint = { a: aEl.value, b: bEl.value, example: example };
+    paintHint(example && aEl.value === mathHint.a && bEl.value === mathHint.b, '');
+    paintMint(false);
+  }
+
   function mint(view) {
     view.innerHTML =
-      '<div class="row"><label>a <input id="a" value="1" spellcheck="false"></label>' +
-      '<label>b <input id="b" value="1" spellcheck="false"></label></div>' +
-      '<div class="eq" id="eq">1 + 1 = 2</div>' +
+      '<div class="row"><label class="num">a <input id="a" spellcheck="false" inputmode="numeric"></label>' +
+      '<label class="num">b <input id="b" spellcheck="false" inputmode="numeric"></label></div>' +
+      '<div class="row"><button type="button" id="suggest">suggest another</button>' +
+      '<span id="hintNote" class="dim"></span></div>' +
+      '<div class="eq" id="eq">a + b = ?</div>' +
       '<div id="grid"></div>' +
       '<p id="mintMeta"></p>' +
       '<div class="preview" id="preview">simulate, then send. this page does not sign.</div>' +
       '<div class="row"><button type="button" id="sim">simulate</button>' + S.mark('ⓘ', S.TIPS.simulate) + '<button type="button" id="send">send add</button>' +
       '<span id="sendWhy" class="bad"></span></div>';
-    const draw = function () { paintMint(false, true); };
+    const draw = function () {
+      paintMint(false, true);
+      const el = $('#hintNote');
+      if (!el || el.textContent !== 'example' || !mathHint) return;
+      if ($('#a').value !== String(mathHint.a) || $('#b').value !== String(mathHint.b)) el.textContent = '';
+    };
     $('#a').addEventListener('input', draw);
     $('#b').addEventListener('input', draw);
+    $('#suggest').onclick = function () { fillMint(true); };
     $('#sim').onclick = function () { paintMint(true, true); };
     $('#send').onclick = function () {
       const pair = readPair();
@@ -153,9 +243,10 @@
       if (mintClosed(note)) return;
       sendMath();
     };
-    paintMint(false);
+    fillMint(false);
   }
 
   S.mint = mint;
   S.paintMint = paintMint;
+  S.fillMint = fillMint;
 })();

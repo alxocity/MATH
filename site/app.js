@@ -1187,6 +1187,7 @@
         syncMine();
         if (state.account) loadWallet();
         if (state.tab === 'toon' || state.tab === 'mint' || state.tab === 'mine' || state.tab === 'browse') show(state.tab);
+        else if (state.tab === 'rgb' && SITE.fillRgb) SITE.fillRgb(false);
       });
       eth.on('chainChanged', onChain);
     }
@@ -1275,6 +1276,7 @@
     await loadHeld();
     paintWho();
     if (state.tab === 'toon' || state.tab === 'mine') show(state.tab);
+    else if (state.tab === 'mint' && SITE.fillMint) SITE.fillMint(false);
   }
 
   let loadGen = 0;
@@ -1290,10 +1292,9 @@
   function paintIndex() {
     setStatus('block ' + state.block);
     if (state.tab === 'browse' || state.tab === 'toon') show(state.tab);
+    else if (state.tab === 'mint' && SITE.fillMint) SITE.fillMint(false);
     else if (state.tab === 'mint' && $('#send')) SITE.paintMint(false);
-    else if (state.tab === 'rgb' && $('#rgbMeta') && state.planes) {
-      $('#rgbMeta').innerHTML = SITE.issuesHtml(SITE.planeIssues(state.planes));
-    }
+    else if (state.tab === 'rgb' && SITE.fillRgb) SITE.fillRgb(false);
   }
 
   function heartCtx() {
