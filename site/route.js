@@ -3,6 +3,7 @@
   const state = S.state;
   const $ = S.$;
   const P = globalThis.PLAN;
+  const ETH = globalThis.ETH;
   const RULES = globalThis.RULES;
 
   function stepNote(s) {
@@ -10,6 +11,47 @@
       RULES.holderNote(s.payTo[0], state.blocked, state.unknown),
       RULES.holderNote(s.payTo[1], state.blocked, state.unknown)
     );
+  }
+
+  function routeRuns() {
+    const built = state.routeBuilt;
+    if (!built) return [];
+    const produced = [];
+    return built.steps.filter(function (s) { return !s.exists; }).map(function (s) {
+      const uses = [s.a, s.b].filter(function (id) {
+        return produced.some(function (p) { return p === id; });
+      });
+      produced.push(s.result);
+      const note = stepNote(s);
+      return {
+        label: s.a + ' + ' + s.b + ' = ' + s.result,
+        result: s.result,
+        uses: uses,
+        blocked: note === RULES.payout(),
+        blockWhy: note,
+        tx: function () { return S.mathTx(s.a, s.b); },
+        done: async function () { return !!(await ETH.ownerOf(ETH.ADDR.MATH, s.result)); },
+        ready: async function (batch) {
+          const producedNow = {};
+          (batch || []).forEach(function (row) {
+            if (row.result != null) producedNow[String(row.result)] = true;
+          });
+          async function need(id) {
+            if (producedNow[String(id)]) return true;
+            return !!(await ETH.ownerOf(ETH.ADDR.MATH, id));
+          }
+          if (!(await need(s.a)) || !(await need(s.b))) return 'an input is not minted yet';
+          return '';
+        },
+        onOk: function () { state.supply.set(s.result, S.me()); },
+      };
+    });
+  }
+
+  function sendRoute(only) {
+    const runs = routeRuns();
+    state.runSend = function () { sendRoute(); };
+    S.runSteps(runs, only ? { only: only } : null);
   }
 
   function paintRoute() {
@@ -59,6 +101,9 @@
         else meta.textContent = 'holder scan still running';
       }
       if (steps) steps.innerHTML = '';
+      const sendAll = $('#sendRoute');
+      if (sendAll) sendAll.disabled = true;
+      S.paintSavedRun();
       return;
     }
     const warn = built.target.toString() === state.routeTarget ? '' : ' sums to ' + built.target + ', not the target.';
@@ -83,8 +128,20 @@
         b.onclick = function () { S.sendStep(built.steps[Number(b.dataset.sim)], false); };
       });
       steps.querySelectorAll('[data-send]').forEach(function (b) {
-        b.onclick = function () { S.sendStep(built.steps[Number(b.dataset.send)], true); };
+        b.onclick = function () {
+          const s = built.steps[Number(b.dataset.send)];
+          sendRoute(s.a + ' + ' + s.b + ' = ' + s.result);
+        };
       });
+    }
+    const runs = routeRuns();
+    state.runSend = function () { sendRoute(); };
+    S.hydrateRun(runs);
+    const sendAll = $('#sendRoute');
+    if (sendAll) {
+      const open = (state.run || []).filter(function (s) { return s.status !== 'confirmed' && s.tx; });
+      sendAll.disabled = !open.length || !!(open[0] && open[0].blocked);
+      sendAll.onclick = function () { sendRoute(); };
     }
     const box = $('#preview');
     if (box && state.preview) box.textContent = state.preview;
@@ -139,11 +196,15 @@
       '<button type="button" id="mode" class="on">' + state.routeMode + '</button>' +
       '<button type="button" id="plan">plan</button></div>' +
       '<p class="dim" id="routeMeta"></p><div id="pieces"></div><div id="steps"></div>' +
-      '<div class="preview" id="preview">' + S.esc(state.preview || 'each send is one wallet confirmation.') + '</div>';
+      '<p class="dim" id="batchNote" hidden>A batch may ask MetaMask for a one-time smart account upgrade (EIP-7702). That delegates this address for the calls. You approve it in the wallet. This page does not sign by itself.</p>' +
+      '<div id="run"></div>' +
+      '<div class="row"><button type="button" id="sendRoute">send</button></div>' +
+      '<div class="preview" id="preview">' + S.esc(state.preview || 'send signs the next batch. this page does not sign by itself.') + '</div>';
     $('#mode').onclick = function () {
       state.routeMode = state.routeMode === 'fewest' ? 'cheapest' : 'fewest';
       $('#mode').textContent = state.routeMode;
     };
+    state.runSend = function () { sendRoute(); };
     $('#plan').onclick = planRoute;
     $('#target').addEventListener('change', function () { state.routeTarget = $('#target').value.trim(); });
     paintRoute();
