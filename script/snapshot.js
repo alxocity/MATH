@@ -58,7 +58,7 @@ async function main() {
     seen.add(a);
     owners.push(a);
   });
-  const scan = ETH.scanResult(await ETH.scanBlocked(owners, function (msg) { console.error(msg); }));
+  const scan = ETH.scanResult(await ETH.catchHolders(owners, prev, function (msg) { console.error(msg); }, inv.block));
   if (!scan.blockedDone) throw new Error('holders');
   const packed = ETH.pack(inv, scan.blocked);
   packed.blocked.sort();
