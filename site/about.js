@@ -10,6 +10,7 @@
       '<p>Drawing with MATH started with <a href="https://kaigani.medium.com/drawing-with-math-64965b3f0fae">kaigani, 2019</a>.</p>' +
       '<p>Fees on MATH and RGB are royalties to whoever holds the inputs, not a cut for this site. Hold those inputs and that share comes back to you (some contract wallets can\'t take MATH\'s payout). You still pay gas.</p>' +
       '<p>Every MATH after #1 is the sum of two others. RGB and TOON are built from parts. A MATH or RGB mint pays the holders it builds on, and a later mint can build on yours.</p>' +
+      '<p>inputs you own are free. every token you hold makes the next build cheaper, and the route shorter.</p>' +
       '<p>MATH, RGB, TOON, and the renderers have no admin key and no upgrade. The renderers draw the pictures on mainnet.</p>' +
       '<h2>rules</h2>' +
       globalThis.RULES.about().map(function (line) { return '<p>' + S.esc(line) + '</p>'; }).join('') +
