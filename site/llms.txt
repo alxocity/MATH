@@ -7,6 +7,7 @@
 - /index.json — snapshot the site already builds. script/snapshot.js rewrites it; the weekly workflow commits that file.
 - /plan.js — AGENT.plan(wallet, target, snapshot). Browser global after abi.js, planner.js, and eth.js. Node: require('./plan').
 - /agents/ — schema, calls, caveats, contracts.
+- /ens/ — subname batch tool. Reads a parent, diffs records, and waits for a signature.
 - /agents/example.json — MATH, RGB, and TOON plans on a tiny fixture.
 
 ## Snapshot

@@ -1,0 +1,53 @@
+{
+  "parent": "alxocity.eth",
+  "names": [
+    {
+      "label": "math",
+      "addr": "0x6B4fccdd888Bb6fD3934A9e49eF64dfd2c0D8e6D",
+      "text": {
+        "url": "https://math.alxo.city",
+        "description": "The MATH contract. Add two token ids."
+      }
+    },
+    {
+      "label": "rgb",
+      "addr": "0x9355Fb9693ffF9bB6f06721C82fe0B5F49E6c956",
+      "text": {
+        "url": "https://math.alxo.city",
+        "description": "The RGB contract. Three MATH channels."
+      }
+    },
+    {
+      "label": "toon",
+      "addr": "0x026A7D72a448D0E44d441e55F746BF56B843aEDB",
+      "text": {
+        "url": "https://math.alxo.city",
+        "description": "The TOON contract. A MATH, a word, a face, and an RGB."
+      }
+    },
+    {
+      "label": "mathrender",
+      "addr": "0xb3cA13A2722CAB48c8d9068bD67656efe2d5e376",
+      "text": {
+        "url": "https://math.alxo.city",
+        "description": "On-chain pictures and metadata for MATH."
+      }
+    },
+    {
+      "label": "rgbrender",
+      "addr": "0x62FFe75cd9824A2e8855CbC055256De229B5b936",
+      "text": {
+        "url": "https://math.alxo.city",
+        "description": "On-chain pictures and metadata for RGB."
+      }
+    },
+    {
+      "label": "toonrender",
+      "addr": "0x1E1a576e4186551e4DEdE58Ccc2DCC34697159Cb",
+      "text": {
+        "url": "https://math.alxo.city",
+        "description": "On-chain pictures and metadata for TOON."
+      }
+    }
+  ]
+}

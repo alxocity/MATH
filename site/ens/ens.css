@@ -1,0 +1,33 @@
+body {
+  display: block;
+  max-width: 920px;
+  margin: 0 auto;
+}
+h1 a { color: inherit; text-decoration: none; }
+main { display: block; }
+.name { border-top: 1px solid var(--line); padding: 12px 0 16px; }
+.name h2 { font-size: 14px; font-weight: 500; margin: 0 0 8px; }
+label.field, .textrow {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  margin: 4px 0;
+}
+label.field span, .textrow .k {
+  flex: 0 0 7.5rem;
+  color: var(--dim);
+}
+label.field input, .textrow input[type="text"] { flex: 1; min-width: 0; }
+.rec { margin: 2px 0; }
+.rec.same, .rec.kept { color: var(--dim); }
+.rec.new { color: var(--y); }
+.rec.changed { color: var(--fg); }
+.rec.extra { color: var(--mold); }
+.bad { color: var(--bad); }
+#steps { margin: 8px 0 0; padding-left: 1.2rem; color: var(--dim); }
+#steps .now { color: var(--fg); }
+#offer p { margin: 8px 0; }
+@media (max-width: 480px) {
+  label.field, .textrow { flex-wrap: wrap; }
+  label.field span, .textrow .k { flex-basis: 100%; }
+}

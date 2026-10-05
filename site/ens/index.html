@@ -1,0 +1,52 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self'; style-src 'self'; img-src 'self' data: blob:; connect-src 'self' https:; base-uri 'none'; form-action 'none'">
+<title>ens</title>
+<link rel="stylesheet" href="../app.css">
+<link rel="stylesheet" href="ens.css">
+</head>
+<body>
+<header>
+  <h1><a href="../">1 <b>+</b> 1 <b>=</b> 2</a> ens</h1>
+  <button type="button" id="connect">connect</button>
+  <span id="who"></span>
+  <span id="status"></span>
+</header>
+<main>
+  <p class="dim">Read a parent name, compare each subname with the chain, and send only the difference. Nothing is signed until you click.</p>
+  <div class="row">
+    <label class="field"><span>parent</span><input id="parent" type="text" value="alxocity.eth" autocomplete="off" spellcheck="false"></label>
+    <button type="button" id="read">read</button>
+    <label class="field"><span>json</span><input id="file" type="file" accept="application/json,.json"></label>
+    <a href="?preset=math">math preset</a>
+  </div>
+  <p id="parent-state"></p>
+  <div id="offer" hidden>
+    <p id="offer-note" class="dim"></p>
+    <label><input id="newres" type="checkbox"> use the new public resolver for new names</label>
+  </div>
+  <div id="names"></div>
+  <div class="row">
+    <button type="button" id="add">add name</button>
+    <button type="button" id="simulate" disabled>simulate</button>
+    <button type="button" id="sign" disabled>sign one by one</button>
+    <button type="button" id="batch" hidden disabled>send as one batch</button>
+  </div>
+  <p id="count" class="dim"></p>
+  <ol id="steps"></ol>
+</main>
+<footer>
+  <a href="../">math</a>
+  <a href="presets/math.json">math.json</a>
+  <a href="https://github.com/alxocity/MATH/issues/39">#39</a>
+</footer>
+<script src="../abi.js"></script>
+<script src="../ens.js"></script>
+<script src="../eth.js"></script>
+<script src="diff.js"></script>
+<script src="app.js"></script>
+</body>
+</html>
