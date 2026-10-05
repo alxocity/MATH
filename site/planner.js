@@ -591,6 +591,176 @@
     return { R: red.id, G: g.id, B: b.id, rows: rows, mints: red.mints };
   }
 
+  // Channel orders. Duplicate values collapse, so (X, Y, Y) is three orders, not six.
+  function rgbOrders(ids) {
+    const n = ids.length;
+    const out = [];
+    const used = [];
+    function walk(acc) {
+      if (acc.length === n) {
+        out.push(acc.slice());
+        return;
+      }
+      const seen = new Set();
+      for (let i = 0; i < n; i++) {
+        if (used[i]) continue;
+        const key = ids[i].toString();
+        if (seen.has(key)) continue;
+        seen.add(key);
+        used[i] = true;
+        acc.push(i);
+        walk(acc);
+        acc.pop();
+        used[i] = false;
+      }
+    }
+    walk([]);
+    return out;
+  }
+
+  function rgbBetter(a, b, mode) {
+    if (mode === 'fewest') {
+      if (a.mints !== b.mints) return a.mints < b.mints;
+      return a.net < b.net;
+    }
+    if (a.net !== b.net) return a.net < b.net;
+    return a.mints < b.mints;
+  }
+
+  // Royalties that leave the wallet, gas per MATH mint, and the RGB add.
+  // ctx.gasWei is the cost of one MATH add. The RGB add is heavier (G_RGB).
+  // Channel royalties are the part of the 0.03 that does not come back.
+  function rgbScore(steps, channels, baseSupply, ctx) {
+    let royalty = 0n;
+    const minted = new Set();
+    for (let i = 0; i < steps.length; i++) {
+      royalty += steps[i].royalty;
+      minted.add(steps[i].result);
+    }
+    let rgbRoyalty = 0n;
+    for (let i = 0; i < channels.length; i++) {
+      const id = channels[i];
+      const owner = baseSupply.has(id) ? baseSupply.get(id) : '';
+      const held = owner && String(owner).toLowerCase() === ctx.user;
+      if (!held && !minted.has(id)) rgbRoyalty += RGB_ROY;
+    }
+    const mathGas = ctx.gasWei * BigInt(steps.length);
+    const rgbGas = G_ADD === 0n ? 0n : (ctx.gasWei * G_RGB) / G_ADD;
+    return {
+      royalty: royalty,
+      rgbRoyalty: rgbRoyalty,
+      gas: mathGas + rgbGas,
+      mints: steps.length,
+      net: royalty + rgbRoyalty + mathGas + rgbGas,
+    };
+  }
+
+  // Skip a step whose result is already on chain or was minted earlier in this plan.
+  function takeSteps(route, supply, steps, user) {
+    for (let i = 0; i < route.steps.length; i++) {
+      const step = route.steps[i];
+      if (step.exists || supply.has(step.result)) continue;
+      steps.push(step);
+      supply.set(step.result, user);
+    }
+  }
+
+  function routeChannel(id, supply, ctx, retryBlocked) {
+    const here = {
+      supply: supply,
+      user: ctx.user,
+      blocked: ctx.blocked,
+      gasWei: ctx.gasWei,
+      mode: ctx.mode,
+    };
+    try {
+      return plan(id, here);
+    } catch (e) {
+      if (!retryBlocked || String(e && e.message) !== 'no route' || !ctx.blocked || !ctx.blocked.size) throw e;
+      return plan(id, {
+        supply: supply,
+        user: ctx.user,
+        blocked: new Set(),
+        gasWei: ctx.gasWei,
+        mode: ctx.mode,
+      });
+    }
+  }
+
+  function runRgbOrder(ids, order, ctx, retryBlocked) {
+    const supply = new Map(ctx.supply);
+    const steps = [];
+    for (let i = 0; i < order.length; i++) {
+      let route;
+      try {
+        route = routeChannel(ids[order[i]], supply, ctx, retryBlocked);
+      } catch (e) {
+        if (String(e && e.message) !== 'no route') throw e;
+        return null;
+      }
+      takeSteps(route, supply, steps, ctx.user);
+    }
+    return steps;
+  }
+
+  // Plan R, G, B in sequence so a later channel sees earlier mints as owned.
+  // mode 'fewest' is the fewest-txs route (there is no mode named 'fastest').
+  // Anything else, including 'cheapest', minimizes royalties + gas + RGB value,
+  // then fewer mints. The RGB add stays last; only the MATH mint order changes.
+  function planRgb(ids, ctx0, retryBlocked) {
+    const ctx = norm(ctx0 || {});
+    if (!ids || ids.length !== 3) throw new Error('rgb');
+    const channels = [BigInt(ids[0]), BigInt(ids[1]), BigInt(ids[2])];
+    for (let i = 0; i < channels.length; i++) {
+      if (channels[i] <= 0n || channels[i] > MAX) throw new Error('target');
+    }
+    const mode = ctx.mode === 'fewest' ? 'fewest' : 'cheapest';
+    const orders = rgbOrders(channels);
+    const namesOf = ['R', 'G', 'B'];
+    let best = null;
+    let base = null;
+    for (let i = 0; i < orders.length; i++) {
+      const order = orders[i];
+      const steps = runRgbOrder(channels, order, ctx, !!retryBlocked);
+      if (!steps) continue;
+      const score = rgbScore(steps, channels, ctx.supply, ctx);
+      const row = {
+        steps: steps,
+        order: order,
+        mints: score.mints,
+        net: score.net,
+        royalty: score.royalty,
+        rgbRoyalty: score.rgbRoyalty,
+        gas: score.gas,
+      };
+      const identity = order[0] === 0 && order[1] === 1 && order[2] === 2;
+      if (identity) base = row;
+      if (!best || rgbBetter(row, best, mode)) best = row;
+    }
+    if (!best) throw new Error('no route');
+    const names = best.order.map(function (i) { return namesOf[i]; });
+    const reordered = best.order[0] !== 0 || best.order[1] !== 1 || best.order[2] !== 2;
+    let note = '';
+    if (reordered) {
+      const why = base && mode === 'fewest' && best.mints < base.mints ? 'shorter' : 'cheaper';
+      note = 'order ' + names.join(', ') + ' is ' + why + '.';
+    }
+    return {
+      channels: channels,
+      order: best.order,
+      names: names,
+      reordered: reordered,
+      note: note,
+      steps: best.steps,
+      mints: best.mints,
+      royalty: best.royalty,
+      rgbRoyalty: best.rgbRoyalty,
+      gas: best.gas,
+      net: best.net,
+      tried: orders.length,
+    };
+  }
+
   return {
     PAL: PAL,
     COL: COL,
@@ -613,6 +783,7 @@
     planesToRows: planesToRows,
     fold: fold,
     plan: plan,
+    planRgb: planRgb,
     planWithPins: planWithPins,
     pickHeart: pickHeart,
   };

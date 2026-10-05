@@ -325,6 +325,60 @@ assert.strictEqual(held.txs.length, 1);
 assert.strictEqual(held.txs[0].value, '0x0');
 assert.ok(held.shares.every(function (row) { return row.owned === true; }));
 
+const stackSnap = snap({
+  math: [['1', 1], ['2', 1], ['4', 1], ['8', 0]],
+  rgb: [],
+  toon: [],
+  words: {},
+  faces: {},
+  wordOwners: [],
+  faceOwners: [],
+});
+const stacked = AGENT.plan(user, { r: '11', g: '3', b: '8' }, stackSnap);
+check(stacked);
+assert.strictEqual(stacked.ok, true);
+assert.strictEqual(stacked.txs.length, 3);
+assert.strictEqual(stacked.txs[0].data, ABI.call(ABI.SEL.add2, [1n, 2n]));
+assert.ok(stacked.txs[1].data === ABI.call(ABI.SEL.add2, [8n, 3n]) || stacked.txs[1].data === ABI.call(ABI.SEL.add2, [3n, 8n]));
+assert.strictEqual(stacked.txs[2].to, ETH.ADDR.RGB);
+assert.strictEqual(stacked.txs[2].data, ABI.call(ABI.SEL.add3, [11n, 3n, 8n]));
+assert.strictEqual(stacked.royalty, (2n * PLAN.ROY_WEI).toString());
+const mintedInput = stacked.shares.filter(function (row) { return row.id === '3' && row.owned === false; });
+assert.ok(mintedInput.length >= 1);
+assert.ok(mintedInput.every(function (row) { return row.holder === user && row.wei === '0'; }));
+const stackChannels = stacked.shares.slice(-3);
+assert.deepStrictEqual(stackChannels.map(function (row) { return row.id; }), ['11', '3', '8']);
+assert.strictEqual(stackChannels[0].holder, user);
+assert.strictEqual(stackChannels[0].wei, '0');
+assert.strictEqual(stackChannels[1].holder, user);
+assert.strictEqual(stackChannels[1].wei, '0');
+assert.strictEqual(stackChannels[2].owned, true);
+assert.strictEqual(stackChannels[2].wei, '0');
+const seenMint = new Set();
+stacked.txs.slice(0, -1).forEach(function (tx) {
+  assert.strictEqual(seenMint.has(tx.data), false);
+  seenMint.add(tx.data);
+});
+
+const rgbTrap = snap({
+  owners: [user, blockedHolder],
+  math: [['1', 1]],
+  rgb: [],
+  toon: [],
+  words: {},
+  faces: {},
+  wordOwners: [],
+  faceOwners: [],
+  blocked: [blockedHolder],
+  blockedDone: true,
+});
+const rgbRevert = AGENT.plan(user, { r: '3', g: '1', b: '1' }, rgbTrap);
+check(rgbRevert);
+assert.strictEqual(rgbRevert.ok, false);
+assert.ok(rgbRevert.note.indexOf('Holder ' + blockedHolder) !== -1);
+assert.strictEqual(rgbRevert.txs[rgbRevert.txs.length - 1].data, ABI.call(ABI.SEL.add3, [3n, 1n, 1n]));
+assert.ok(rgbRevert.txs.length > 1);
+
 const example = {
   math: AGENT.plan(user, '3', snap()),
   rgb: AGENT.plan(user, { r: '8', g: '16', b: '32' }, snap()),

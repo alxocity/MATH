@@ -258,4 +258,200 @@ const everyone = new Set();
 supply.forEach(function (owner) { everyone.add(owner); });
 assert.strictEqual(P.pickHeart(heartCtx({ blocked: everyone }), Math.random), null);
 
+function chainOk(steps, supply) {
+  const have = new Set();
+  supply.forEach(function (_, id) { have.add(id.toString()); });
+  const seen = new Set();
+  steps.forEach(function (s) {
+    const key = s.result.toString();
+    assert.strictEqual(s.exists, false);
+    assert.ok(have.has(s.a.toString()), 'missing input ' + s.a);
+    assert.ok(have.has(s.b.toString()), 'missing input ' + s.b);
+    assert.strictEqual(have.has(key), false, 'remint ' + key);
+    assert.strictEqual(seen.has(key), false, 'duplicate ' + key);
+    seen.add(key);
+    have.add(key);
+  });
+}
+
+function looseRgb(ids, c) {
+  const have = new Set();
+  c.supply.forEach(function (_, id) { have.add(id); });
+  const steps = [];
+  ids.forEach(function (id) {
+    P.plan(id, c).steps.forEach(function (step) {
+      if (step.exists || have.has(step.result)) {
+        have.add(step.result);
+        return;
+      }
+      steps.push(step);
+      have.add(step.result);
+    });
+  });
+  return steps;
+}
+
+function looseNet(steps, ids, c) {
+  let royalty = 0n;
+  const minted = new Set();
+  steps.forEach(function (s) {
+    royalty += s.royalty;
+    minted.add(s.result);
+  });
+  let rgbRoyalty = 0n;
+  ids.forEach(function (id) {
+    const owner = c.supply.get(id);
+    const held = owner && String(owner).toLowerCase() === c.user.toLowerCase();
+    if (!held && !minted.has(id)) rgbRoyalty += P.RGB_ROY;
+  });
+  const gas = c.gasWei * BigInt(steps.length);
+  const rgbGas = (c.gasWei * P.G_RGB) / P.G_ADD;
+  return royalty + rgbRoyalty + gas + rgbGas;
+}
+
+// User holds 8. Strangers hold 1, 2, and 4. 11 alone pays both 1 and 2.
+// Minting 3 first makes 11 = 8 + 3, so that royalty is not paid again.
+const stackSupply = new Map([
+  [1n, stranger],
+  [2n, stranger],
+  [4n, stranger],
+  [8n, user],
+]);
+const stackIds = [11n, 3n, 8n];
+['cheapest', 'fewest'].forEach(function (mode) {
+  const c = { mode: mode, user: user, gasWei: 0n, blocked: new Set(), supply: stackSupply };
+  const built = P.planRgb(stackIds, c);
+  const alone = looseRgb(stackIds, c);
+  chainOk(built.steps, stackSupply);
+  assert.ok(built.net < looseNet(alone, stackIds, c));
+  assert.ok(built.mints < alone.length);
+  assert.strictEqual(built.royalty, 2n * P.ROY_WEI);
+  assert.ok(looseNet(alone, stackIds, c) - built.net >= 2n * P.ROY_WEI);
+  assert.deepStrictEqual(built.names, ['G', 'R', 'B']);
+  assert.strictEqual(built.reordered, true);
+  assert.strictEqual(built.tried, 6);
+  const why = mode === 'fewest' ? 'shorter' : 'cheaper';
+  assert.strictEqual(built.note, 'order G, R, B is ' + why + '.');
+  assert.deepStrictEqual(built.steps.map(function (s) { return s.result; }), [3n, 11n]);
+  const hop = built.steps[1];
+  assert.strictEqual(hop.a + hop.b, 11n);
+  assert.ok(hop.a === 3n || hop.b === 3n);
+  assert.strictEqual(hop.royalty, 0n);
+  assert.strictEqual(hop.payTo[0], user);
+  assert.strictEqual(hop.payTo[1], user);
+  [3n, 11n, 8n].forEach(function (id) {
+    const held = stackSupply.get(id) === user || built.steps.some(function (s) { return s.result === id; });
+    assert.strictEqual(held, true);
+  });
+});
+
+const sameOrder = P.planRgb([3n, 11n, 8n], {
+  mode: 'cheapest',
+  user: user,
+  gasWei: 0n,
+  blocked: new Set(),
+  supply: stackSupply,
+});
+assert.strictEqual(sameOrder.reordered, false);
+assert.strictEqual(sameOrder.note, '');
+assert.deepStrictEqual(sameOrder.steps.map(function (s) { return s.result; }), [3n, 11n]);
+
+// G == B. The second Y is not minted again, and the repeated value drops two orders.
+const yy = P.planRgb([6n, 6n, 3n], {
+  mode: 'cheapest',
+  user: user,
+  gasWei: 1n,
+  blocked: new Set(),
+  supply: new Map([[1n, user]]),
+});
+chainOk(yy.steps, new Map([[1n, user]]));
+assert.strictEqual(yy.tried, 3);
+assert.strictEqual(yy.mints, 3);
+assert.deepStrictEqual(yy.steps.map(function (s) { return s.result; }), [2n, 3n, 6n]);
+const yyy = P.planRgb([6n, 6n, 6n], {
+  mode: 'fewest',
+  user: user,
+  gasWei: 1n,
+  blocked: new Set(),
+  supply: new Map([[1n, user]]),
+});
+assert.strictEqual(yyy.tried, 1);
+assert.deepStrictEqual(yyy.steps.map(function (s) { return s.result; }), [2n, 3n, 6n]);
+
+// 3 is already minted. A later channel may use it, and must not mint it again.
+const have3 = new Map([[1n, user], [2n, user], [3n, user]]);
+const reused = P.planRgb([3n, 6n, 7n], {
+  mode: 'cheapest',
+  user: user,
+  gasWei: 1n,
+  blocked: new Set(),
+  supply: have3,
+});
+chainOk(reused.steps, have3);
+assert.ok(reused.steps.every(function (s) { return s.result !== 3n; }));
+assert.ok(reused.steps.some(function (s) { return s.a === 3n || s.b === 3n; }));
+
+// 2 already exists, so the route's 1+1=2 step is not a mint. 4 then reuses 3.
+const throughSupply = new Map([[1n, user], [2n, blockedOwner]]);
+const through = P.planRgb([3n, 4n, 1n], {
+  mode: 'cheapest',
+  user: user,
+  gasWei: 0n,
+  blocked: new Set([blockedOwner]),
+  supply: throughSupply,
+});
+chainOk(through.steps, throughSupply);
+assert.ok(through.steps.every(function (s) { return s.result !== 2n && s.exists === false; }));
+assert.ok(through.steps.some(function (s) { return s.result === 3n; }));
+assert.ok(through.steps.some(function (s) { return s.a === 3n || s.b === 3n; }));
+
+assert.throws(function () {
+  P.planRgb([7n, 2n, 8n], {
+    mode: 'fewest',
+    user: user,
+    gasWei: 0n,
+    blocked: new Set(),
+    supply: new Map([[8n, user], [6n, user]]),
+  });
+}, /no route/);
+
+// fewest pays the stranger for one mint of 7. cheapest builds 7 from the 3 it just minted.
+const splitSupply = new Map([[1n, user], [6n, stranger]]);
+const splitGas = P.ROY_WEI / 10n;
+const splitIds = [3n, 7n, 1n];
+const cheapSplit = P.planRgb(splitIds, {
+  mode: 'cheapest',
+  user: user,
+  gasWei: splitGas,
+  blocked: new Set(),
+  supply: splitSupply,
+});
+const fewSplit = P.planRgb(splitIds, {
+  mode: 'fewest',
+  user: user,
+  gasWei: splitGas,
+  blocked: new Set(),
+  supply: splitSupply,
+});
+chainOk(cheapSplit.steps, splitSupply);
+chainOk(fewSplit.steps, splitSupply);
+assert.strictEqual(cheapSplit.royalty, 0n);
+assert.strictEqual(fewSplit.royalty, P.ROY_WEI);
+assert.ok(fewSplit.mints < cheapSplit.mints);
+assert.ok(cheapSplit.net < fewSplit.net);
+assert.ok(fewSplit.steps.some(function (s) { return s.a === 6n || s.b === 6n; }));
+assert.ok(cheapSplit.steps.every(function (s) { return s.a !== 6n && s.b !== 6n; }));
+const cheapAlone = looseRgb(splitIds, {
+  mode: 'cheapest',
+  user: user,
+  gasWei: splitGas,
+  blocked: new Set(),
+  supply: splitSupply,
+});
+assert.ok(cheapSplit.net < looseNet(cheapAlone, splitIds, {
+  user: user,
+  gasWei: splitGas,
+  supply: splitSupply,
+}));
+
 console.log('planner.test.js ok');
