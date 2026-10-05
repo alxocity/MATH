@@ -33,7 +33,7 @@
       "1",
       "2"
     ],
-    "note": "A human signs. This does not. MATH.add value is 0.002 ETH: 0.001 to each input holder, sent with a 2300-gas transfer, so some contract wallets cannot receive it. Hold an input and that share is 0. The snapshot does not list those contracts. You still pay gas."
+    "note": "A human signs. This does not. MATH.add value is 0.002 ETH: 0.001 to each input holder, sent with a 2300-gas transfer, so some contract wallets cannot receive it. Hold an input and that share is 0. You still pay gas."
   },
   "rgb": {
     "v": 1,
@@ -95,7 +95,7 @@
   },
   "toon": {
     "v": 1,
-    "ok": true,
+    "ok": false,
     "kind": "toon",
     "target": "16,7,8,10",
     "block": 42,
@@ -139,6 +139,6 @@
       "10",
       "16"
     ],
-    "note": "A human signs. This does not. TOON.add is free. It reverts unless the signer holds the MATH, WORD, FACE, and RGB. WORD and FACE owners are not in the snapshot."
+    "note": "A human signs. This does not. TOON.add is free. It reverts unless the signer holds the MATH, WORD, FACE, and RGB. WORD and FACE owners are not in the snapshot. WORD/FACE owners are not in the snapshot; confirm the signer holds them before sending."
   }
 }

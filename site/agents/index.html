@@ -27,9 +27,11 @@
   rgb: [["id", ownerIndex, r, g, b]],
   toon: [["id", ownerIndex, word, face, rgb]],
   words: { "id": "text" },
-  faces: { "id": "text" }
+  faces: { "id": "text" },
+  blocked: ["0x…"],
+  blockedDone: true
 }</pre>
-<p>Ids are decimal strings. <code>ownerIndex</code> indexes <code>owners</code>, which are lowercase. A used channel is an <code>r</code>, <code>g</code>, or <code>b</code> on an RGB row. WORD and FACE owners are not in the file. The list of holders who revert MATH's payout is not in the file either.</p>
+<p>Ids are decimal strings. <code>ownerIndex</code> indexes <code>owners</code>, which are lowercase. A used channel is an <code>r</code>, <code>g</code>, or <code>b</code> on an RGB row. WORD and FACE owners are not in the file. <code>blocked</code> lists holders that revert MATH's 2300-gas payout. <code>blockedDone</code> is true when that list was scanned.</p>
 
 <h2>plan</h2>
 <p><code>AGENT.plan(wallet, target, snapshot)</code></p>
@@ -48,14 +50,14 @@ AGENT.plan(wallet, '3', snap)</pre>
   royalty, shares: [{ id, holder, wei, owned }],
   owned, note
 }</pre>
-<p><code>value</code> is hex wei. MATH sends 0.002 ETH. RGB sends 0.03 ETH. TOON sends <code>0x0</code>. <code>royalty</code> and each share's <code>wei</code> are decimal wei, the part holders receive, not gas. <code>owned</code> lists input ids this address already holds. A share's <code>owned</code> is null when the snapshot has no owner for it.</p>
-<p><code>ok: false</code> means the snapshot shows the call reverting (a channel already used, a TOON part already used, or a missing MATH or RGB). The transactions are still returned. <code>exists: true</code> means that target is already minted, so <code>txs</code> is empty.</p>
+<p><code>value</code> is hex wei. MATH sends 0.002 ETH. RGB sends 0.03 ETH. TOON sends <code>0x0</code>. <code>royalty</code> and each share's <code>wei</code> are decimal wei, the part holders receive, not gas. <code>owned</code> lists input ids this address already holds. A share's <code>owned</code> is null when the snapshot has no owner for it. <code>shares.holder</code> is the owner in the snapshot. The contract pays whoever holds the input at send time.</p>
+<p><code>ok: false</code> means the snapshot shows the call reverting (a channel already used, a TOON part already used, a missing MATH or RGB, a WORD or FACE whose owner is not in the snapshot, or a MATH input held by an address in <code>blocked</code>). The transactions are still returned. <code>exists: true</code> means that target is already minted, so <code>txs</code> is empty.</p>
 
 <h2>caveats</h2>
 <ul>
 <li>A human signs. <code>plan</code> does not.</li>
 <li>TOON.add is free. It reverts unless the signer holds the MATH, WORD, FACE, and RGB.</li>
-<li>MATH pays each input holder 0.001 ETH with a 2300-gas transfer. Some contract wallets cannot receive it. This snapshot does not list those contracts, so a route can still name one.</li>
+<li>MATH pays each input holder 0.001 ETH with a 2300-gas transfer. Some contract wallets cannot receive it. <code>blocked</code> lists them when <code>blockedDone</code> is true. A route that still names one comes back <code>ok: false</code>.</li>
 <li>RGB pays 0.01 ETH to each MATH channel holder. Hold a channel, or mint it earlier in the same plan, and that share is 0.</li>
 <li>You still pay gas. <code>value</code> is only the msg.value.</li>
 <li>The file is current as of <code>block</code>. It lags mainnet until the next snapshot.</li>
