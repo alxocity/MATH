@@ -260,7 +260,22 @@
     });
     const words = await loadTexts(ADDR.WORD, ABI.SEL.getWord, toon.map(function (t) { return t.word; }), progress, 'WORD');
     const faces = await loadTexts(ADDR.FACE, ABI.SEL.getFace, toon.map(function (t) { return t.face; }), progress, 'FACE');
-    return { block: blockNum(block.result), math: math, rgb: rgb, toon: toon, words: words, faces: faces };
+    const wordOwners = await loadPartOwners(ADDR.WORD, progress, 'WORD');
+    const faceOwners = await loadPartOwners(ADDR.FACE, progress, 'FACE');
+    return { block: blockNum(block.result), math: math, rgb: rgb, toon: toon, words: words, faces: faces, wordOwners: wordOwners, faceOwners: faceOwners };
+  }
+
+  // WORD and FACE ids are 0..supply-1. The array index is the token id.
+  async function loadPartOwners(address, progress, label) {
+    const raw = await ethCall(address, '0x' + ABI.SEL.totalSupply);
+    const n = Number(ABI.decodeUint(raw));
+    if (!Number.isSafeInteger(n) || n < 1) throw new Error(label + ' supply');
+    const ids = await loadIds(address, n, progress, label);
+    if (ids.length !== n) throw new Error(label + ' supply');
+    for (let i = 0; i < ids.length; i++) {
+      if (ids[i] !== BigInt(i)) throw new Error(label + ' id ' + i);
+    }
+    return loadOwners(address, ids, progress, label);
   }
 
   async function appendIds(address, n, have, progress, label, fill) {
@@ -320,6 +335,8 @@
     const toon = toonRows.map(function (t, i) { return { id: t.id, owner: toonOwners[i], word: t.word, face: t.face, rgb: t.rgb }; });
     const words = await fillTexts(base.words, toon.map(function (t) { return t.word; }), ADDR.WORD, ABI.SEL.getWord, progress, 'WORD', trusted && trusted.words);
     const faces = await fillTexts(base.faces, toon.map(function (t) { return t.face; }), ADDR.FACE, ABI.SEL.getFace, progress, 'FACE', trusted && trusted.faces);
+    const wordOwners = await loadPartOwners(ADDR.WORD, progress, 'WORD');
+    const faceOwners = await loadPartOwners(ADDR.FACE, progress, 'FACE');
     return {
       block: blockNum(block.result),
       math: mathRows.map(function (t, i) { return { id: t.id, owner: mathOwners[i] }; }),
@@ -327,6 +344,8 @@
       toon: toon,
       words: words,
       faces: faces,
+      wordOwners: wordOwners,
+      faceOwners: faceOwners,
     };
   }
 
@@ -387,9 +406,16 @@
       toon: inv.toon.map(function (t) { return [t.id.toString(), ownerIndex(t.owner), t.word.toString(), t.face.toString(), t.rgb.toString()]; }),
       words: packTexts(inv.words),
       faces: packTexts(inv.faces),
+      wordOwners: packOwnerList(inv.wordOwners, ownerIndex),
+      faceOwners: packOwnerList(inv.faceOwners, ownerIndex),
       blocked: blocked ? Array.from(blocked).map(function (a) { return String(a).toLowerCase(); }) : [],
       blockedDone: !!blocked,
     };
+  }
+
+  function packOwnerList(list, ownerIndex) {
+    if (list == null) return undefined;
+    return list.map(function (addr) { return ownerIndex(addr); });
   }
 
   function packTexts(map) {
@@ -433,6 +459,8 @@
       });
       const words = unpackTexts(raw.words);
       const faces = unpackTexts(raw.faces);
+      const wordOwners = unpackOwnerList(raw.wordOwners, ownerAt);
+      const faceOwners = unpackOwnerList(raw.faceOwners, ownerAt);
       const blocked = [];
       (raw.blocked || []).forEach(function (a) {
         if (!OWNER.test(a)) throw new Error('owner');
@@ -445,12 +473,20 @@
         toon: toon,
         words: words,
         faces: faces,
+        wordOwners: wordOwners,
+        faceOwners: faceOwners,
         blocked: new Set(blocked),
         blockedDone: !!raw.blockedDone,
       };
     } catch (e) {
       return null;
     }
+  }
+
+  function unpackOwnerList(raw, ownerAt) {
+    if (raw == null) return null;
+    if (!Array.isArray(raw)) throw new Error('owners');
+    return raw.map(ownerAt);
   }
 
   function unpackTexts(raw) {

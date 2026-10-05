@@ -48,6 +48,8 @@ async function main() {
   if (!prev) throw new Error('snapshot');
   const inv = await ETH.loadDelta(prev, function (msg) { console.error(msg); });
   assertInventory(inv, prev);
+  if (!Array.isArray(inv.wordOwners) || !inv.wordOwners.length) throw new Error('WORD owners');
+  if (!Array.isArray(inv.faceOwners) || !inv.faceOwners.length) throw new Error('FACE owners');
   const owners = [];
   const seen = new Set();
   inv.math.forEach(function (t) {
@@ -74,7 +76,7 @@ async function main() {
     try { fs.unlinkSync(tmp); } catch (ignore) { /* leave the old snapshot */ }
     throw e;
   }
-  console.error('wrote ' + out + ' block ' + packed.block + ' MATH ' + packed.math.length + ' RGB ' + packed.rgb.length + ' TOON ' + packed.toon.length + ' owners ' + packed.owners.length + ' WORD ' + Object.keys(packed.words).length + ' FACE ' + Object.keys(packed.faces).length + ' blocked ' + packed.blocked.length);
+  console.error('wrote ' + out + ' block ' + packed.block + ' MATH ' + packed.math.length + ' RGB ' + packed.rgb.length + ' TOON ' + packed.toon.length + ' owners ' + packed.owners.length + ' WORD ' + Object.keys(packed.words).length + ' FACE ' + Object.keys(packed.faces).length + ' wordOwners ' + packed.wordOwners.length + ' faceOwners ' + packed.faceOwners.length + ' blocked ' + packed.blocked.length);
 }
 
 if (require.main === module) {

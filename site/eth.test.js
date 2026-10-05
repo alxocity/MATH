@@ -58,7 +58,10 @@ assert.strictEqual(ETH.preferIndex(null, scanned), scanned);
 assert.strictEqual(ETH.preferIndex(scanned, { math: [1], rgb: [], toon: [], blockedDone: false }), scanned);
 
 const rawSnap = JSON.parse(fs.readFileSync(__dirname + '/index.json', 'utf8'));
-assert.ok(Array.isArray(rawSnap.owners) && rawSnap.owners.length > 0 && rawSnap.owners.length < 200);
+assert.ok(Array.isArray(rawSnap.owners) && rawSnap.owners.length > 100);
+assert.ok(Array.isArray(rawSnap.wordOwners) && rawSnap.wordOwners.length > 1000);
+assert.ok(Array.isArray(rawSnap.faceOwners) && rawSnap.faceOwners.length > 1000);
+assert.ok(rawSnap.owners.length < rawSnap.wordOwners.length);
 assert.strictEqual(typeof rawSnap.math[0][1], 'number');
 assert.strictEqual(typeof rawSnap.block, 'number');
 assert.ok(Number.isSafeInteger(rawSnap.block) && rawSnap.block > 0);
@@ -115,6 +118,20 @@ assert.strictEqual(ETH.unpack(packed), null);
 packed.math[0][1] = index;
 assert.strictEqual(ETH.unpack(packed).words.size, 0);
 assert.strictEqual(ETH.unpack(packed).faces.size, 0);
+assert.strictEqual(ETH.unpack(packed).wordOwners, null);
+assert.strictEqual(ETH.unpack(packed).faceOwners, null);
+const parts = ETH.pack({
+  block: 3,
+  math: [{ id: 1n, owner: owner }],
+  rgb: [],
+  toon: [],
+  wordOwners: [owner, other],
+  faceOwners: [other],
+}, null);
+const partInv = ETH.unpack(parts);
+assert.deepStrictEqual(partInv.wordOwners, [owner, other]);
+assert.deepStrictEqual(partInv.faceOwners, [other]);
+assert.strictEqual(parts.wordOwners[1], parts.math[0][1] === 0 ? 1 : 0);
 const named = ETH.pack({
   block: 9,
   math: [],

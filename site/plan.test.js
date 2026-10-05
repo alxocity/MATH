@@ -20,6 +20,8 @@ function snap(extra) {
     toon: [['1', 0, '5', '6', '9']],
     words: { '5': 'hi', '7': 'yo' },
     faces: { '6': ':)', '8': ':(' },
+    wordOwners: [stranger, stranger, stranger, stranger, stranger, stranger, stranger, user],
+    faceOwners: [stranger, stranger, stranger, stranger, stranger, stranger, stranger, stranger, user],
     blocked: [],
     blockedDone: true,
   }, extra || {});
@@ -124,8 +126,12 @@ assert.deepStrictEqual(image.owned, ['1', '2']);
 const toon = AGENT.plan(user, { math: '16', word: '7', face: '8', rgb: '10' }, snap());
 check(toon);
 assert.strictEqual(toon.kind, 'toon');
-assert.strictEqual(toon.ok, false);
-assert.ok(toon.note.indexOf('WORD/FACE owners are not in the snapshot; confirm the signer holds them before sending.') !== -1);
+assert.strictEqual(toon.ok, true);
+assert.strictEqual(toon.shares[1].owned, true);
+assert.strictEqual(toon.shares[1].holder, user);
+assert.strictEqual(toon.shares[2].owned, true);
+assert.strictEqual(toon.shares[2].holder, user);
+assert.deepStrictEqual(toon.owned, ['7', '8', '10', '16']);
 assert.strictEqual(toon.target, '16,7,8,10');
 assert.strictEqual(toon.txs.length, 1);
 assert.strictEqual(toon.txs[0].to, ETH.ADDR.TOON);
@@ -133,12 +139,8 @@ assert.strictEqual(toon.txs[0].data, ABI.call(ABI.SEL.add4, [16n, 7n, 8n, 10n]))
 assert.ok(toon.txs[0].data.startsWith('0xe022d77c'));
 assert.strictEqual(toon.txs[0].value, '0x0');
 assert.strictEqual(toon.royalty, '0');
-assert.deepStrictEqual(toon.owned, ['10', '16']);
-assert.strictEqual(toon.shares[1].owned, null);
-assert.strictEqual(toon.shares[1].holder, '');
-assert.strictEqual(toon.shares[2].owned, null);
 assert.ok(toon.note.indexOf('free') !== -1);
-assert.ok(toon.note.indexOf('WORD and FACE') !== -1);
+assert.ok(toon.note.indexOf('not in the snapshot') === -1);
 
 const spent = AGENT.plan(user, { math: '16', word: '5', face: '8', rgb: '9' }, snap());
 check(spent);
@@ -166,7 +168,10 @@ assert.throws(function () { AGENT.plan(user, '0', snap()); }, /target/);
 assert.throws(function () { AGENT.plan(user, '3', { math: [] }); }, /snapshot/);
 
 const FACE_REASON = 'WORD/FACE owners are not in the snapshot; confirm the signer holds them before sending.';
-const unknownParts = AGENT.plan(user, { math: '16', word: '7', face: '8', rgb: '10' }, snap());
+const unlistParts = snap();
+delete unlistParts.wordOwners;
+delete unlistParts.faceOwners;
+const unknownParts = AGENT.plan(user, { math: '16', word: '7', face: '8', rgb: '10' }, unlistParts);
 check(unknownParts);
 assert.strictEqual(unknownParts.ok, false);
 assert.strictEqual(unknownParts.shares[1].owned, null);
@@ -174,6 +179,13 @@ assert.strictEqual(unknownParts.shares[2].owned, null);
 assert.strictEqual(unknownParts.txs.length, 1);
 assert.strictEqual(unknownParts.txs[0].value, '0x0');
 assert.ok(unknownParts.note.indexOf(FACE_REASON) !== -1);
+
+const notWord = AGENT.plan(stranger, { math: '8', word: '7', face: '8', rgb: '9' }, snap());
+assert.strictEqual(notWord.ok, false);
+assert.strictEqual(notWord.shares[1].owned, false);
+assert.strictEqual(notWord.shares[1].holder, user);
+assert.ok(notWord.note.indexOf('does not hold WORD #7') !== -1);
+assert.strictEqual(notWord.txs.length, 1);
 
 const unlist = snap();
 delete unlist.blocked;
@@ -227,11 +239,53 @@ const foreign = AGENT.plan(liveWallet, { math: '65537', word: '1', face: '2', rg
 assert.strictEqual(foreign.ok, false);
 assert.strictEqual(foreign.txs.length, 1);
 assert.strictEqual(foreign.txs[0].value, '0x0');
-assert.strictEqual(foreign.shares[1].owned, null);
-assert.strictEqual(foreign.shares[2].owned, null);
-assert.ok(foreign.note.indexOf(FACE_REASON) !== -1);
+assert.strictEqual(foreign.shares[1].owned, false);
+assert.strictEqual(foreign.shares[2].owned, false);
+assert.notStrictEqual(foreign.shares[1].holder, liveWallet);
+assert.notStrictEqual(foreign.shares[2].holder, liveWallet);
+assert.ok(foreign.note.indexOf('does not hold WORD #1') !== -1);
+assert.ok(foreign.note.indexOf('does not hold FACE #2') !== -1);
 assert.strictEqual(raw.blockedDone, true);
 assert.strictEqual(raw.blocked.length, 7);
+assert.ok(Array.isArray(raw.wordOwners) && raw.wordOwners.length > 2);
+assert.ok(Array.isArray(raw.faceOwners) && raw.faceOwners.length > 2);
+const liveInv = ETH.unpack(raw);
+const usedWord = new Set();
+const usedFace = new Set();
+const usedRgb = new Set();
+const usedMath = new Set();
+liveInv.toon.forEach(function (t) {
+  usedWord.add(t.word.toString());
+  usedFace.add(t.face.toString());
+  usedRgb.add(t.rgb.toString());
+  usedMath.add(t.id.toString());
+});
+const bags = new Map();
+function bag(owner) {
+  const a = String(owner).toLowerCase();
+  if (!bags.has(a)) bags.set(a, { math: [], word: [], face: [], rgb: [] });
+  return bags.get(a);
+}
+liveInv.math.forEach(function (t) { bag(t.owner).math.push(t.id.toString()); });
+liveInv.wordOwners.forEach(function (owner, i) { bag(owner).word.push(String(i)); });
+liveInv.faceOwners.forEach(function (owner, i) { bag(owner).face.push(String(i)); });
+liveInv.rgb.forEach(function (t) { bag(t.owner).rgb.push(t.id.toString()); });
+let heldBy = null;
+bags.forEach(function (parts, addr) {
+  if (heldBy) return;
+  const math = parts.math.find(function (id) { return !usedMath.has(id); });
+  const word = parts.word.find(function (id) { return !usedWord.has(id); });
+  const face = parts.face.find(function (id) { return !usedFace.has(id); });
+  const rgb = parts.rgb.find(function (id) { return !usedRgb.has(id); });
+  if (math && word && face && rgb) heldBy = { addr: addr, math: math, word: word, face: face, rgb: rgb };
+});
+assert.ok(heldBy);
+const held = AGENT.plan(heldBy.addr, { math: heldBy.math, word: heldBy.word, face: heldBy.face, rgb: heldBy.rgb }, raw);
+assert.strictEqual(held.ok, true);
+assert.strictEqual(held.exists, false);
+assert.strictEqual(held.txs.length, 1);
+assert.strictEqual(held.txs[0].value, '0x0');
+assert.ok(held.shares.every(function (row) { return row.owned === true; }));
 
 const example = {
   math: AGENT.plan(user, '3', snap()),
