@@ -1,0 +1,53 @@
+# MATH
+
+> math.alxo.city. Read /index.json. plan() returns unsigned transactions. A human signs. No server.
+
+## Files
+
+- /index.json — snapshot the site already builds. script/snapshot.js rewrites it; the weekly workflow commits that file.
+- /plan.js — AGENT.plan(wallet, target, snapshot). Browser global after abi.js, planner.js, and eth.js. Node: require('./plan').
+- /agents/ — schema, calls, caveats, contracts.
+- /agents/example.json — MATH, RGB, and TOON plans on a tiny fixture.
+
+## Snapshot
+
+index.json fields:
+
+- block: number. Last indexed block.
+- owners: lowercase 0x addresses.
+- math: [id, ownerIndex]
+- rgb: [id, ownerIndex, r, g, b]
+- toon: [id, ownerIndex, word, face, rgb]
+- words, faces: { id: text }
+
+Ids are decimal strings. ownerIndex indexes owners. A used RGB channel is an r, g, or b value. WORD and FACE owners are not in the file. The payout blocklist is not in the file.
+
+## plan(wallet, target, snapshot)
+
+- wallet: 0x address.
+- target: "3" or { "math": "3" }. RGB: { "r", "g", "b" }. TOON: { "math", "word", "face", "rgb" }.
+- snapshot: the index.json object.
+
+Returns v, ok, kind, target, block, wallet, exists, txs, royalty, shares, owned, note.
+
+txs items are { to, data, value }. value is hex wei: MATH 0.002 ETH, RGB 0.03 ETH, TOON 0x0. royalty is decimal wei paid to holders, not gas. shares items are { id, holder, wei, owned }. owned is the input ids this address already holds. owned null means the snapshot has no owner (WORD and FACE).
+
+## Caveats
+
+- A human signs. This returns transactions and holds no key.
+- TOON.add is free.
+- MATH pays each input holder 0.001 ETH with a 2300-gas transfer. Some contract wallets cannot receive it. The snapshot does not list them.
+- RGB pays 0.01 ETH to each of the three MATH channel holders (0.03 ETH total).
+- You still pay gas. value is only msg.value.
+- Each MATH id is one red, one green, or one blue. Each WORD, FACE, RGB, and MATH bases one TOON.
+
+## Contracts
+
+- MATH https://etherscan.io/address/0x6B4fccdd888Bb6fD3934A9e49eF64dfd2c0D8e6D
+- RGB https://etherscan.io/address/0x9355Fb9693ffF9bB6f06721C82fe0B5F49E6c956
+- TOON https://etherscan.io/address/0x026A7D72a448D0E44d441e55F746BF56B843aEDB
+- WORD https://etherscan.io/address/0xAc1AEe5027FCC98d40a26588aC0841a44f53A8Fe
+- FACE https://etherscan.io/address/0x91047Abf3cAb8da5A9515c8750Ab33B4f1560a7A
+- MATHRender https://etherscan.io/address/0xb3cA13A2722CAB48c8d9068bD67656efe2d5e376
+- RGBRender https://etherscan.io/address/0x62FFe75cd9824A2e8855CbC055256De229B5b936
+- TOONRender https://etherscan.io/address/0x1E1a576e4186551e4DEdE58Ccc2DCC34697159Cb

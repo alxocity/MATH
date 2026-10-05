@@ -37,4 +37,4 @@ az functionapp config set --name alxo --resource-group $RG --linux-fx-version "N
 
 In the portal: Configuration, Function runtime settings, Runtime version `~4`, then General settings, Node `18` or newer.
 
-`site/` is a static workshop. GitHub Pages serves that directory. Pointing `math.alxo.city` at it is a follow-up: add the CNAME then, not in the repo now.
+`site/` is a static workshop. GitHub Pages serves that directory. Pointing `math.alxo.city` at it is a follow-up: add the CNAME then, not in the repo now. Agents start at `site/llms.txt`. The snapshot is `site/index.json`. Unsigned plans are `site/plan.js`.

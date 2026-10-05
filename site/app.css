@@ -217,3 +217,21 @@ footer a { color: var(--dim); }
   footer a, a.out, #tile { min-height: 40px; min-width: 40px; display: inline-flex; align-items: center; justify-content: center; }
   #run a, #run button, #pending a, #pending button { min-height: 40px; min-width: 40px; display: inline-flex; align-items: center; }
 }
+body.doc {
+  display: block;
+  max-width: 68ch;
+  margin: 0 auto;
+  padding: 24px 16px 48px;
+}
+body.doc h1 { margin: 0 0 16px; }
+body.doc h2 { font-size: 14px; font-weight: 500; margin: 24px 0 8px; }
+body.doc p, body.doc li { margin: 0 0 10px; }
+body.doc ul { padding-left: 18px; }
+body.doc code, body.doc pre { font: inherit; color: var(--mold); }
+body.doc pre {
+  white-space: pre-wrap;
+  word-break: break-word;
+  border: 1px solid var(--line);
+  padding: 10px 12px;
+  margin: 8px 0 16px;
+}
