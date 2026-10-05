@@ -945,6 +945,10 @@
     return rpc('eth_call', [tx, 'latest']);
   }
 
+  async function estimateGas(tx) {
+    return rpc('eth_estimateGas', [tx]);
+  }
+
   // One block, calls in order, so a later mint can see an earlier one.
   async function simulateCalls(calls) {
     const j = await rpc('eth_simulateV1', [{
@@ -1018,6 +1022,7 @@
     rgbMinted: rgbMinted,
     rgbUsed: rgbUsed,
     simulate: simulate,
+    estimateGas: estimateGas,
     simulateCalls: simulateCalls,
     send: send,
     ensureChain: ensureChain,

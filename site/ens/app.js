@@ -385,7 +385,7 @@
     p.className = 'rec ' + (f.kind || '');
     let text = label + ' ' + kindWord(f.kind);
     if (f.kind === 'changed') text += ' ' + showVal(f.old) + ' → ' + showVal(f.next);
-    else if (f.kind === 'new' && f.next) text += ' ' + showVal(f.next);
+    else if (f.kind === 'new') { if (f.next) text += ' ' + showVal(f.next); }
     else if (f.kind === 'extra') text += ' ' + showVal(f.old) + (f.next ? ', keep' : ', delete');
     else text += ' ' + showVal(f.old || f.next);
     p.textContent = text;
@@ -475,10 +475,22 @@
       return;
     }
     if (!txs.length) {
-      count.textContent = 'already set. nothing to sign.';
+      const work = (plan.names || []).some(function (n) {
+        if (n.owner.kind === 'new' || n.owner.kind === 'changed') return true;
+        if (n.resolver.kind === 'new' || n.resolver.kind === 'changed') return true;
+        if (n.addr.kind === 'new' || n.addr.kind === 'changed') return true;
+        return (n.texts || []).some(function (t) {
+          return t.kind === 'new' || t.kind === 'changed' || (t.kind === 'extra' && !t.next);
+        });
+      });
+      if (work && !state.wallet) count.textContent = 'connect a wallet to build the transactions';
+      else if (work) count.textContent = 'nothing to send';
+      else count.textContent = 'already set. nothing to sign.';
       return;
     }
-    count.textContent = txs.length + (txs.length === 1 ? ' transaction' : ' transactions');
+    let summary = txs.length + (txs.length === 1 ? ' transaction' : ' transactions');
+    if (state.wallet && !state.parentChain.controls) summary += '. this wallet cannot send them';
+    count.textContent = summary;
     txs.forEach(function (tx, i) {
       const li = document.createElement('li');
       li.textContent = tx.label;
@@ -772,9 +784,9 @@
       if (tx.depends && ordered) continue;
       if (tx.depends) throw new Error(tx.label + ': ordered simulation unavailable');
       const call = { from: state.wallet, to: tx.to, data: tx.data, value: '0x0' };
-      const probed = await ETH.rpc('eth_call', [call, 'latest']);
+      const probed = await ETH.simulate(call);
       if (probed.error) throw new Error(tx.label + ': ' + ETH.reason(probed.error));
-      const gas = await ETH.rpc('eth_estimateGas', [call]);
+      const gas = await ETH.estimateGas(call);
       if (gas.error) throw new Error(tx.label + ': ' + ETH.reason(gas.error));
     }
   }
