@@ -85,7 +85,7 @@
         "id": "32",
         "holder": "0xabcabcabcabcabcabcabcabcabcabcabcabcabca",
         "wei": "0",
-        "owned": false
+        "owned": true
       }
     ],
     "owned": [

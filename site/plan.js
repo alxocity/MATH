@@ -175,17 +175,20 @@
     };
   }
 
-  function mathShares(PLAN, step, supply, wallet, already) {
+  // `already` is the top-level owned list: ids this wallet holds in the snapshot.
+  // A share's owned is also true when an earlier tx in this plan mints that input.
+  function mathShares(PLAN, step, supply, wallet, already, minted) {
     let sum = 0n;
     const rows = [[step.a, step.payTo[0]], [step.b, step.payTo[1]]].map(function (pair) {
       const id = pair[0];
       const holder = pair[1];
       const had = holds(supply, id, wallet);
+      const made = !!(minted && minted.has(id));
       if (had) already.add(id.toString());
       const back = holder && String(holder).toLowerCase() === wallet;
       const wei = back ? 0n : PLAN.ROY_WEI;
       sum += wei;
-      return share(id, holder, wei, had);
+      return share(id, holder, wei, had || made);
     });
     if (sum !== step.royalty) throw new Error('royalty');
     return rows;
@@ -248,10 +251,12 @@
     const txs = [];
     const shares = [];
     const already = new Set();
+    const minted = new Set();
     route.steps.forEach(function (step) {
       if (step.exists) return;
       txs.push(mathTx(L.ABI, L.ETH.ADDR, L.PLAN, step));
-      mathShares(L.PLAN, step, ix.supply, wallet, already).forEach(function (row) { shares.push(row); });
+      mathShares(L.PLAN, step, ix.supply, wallet, already, minted).forEach(function (row) { shares.push(row); });
+      minted.add(step.result);
     });
     const royalty = shares.reduce(function (sum, row) { return sum + BigInt(row.wei); }, 0n);
     const reasons = blockedPays(route.steps, inv.blocked);
@@ -313,7 +318,7 @@
     const mathSteps = built.steps;
     mathSteps.forEach(function (step) {
       txs.push(mathTx(L.ABI, L.ETH.ADDR, L.PLAN, step));
-      mathShares(L.PLAN, step, ix.supply, wallet, already).forEach(function (row) { shares.push(row); });
+      mathShares(L.PLAN, step, ix.supply, wallet, already, minted).forEach(function (row) { shares.push(row); });
       minted.add(step.result);
     });
     txs.push({
@@ -327,7 +332,7 @@
       if (had) already.add(id.toString());
       const holder = made ? wallet : (ix.supply.get(id) || '');
       const wei = (had || made) ? 0n : L.PLAN.RGB_ROY;
-      shares.push(share(id, holder, wei, had));
+      shares.push(share(id, holder, wei, had || made));
     });
     const reasons = blockedPays(mathSteps, inv.blocked);
     [['Red', r, ix.used.r], ['Green', g, ix.used.g], ['Blue', b, ix.used.b]].forEach(function (part) {
@@ -335,6 +340,8 @@
       if (id != null) reasons.push(part[0] + ' already used by RGB #' + id + '.');
     });
     const royalty = shares.reduce(function (sum, row) { return sum + BigInt(row.wei); }, 0n);
+    let note = noteWith(inv, NOTES.rgb, reasons);
+    if (built.reordered && built.note) note += ' ' + built.note;
     return done(inv, wallet, {
       ok: reasons.length === 0,
       kind: 'rgb',
@@ -344,7 +351,7 @@
       royalty: royalty.toString(),
       shares: shares,
       owned: sortIds(already),
-      note: noteWith(inv, NOTES.rgb, reasons),
+      note: note,
     });
   }
 

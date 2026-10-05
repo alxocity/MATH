@@ -109,6 +109,9 @@ assert.strictEqual(channel[1].wei, '0');
 assert.strictEqual(channel[1].owned, true);
 assert.strictEqual(channel[2].wei, '0');
 assert.strictEqual(channel[2].holder, user);
+assert.strictEqual(channel[2].owned, true);
+assert.ok(rgb.owned.indexOf('32') === -1);
+assert.ok(rgb.note.indexOf('order ') === -1);
 
 const taken = AGENT.plan(user, { r: '1', g: '2', b: '8' }, snap());
 check(taken);
@@ -343,9 +346,11 @@ assert.ok(stacked.txs[1].data === ABI.call(ABI.SEL.add2, [8n, 3n]) || stacked.tx
 assert.strictEqual(stacked.txs[2].to, ETH.ADDR.RGB);
 assert.strictEqual(stacked.txs[2].data, ABI.call(ABI.SEL.add3, [11n, 3n, 8n]));
 assert.strictEqual(stacked.royalty, (2n * PLAN.ROY_WEI).toString());
-const mintedInput = stacked.shares.filter(function (row) { return row.id === '3' && row.owned === false; });
+const mintedInput = stacked.shares.filter(function (row) { return row.id === '3'; });
 assert.ok(mintedInput.length >= 1);
-assert.ok(mintedInput.every(function (row) { return row.holder === user && row.wei === '0'; }));
+assert.ok(mintedInput.every(function (row) { return row.holder === user && row.wei === '0' && row.owned === true; }));
+assert.deepStrictEqual(stacked.owned, ['8']);
+assert.ok(stacked.note.indexOf('order G, R, B is cheaper.') !== -1);
 const stackChannels = stacked.shares.slice(-3);
 assert.deepStrictEqual(stackChannels.map(function (row) { return row.id; }), ['11', '3', '8']);
 assert.strictEqual(stackChannels[0].holder, user);
