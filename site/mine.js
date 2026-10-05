@@ -47,7 +47,7 @@
     if (n) return 'nothing in this filter.';
     if (state.indexState === 'error') return 'index not loaded. refresh.';
     if (state.indexState === 'loading' && !state.math.length && !state.rgb.length && !state.toon.length) return 'loading index…';
-    if (state.mineKind === 'math') return 'none. a mint that uses your MATH pays you.';
+    if (state.mineKind === 'math') return 'none. a MATH or RGB mint that uses your MATH pays you.';
     if (state.mineKind === 'rgb') return 'none. an RGB mint pays the holders of its three MATH channels.';
     return 'none. TOON has no fee. you have to hold all four parts.';
   }
