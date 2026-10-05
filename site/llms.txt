@@ -41,7 +41,7 @@ ok: false means the snapshot shows the call reverting (a channel already used, a
 
 ## ideas(wallet, snapshot)
 
-- wallet: 0x address. The zero address returns []. Moldemort takes a pasted address or ENS name, resolves it, then calls ideas().
+- wallet: 0x address. The zero address returns []. Moldemort takes a pasted address or ENS name, resolves it, then calls ideas(). With a wallet connected, that field is hidden and the account is used.
 - snapshot: the index.json object.
 
 At most one math, one rgb, and one toon. Cheapest royalty first, then smallest value sent. Each item is { kind, target, ok, cost, sent, plan }. cost is the royalty in wei. sent is the sum of tx value. Both are BigInt. plan is the AGENT.plan result. Already minted targets are omitted. An ok: false plan is still returned. No chain calls.
