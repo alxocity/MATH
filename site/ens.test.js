@@ -45,6 +45,15 @@ assert.deepStrictEqual(named.map(function (row) { return row[0]; }), [
   'toonrender.alxocity.eth',
 ]);
 assert.strictEqual(ENS.normAddr(named[3][1]), '0xb3ca13a2722cab48c8d9068bd67656efe2d5e376');
+assert.strictEqual(ENS.contractLabel(ETH.ADDR.MATH), 'math.alxocity.eth');
+assert.strictEqual(ENS.contractLabel(ETH.ADDR.RGB), 'rgb.alxocity.eth');
+assert.strictEqual(ENS.contractLabel(ETH.ADDR.TOON), 'toon.alxocity.eth');
+assert.strictEqual(ENS.contractLabel(ETH.ADDR.MATH_RENDER), 'mathrender.alxocity.eth');
+assert.strictEqual(ENS.contractLabel(ETH.ADDR.RGB_RENDER), 'rgbrender.alxocity.eth');
+assert.strictEqual(ENS.contractLabel(ETH.ADDR.TOON_RENDER), 'toonrender.alxocity.eth');
+assert.strictEqual(ENS.contractLabel(ETH.ADDR.MATH.toLowerCase()), 'math.alxocity.eth');
+assert.strictEqual(ENS.contractLabel(ETH.ADDR.WORD), '');
+assert.strictEqual(ENS.contractLabel(ETH.ADDR.FACE), '');
 const day = 24 * 60 * 60 * 1000;
 const now = Date.now();
 assert.strictEqual(ENS.forwardFresh(mathAddr, now - 6 * day, now), true);

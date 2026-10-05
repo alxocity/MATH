@@ -1,5 +1,6 @@
 (function () {
   const S = globalThis.SITE;
+  const ETH = globalThis.ETH;
   const state = S.state;
   const P = globalThis.PLAN;
   const T = globalThis.TOKEN;
@@ -65,6 +66,12 @@
     return S.cellsHtml(P.planesToRows(r, g, b)).replace(/<button/g, '<i').replace(/<\/button>/g, '</i>');
   }
 
+  function contractLine(kind) {
+    const c = kind === 'rgb' ? ETH.ADDR.RGB : kind === 'toon' ? ETH.ADDR.TOON : ETH.ADDR.MATH;
+    const r = kind === 'rgb' ? ETH.ADDR.RGB_RENDER : kind === 'toon' ? ETH.ADDR.TOON_RENDER : ETH.ADDR.MATH_RENDER;
+    return '<p class="dim">' + S.contractLink(c) + ' · ' + S.contractLink(r) + '</p>';
+  }
+
   function token(view) {
     const spec = state.token;
     if (!spec) return;
@@ -74,7 +81,7 @@
     const tok = lookup(kind, id);
     document.title = (tok ? nameOf(kind, tok) : spec.id) + ' · ' + label;
     if (!tok) {
-      view.innerHTML = '<h2>' + S.esc(spec.id) + ' ' + shareBtn(kind, id, document.title) + '</h2><p>' + missing() + '</p>';
+      view.innerHTML = '<h2>' + S.esc(spec.id) + ' ' + shareBtn(kind, id, document.title) + '</h2><p>' + missing() + '</p>' + contractLine(kind);
       return;
     }
     let extra = '';
@@ -116,6 +123,7 @@
       '<img class="token" alt="" data-svg="' + kind + ':' + id + '">' +
       extra + grid + traitsHtml(traitsOf(kind, tok)) +
       '<div class="outs">' + S.links(kind, id) + '</div>' +
+      contractLine(kind) +
       made;
     S.loadSvgs([id], kind);
     ENS.want(tok.owner);

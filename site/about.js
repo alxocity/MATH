@@ -3,10 +3,6 @@
   const ETH = globalThis.ETH;
   const ADDR = ETH.ADDR;
 
-  function scan(addr) {
-    return '<a href="https://etherscan.io/address/' + addr + '" target="_blank" rel="noopener noreferrer">' + S.namedAddr(addr) + '</a>';
-  }
-
   function about(view) {
     view.innerHTML =
       '<p>1 + 1 = 2</p>' +
@@ -19,9 +15,9 @@
       globalThis.RULES.about().map(function (line) { return '<p>' + S.esc(line) + '</p>'; }).join('') +
       '<p class="dim">served from site/ at math.alxo.city.</p>' +
       '<p class="dim"><a href="https://github.com/alxocity/MATH" target="_blank" rel="noopener noreferrer">source</a> &amp; <a href="https://github.com/alxocity/MATH/issues/new" target="_blank" rel="noopener noreferrer">feedback</a></p>' +
-      '<p class="dim">MATH ' + scan(ADDR.MATH) + '<br>RGB ' + scan(ADDR.RGB) + '<br>TOON ' + scan(ADDR.TOON) +
-      '<br>WORD ' + scan(ADDR.WORD) + '<br>FACE ' + scan(ADDR.FACE) +
-      '<br>render ' + scan(ADDR.MATH_RENDER) + '<br>' + scan(ADDR.RGB_RENDER) + '<br>' + scan(ADDR.TOON_RENDER) + '</p>';
+      '<p class="dim">' + S.contractLink(ADDR.MATH) + '<br>' + S.contractLink(ADDR.RGB) + '<br>' + S.contractLink(ADDR.TOON) +
+      '<br>WORD ' + S.contractLink(ADDR.WORD) + '<br>FACE ' + S.contractLink(ADDR.FACE) +
+      '<br>' + S.contractLink(ADDR.MATH_RENDER) + '<br>' + S.contractLink(ADDR.RGB_RENDER) + '<br>' + S.contractLink(ADDR.TOON_RENDER) + '</p>';
   }
 
   S.about = about;
