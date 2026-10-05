@@ -10,7 +10,12 @@ contract TextHexTest is Render, Test {
         cmd[0] = "node";
         cmd[1] = "test/jshex.js";
         cmd[2] = vm.toString(n);
-        return vm.ffiString(cmd);
+        // A leading J stops vm.ffi from hex-decoding the digits. Foundry 1.5.1 has no ffiString.
+        bytes memory raw = vm.ffi(cmd);
+        require(raw.length > 1 && raw[0] == "J", "jshex");
+        bytes memory out = new bytes(raw.length - 1);
+        for (uint i; i < out.length; i++) out[i] = raw[i + 1];
+        return string(out);
     }
 
     function test_text_hex_edges() public {

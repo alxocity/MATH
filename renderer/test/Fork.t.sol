@@ -1,11 +1,24 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity 0.8.24;
 
-import {Test, console2} from "forge-std/Test.sol";
+import {console2} from "forge-std/Test.sol";
 import {stdJson} from "forge-std/StdJson.sol";
 import {MATHRender, RGBRender, TOONRender} from "../src/Render.sol";
+import {Py} from "./Py.sol";
 
-contract ForkTest is Test {
+// lastFrameGas is missing on Foundry 1.5.1. That release uses gas spent instead.
+interface FrameVm {
+    struct Gas {
+        uint64 gasLimit;
+        uint64 gasTotalUsed;
+        uint64 gasMemoryUsed;
+        int64 gasRefunded;
+        uint64 gasRemaining;
+    }
+    function lastFrameGas() external view returns (Gas memory gas);
+}
+
+contract ForkTest is Py {
     using stdJson for string;
 
     // Used only with an archive MAINNET_RPC_URL. publicnode 403s on old blocks.
@@ -27,12 +40,7 @@ contract ForkTest is Test {
     }
 
     function _cmp(string memory uri, string memory fixture) internal {
-        string[] memory cmd = new string[](4);
-        cmd[0] = "python3";
-        cmd[1] = "test/compare.py";
-        cmd[2] = uri;
-        cmd[3] = fixture;
-        assertEq(string(vm.ffi(cmd)), "ok");
+        assertEq(_pyOut("test/compare.py", uri, fixture), "ok");
     }
 
     function test_math_on_chain() public {
@@ -83,21 +91,19 @@ contract ForkTest is Test {
     }
 
     function _svgOf(string memory jsonStr) internal returns (string memory) {
-        string[] memory cmd = new string[](4);
-        cmd[0] = "python3";
-        cmd[1] = "-c";
-        cmd[2] = "import sys,json,base64; u=json.loads(sys.argv[1])['image']; p='data:image/svg+xml;base64,'; sys.stdout.write(base64.b64decode(u[len(p):]).decode())";
-        cmd[3] = jsonStr;
-        return vm.ffiString(cmd);
+        return _pyOut(
+            "-c",
+            "import sys,json,base64; u=json.loads(sys.argv[1])['image']; p='data:image/svg+xml;base64,'; sys.stdout.write(base64.b64decode(u[len(p):]).decode())",
+            jsonStr
+        );
     }
 
     function _jsonOf(string memory uri) internal returns (string memory) {
-        string[] memory cmd = new string[](4);
-        cmd[0] = "python3";
-        cmd[1] = "-c";
-        cmd[2] = "import sys,base64; u=sys.argv[1]; p='data:application/json;base64,'; sys.stdout.write(base64.b64decode(u[len(p):]).decode())";
-        cmd[3] = uri;
-        return vm.ffiString(cmd);
+        return _pyOut(
+            "-c",
+            "import sys,base64; u=sys.argv[1]; p='data:application/json;base64,'; sys.stdout.write(base64.b64decode(u[len(p):]).decode())",
+            uri
+        );
     }
 
     function test_missing_reverts_like_erc721() public {
@@ -170,18 +176,24 @@ contract ForkTest is Test {
     }
 
     function test_gas() public view {
+        uint before = gasleft();
         math.tokenSVG(1);
-        uint mathSvg = vm.lastFrameGas().gasTotalUsed;
+        uint mathSvg = _frameGas(before);
+        before = gasleft();
         math.tokenURI(1);
-        uint mathGas = vm.lastFrameGas().gasTotalUsed;
+        uint mathGas = _frameGas(before);
+        before = gasleft();
         rgb.tokenSVG(100);
-        uint rgbSvg = vm.lastFrameGas().gasTotalUsed;
+        uint rgbSvg = _frameGas(before);
+        before = gasleft();
         rgb.tokenURI(100);
-        uint rgbGas = vm.lastFrameGas().gasTotalUsed;
+        uint rgbGas = _frameGas(before);
+        before = gasleft();
         toon.tokenSVG(1973);
-        uint toonSvg = vm.lastFrameGas().gasTotalUsed;
+        uint toonSvg = _frameGas(before);
+        before = gasleft();
         toon.tokenURI(1973);
-        uint toonGas = vm.lastFrameGas().gasTotalUsed;
+        uint toonGas = _frameGas(before);
         console2.log("block", block.number);
         console2.log("svg MATH", mathSvg);
         console2.log("render MATH", mathGas);
@@ -210,6 +222,18 @@ contract ForkTest is Test {
         assertGt(bytes(body.readString(".image_data")).length, 100);
     }
 
+    function _readFrame() external view returns (uint) {
+        return FrameVm(address(vm)).lastFrameGas().gasTotalUsed;
+    }
+
+    function _frameGas(uint before) internal view returns (uint) {
+        try this._readFrame() returns (uint used) {
+            return used;
+        } catch {
+            return before - gasleft();
+        }
+    }
+
     function _txGas(bytes memory init, uint frame) internal pure returns (uint) {
         uint zeros;
         for (uint i; i < init.length; i++) if (init[i] == 0) zeros++;
@@ -217,13 +241,18 @@ contract ForkTest is Test {
         return 21000 + zeros * 4 + (init.length - zeros) * 16 + frame;
     }
 
+    // `new` is a create. Foundry 1.5.1 does not record it, so that release uses
+    // the gas spent around the create instead of the frame.
     function test_deploy_gas() public {
+        uint before = gasleft();
         new MATHRender();
-        uint mathDeploy = _txGas(type(MATHRender).creationCode, vm.lastFrameGas().gasTotalUsed);
+        uint mathDeploy = _txGas(type(MATHRender).creationCode, _frameGas(before));
+        before = gasleft();
         new RGBRender();
-        uint rgbDeploy = _txGas(type(RGBRender).creationCode, vm.lastFrameGas().gasTotalUsed);
+        uint rgbDeploy = _txGas(type(RGBRender).creationCode, _frameGas(before));
+        before = gasleft();
         new TOONRender();
-        uint toonDeploy = _txGas(type(TOONRender).creationCode, vm.lastFrameGas().gasTotalUsed);
+        uint toonDeploy = _txGas(type(TOONRender).creationCode, _frameGas(before));
         console2.log("deploy MATH", mathDeploy);
         console2.log("deploy RGB", rgbDeploy);
         console2.log("deploy TOON", toonDeploy);
