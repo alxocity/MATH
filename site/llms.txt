@@ -19,8 +19,10 @@ index.json fields:
 - rgb: [id, ownerIndex, r, g, b]
 - toon: [id, ownerIndex, word, face, rgb]
 - words, faces: { id: text }
+- blocked: lowercase addresses that revert MATH's 2300-gas payout
+- blockedDone: true when that list was scanned
 
-Ids are decimal strings. ownerIndex indexes owners. A used RGB channel is an r, g, or b value. WORD and FACE owners are not in the file. The payout blocklist is not in the file.
+Ids are decimal strings. ownerIndex indexes owners. A used RGB channel is an r, g, or b value. WORD and FACE owners are not in the file.
 
 ## plan(wallet, target, snapshot)
 
@@ -30,13 +32,15 @@ Ids are decimal strings. ownerIndex indexes owners. A used RGB channel is an r, 
 
 Returns v, ok, kind, target, block, wallet, exists, txs, royalty, shares, owned, note.
 
-txs items are { to, data, value }. value is hex wei: MATH 0.002 ETH, RGB 0.03 ETH, TOON 0x0. royalty is decimal wei paid to holders, not gas. shares items are { id, holder, wei, owned }. owned is the input ids this address already holds. owned null means the snapshot has no owner (WORD and FACE).
+txs items are { to, data, value }. value is hex wei: MATH 0.002 ETH, RGB 0.03 ETH, TOON 0x0. royalty is decimal wei paid to holders, not gas. shares items are { id, holder, wei, owned }. owned is the input ids this address already holds. owned null means the snapshot has no owner (WORD and FACE). shares.holder is the owner in the snapshot. The contract pays whoever holds the input at send time.
+
+ok: false means the snapshot shows the call reverting (a channel already used, a TOON part already used, a missing MATH or RGB, a WORD or FACE whose owner is not in the snapshot, or a MATH input held by an address in blocked). The transactions are still returned. exists: true means that target is already minted, so txs is empty.
 
 ## Caveats
 
 - A human signs. This returns transactions and holds no key.
 - TOON.add is free.
-- MATH pays each input holder 0.001 ETH with a 2300-gas transfer. Some contract wallets cannot receive it. The snapshot does not list them.
+- MATH pays each input holder 0.001 ETH with a 2300-gas transfer. Some contract wallets cannot receive it. blocked lists them when blockedDone is true. A route that still names one comes back ok: false. If the list is missing, the note says so.
 - RGB pays 0.01 ETH to each of the three MATH channel holders (0.03 ETH total).
 - You still pay gas. value is only msg.value.
 - Each MATH id is one red, one green, or one blue. Each WORD, FACE, RGB, and MATH bases one TOON.

@@ -20,6 +20,8 @@ function snap(extra) {
     toon: [['1', 0, '5', '6', '9']],
     words: { '5': 'hi', '7': 'yo' },
     faces: { '6': ':)', '8': ':(' },
+    blocked: [],
+    blockedDone: true,
   }, extra || {});
 }
 
@@ -122,7 +124,8 @@ assert.deepStrictEqual(image.owned, ['1', '2']);
 const toon = AGENT.plan(user, { math: '16', word: '7', face: '8', rgb: '10' }, snap());
 check(toon);
 assert.strictEqual(toon.kind, 'toon');
-assert.strictEqual(toon.ok, true);
+assert.strictEqual(toon.ok, false);
+assert.ok(toon.note.indexOf('WORD/FACE owners are not in the snapshot; confirm the signer holds them before sending.') !== -1);
 assert.strictEqual(toon.target, '16,7,8,10');
 assert.strictEqual(toon.txs.length, 1);
 assert.strictEqual(toon.txs[0].to, ETH.ADDR.TOON);
@@ -162,6 +165,41 @@ assert.throws(function () { AGENT.plan(user, { math: '1', word: '2' }, snap()); 
 assert.throws(function () { AGENT.plan(user, '0', snap()); }, /target/);
 assert.throws(function () { AGENT.plan(user, '3', { math: [] }); }, /snapshot/);
 
+const FACE_REASON = 'WORD/FACE owners are not in the snapshot; confirm the signer holds them before sending.';
+const unknownParts = AGENT.plan(user, { math: '16', word: '7', face: '8', rgb: '10' }, snap());
+check(unknownParts);
+assert.strictEqual(unknownParts.ok, false);
+assert.strictEqual(unknownParts.shares[1].owned, null);
+assert.strictEqual(unknownParts.shares[2].owned, null);
+assert.strictEqual(unknownParts.txs.length, 1);
+assert.strictEqual(unknownParts.txs[0].value, '0x0');
+assert.ok(unknownParts.note.indexOf(FACE_REASON) !== -1);
+
+const unlist = snap();
+delete unlist.blocked;
+delete unlist.blockedDone;
+const warned = AGENT.plan(user, '3', unlist);
+check(warned);
+assert.strictEqual(warned.ok, true);
+assert.ok(warned.note.indexOf('no payout blocklist') !== -1);
+
+const blockedHolder = '0xbadbadbadbadbadbadbadbadbadbadbadbadbadb';
+const trapped = snap();
+trapped.owners = [user, blockedHolder];
+trapped.math = [['1', 0], ['4', 1]];
+trapped.blocked = [blockedHolder];
+trapped.blockedDone = true;
+const revert = AGENT.plan(user, '5', trapped);
+assert.strictEqual(revert.ok, false);
+assert.ok(revert.txs.length > 0);
+assert.ok(revert.txs[0].data.startsWith('0x771602f7'));
+assert.ok(revert.note.indexOf('Holder ' + blockedHolder + ' cannot take the 2300-gas payout. The mint would revert.') !== -1);
+
+const around = AGENT.plan(user, '3', snap());
+check(around);
+assert.strictEqual(around.ok, true);
+assert.ok(around.shares.every(function (row) { return row.holder !== blockedHolder; }));
+
 const raw = JSON.parse(fs.readFileSync(__dirname + '/index.json', 'utf8'));
 const live = AGENT.plan('0x' + '11'.repeat(20), '3', raw);
 assert.strictEqual(live.v, 1);
@@ -184,6 +222,16 @@ const toonRow = raw.toon[0];
 const toonHit = AGENT.plan(user, { math: toonRow[0], word: toonRow[2], face: toonRow[3], rgb: toonRow[4] }, raw);
 assert.strictEqual(toonHit.exists, true);
 assert.strictEqual(toonHit.txs.length, 0);
+const liveWallet = '0x7891f796a5d43466fc29f102069092aef497a290';
+const foreign = AGENT.plan(liveWallet, { math: '65537', word: '1', face: '2', rgb: '23' }, raw);
+assert.strictEqual(foreign.ok, false);
+assert.strictEqual(foreign.txs.length, 1);
+assert.strictEqual(foreign.txs[0].value, '0x0');
+assert.strictEqual(foreign.shares[1].owned, null);
+assert.strictEqual(foreign.shares[2].owned, null);
+assert.ok(foreign.note.indexOf(FACE_REASON) !== -1);
+assert.strictEqual(raw.blockedDone, true);
+assert.strictEqual(raw.blocked.length, 7);
 
 const example = {
   math: AGENT.plan(user, '3', snap()),

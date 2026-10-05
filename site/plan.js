@@ -7,7 +7,7 @@
 })(typeof globalThis !== 'undefined' ? globalThis : this, function (g) {
   const SIGN = 'A human signs. This does not.';
   const NOTES = {
-    math: SIGN + ' MATH.add value is 0.002 ETH: 0.001 to each input holder, sent with a 2300-gas transfer, so some contract wallets cannot receive it. Hold an input and that share is 0. The snapshot does not list those contracts. You still pay gas.',
+    math: SIGN + ' MATH.add value is 0.002 ETH: 0.001 to each input holder, sent with a 2300-gas transfer, so some contract wallets cannot receive it. Hold an input and that share is 0. You still pay gas.',
     rgb: SIGN + ' RGB.add value is 0.03 ETH: 0.01 to each MATH channel holder. Hold a channel, or mint it earlier in this plan, and that share is 0. You still pay gas.',
     toon: SIGN + ' TOON.add is free. It reverts unless the signer holds the MATH, WORD, FACE, and RGB. WORD and FACE owners are not in the snapshot.',
     exists: 'Already minted. Nothing to sign.',
@@ -173,6 +173,40 @@
     return { supply: supply, user: wallet, blocked: blocked, gasWei: 0n, mode: 'cheapest' };
   }
 
+  // Prefer a route that skips blocked holders. If none exists, return the reverting one.
+  function routeFor(PLAN, id, supply, wallet, blocked) {
+    const list = blocked && blocked.size ? blocked : new Set();
+    try {
+      return PLAN.plan(id, ctx(supply, wallet, list));
+    } catch (e) {
+      if (String(e && e.message) !== 'no route' || !list.size) throw e;
+      return PLAN.plan(id, ctx(supply, wallet, new Set()));
+    }
+  }
+
+  function blockedPays(steps, blocked) {
+    const reasons = [];
+    const seen = new Set();
+    if (!blocked || !blocked.size) return reasons;
+    (steps || []).forEach(function (step) {
+      if (!step || step.exists) return;
+      (step.payTo || []).forEach(function (holder) {
+        const h = holder ? String(holder).toLowerCase() : '';
+        if (!h || !blocked.has(h) || seen.has(h)) return;
+        seen.add(h);
+        reasons.push('Holder ' + h + ' cannot take the 2300-gas payout. The mint would revert.');
+      });
+    });
+    return reasons;
+  }
+
+  function noteWith(inv, note, reasons) {
+    let text = note;
+    if (reasons.length) text += ' ' + reasons.join(' ');
+    if (!inv.blockedDone) text += ' The snapshot has no payout blocklist. A named holder may still revert the 2300-gas transfer.';
+    return text;
+  }
+
   function planMath(L, inv, ix, wallet, id) {
     const target = id.toString();
     if (ix.supply.has(id)) {
@@ -188,7 +222,7 @@
         note: NOTES.exists,
       });
     }
-    const route = L.PLAN.plan(id, ctx(ix.supply, wallet, inv.blocked));
+    const route = routeFor(L.PLAN, id, ix.supply, wallet, inv.blocked);
     const txs = [];
     const shares = [];
     const already = new Set();
@@ -198,8 +232,9 @@
       mathShares(L.PLAN, step, ix.supply, wallet, already).forEach(function (row) { shares.push(row); });
     });
     const royalty = shares.reduce(function (sum, row) { return sum + BigInt(row.wei); }, 0n);
+    const reasons = blockedPays(route.steps, inv.blocked);
     return done(inv, wallet, {
-      ok: true,
+      ok: reasons.length === 0,
       kind: 'math',
       target: target,
       exists: false,
@@ -207,7 +242,7 @@
       royalty: royalty.toString(),
       shares: shares,
       owned: sortIds(already),
-      note: NOTES.math,
+      note: noteWith(inv, NOTES.math, reasons),
     });
   }
 
@@ -241,18 +276,20 @@
         note: NOTES.exists,
       });
     }
-    const routes = [r, g, b].map(function (n) { return L.PLAN.plan(n, ctx(ix.supply, wallet, inv.blocked)); });
+    const routes = [r, g, b].map(function (n) { return routeFor(L.PLAN, n, ix.supply, wallet, inv.blocked); });
     const have = new Set(ix.supply.keys());
     const minted = new Set();
     const txs = [];
     const shares = [];
     const already = new Set();
+    const mathSteps = [];
     routes.forEach(function (route) {
       route.steps.forEach(function (step) {
         if (step.exists || have.has(step.result)) {
           have.add(step.result);
           return;
         }
+        mathSteps.push(step);
         txs.push(mathTx(L.ABI, L.ETH.ADDR, L.PLAN, step));
         mathShares(L.PLAN, step, ix.supply, wallet, already).forEach(function (row) { shares.push(row); });
         minted.add(step.result);
@@ -272,14 +309,12 @@
       const wei = (had || made) ? 0n : L.PLAN.RGB_ROY;
       shares.push(share(id, holder, wei, had));
     });
-    const reasons = [];
+    const reasons = blockedPays(mathSteps, inv.blocked);
     [['Red', r, ix.used.r], ['Green', g, ix.used.g], ['Blue', b, ix.used.b]].forEach(function (part) {
       const id = part[2].get(part[1]);
       if (id != null) reasons.push(part[0] + ' already used by RGB #' + id + '.');
     });
     const royalty = shares.reduce(function (sum, row) { return sum + BigInt(row.wei); }, 0n);
-    let note = NOTES.rgb;
-    if (reasons.length) note = note + ' ' + reasons.join(' ');
     return done(inv, wallet, {
       ok: reasons.length === 0,
       kind: 'rgb',
@@ -289,7 +324,7 @@
       royalty: royalty.toString(),
       shares: shares,
       owned: sortIds(already),
-      note: note,
+      note: noteWith(inv, NOTES.rgb, reasons),
     });
   }
 
@@ -332,6 +367,9 @@
       share(spec.face, '', 0n, null),
       share(spec.rgb, rgb ? rgb.owner : '', 0n, rgb ? rgb.owner.toLowerCase() === wallet : false),
     ];
+    if (shares.some(function (row) { return row.owned === null; })) {
+      reasons.push('WORD/FACE owners are not in the snapshot; confirm the signer holds them before sending.');
+    }
     let note = NOTES.toon;
     if (reasons.length) note = note + ' ' + reasons.join(' ');
     return done(inv, wallet, {

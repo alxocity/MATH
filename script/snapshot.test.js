@@ -49,9 +49,11 @@ later.math.push(['9', 0]);
 assert.strictEqual(snap.sameBody(packed, later), false);
 
 const raw = JSON.parse(fs.readFileSync(__dirname + '/../site/index.json', 'utf8'));
-const round = ETH.pack(ETH.unpack(raw), null);
-delete round.blocked;
-delete round.blockedDone;
+const unpacked = ETH.unpack(raw);
+assert.strictEqual(unpacked.blockedDone, true);
+assert.ok(unpacked.blocked.size >= 1);
+const round = ETH.pack(unpacked, unpacked.blocked);
+round.blocked.sort();
 assert.strictEqual(snap.sameBody(raw, round), true);
 
 assert.strictEqual(ABI.decodeAddr('0x' + '00'.repeat(12) + 'ab'.repeat(20)), '0x' + 'ab'.repeat(20));

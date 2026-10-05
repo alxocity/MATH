@@ -67,8 +67,19 @@ assert.ok(snap);
 assert.ok(snap.math.length > 8000);
 assert.ok(snap.rgb.length > 0);
 assert.ok(snap.toon.length > 0);
-assert.strictEqual(snap.blockedDone, false);
-assert.strictEqual(snap.blocked.size, 0);
+assert.strictEqual(snap.blockedDone, true);
+assert.strictEqual(rawSnap.blockedDone, true);
+assert.ok(Array.isArray(rawSnap.blocked) && rawSnap.blocked.length === snap.blocked.size);
+assert.ok(snap.blocked.size >= 7);
+[
+  '0x019ed608dd806b80193942f2a960e7ac8abb2ee3',
+  '0x074068d4690c2ae7dfe5ffd9cb85575745b6c55c',
+  '0x1ded2d5bb13205833a7ad2c65e28c578a172b5ae',
+  '0xd8b738f2e667e2cd169dc282f3de956877047922',
+  '0xdad941cb9a1e95b481ab4a47fb8e3b38e09f0be1',
+  '0xeed96496691cfaefc2e9eb80f7e97b5175c7f483',
+  '0xf24bc9c899e71708b5d076714408465b6c203a46',
+].forEach(function (a) { assert.ok(snap.blocked.has(a)); });
 assert.ok(/^0x[0-9a-f]{40}$/.test(snap.math[0].owner));
 
 const other = '0x' + 'cd'.repeat(20);

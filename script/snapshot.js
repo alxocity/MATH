@@ -48,9 +48,18 @@ async function main() {
   if (!prev) throw new Error('snapshot');
   const inv = await ETH.loadDelta(prev, function (msg) { console.error(msg); });
   assertInventory(inv, prev);
-  const packed = ETH.pack(inv, null);
-  delete packed.blocked;
-  delete packed.blockedDone;
+  const owners = [];
+  const seen = new Set();
+  inv.math.forEach(function (t) {
+    const a = String(t.owner).toLowerCase();
+    if (seen.has(a)) return;
+    seen.add(a);
+    owners.push(a);
+  });
+  const scan = ETH.scanResult(await ETH.scanBlocked(owners, function (msg) { console.error(msg); }));
+  if (!scan.blockedDone) throw new Error('holders');
+  const packed = ETH.pack(inv, scan.blocked);
+  packed.blocked.sort();
   if (sameBody(raw, packed)) {
     console.error('unchanged block ' + raw.block);
     return;
@@ -65,7 +74,7 @@ async function main() {
     try { fs.unlinkSync(tmp); } catch (ignore) { /* leave the old snapshot */ }
     throw e;
   }
-  console.error('wrote ' + out + ' block ' + packed.block + ' MATH ' + packed.math.length + ' RGB ' + packed.rgb.length + ' TOON ' + packed.toon.length + ' owners ' + packed.owners.length + ' WORD ' + Object.keys(packed.words).length + ' FACE ' + Object.keys(packed.faces).length);
+  console.error('wrote ' + out + ' block ' + packed.block + ' MATH ' + packed.math.length + ' RGB ' + packed.rgb.length + ' TOON ' + packed.toon.length + ' owners ' + packed.owners.length + ' WORD ' + Object.keys(packed.words).length + ' FACE ' + Object.keys(packed.faces).length + ' blocked ' + packed.blocked.length);
 }
 
 if (require.main === module) {
