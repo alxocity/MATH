@@ -5,6 +5,17 @@
 })(typeof globalThis !== 'undefined' ? globalThis : this, function () {
   const PAL = 'kbgcrmyw';
   const COL = { k: 0, b: 1, g: 2, c: 3, r: 4, m: 5, y: 6, w: 7 };
+  // Display order. Bits are R, G, B, each on or off. PAL stays the bit order.
+  const SWATCHES = [
+    { ch: 'k', name: 'black' },
+    { ch: 'r', name: 'red' },
+    { ch: 'g', name: 'green' },
+    { ch: 'b', name: 'blue' },
+    { ch: 'y', name: 'yellow' },
+    { ch: 'm', name: 'magenta' },
+    { ch: 'c', name: 'cyan' },
+    { ch: 'w', name: 'white' },
+  ];
   const ROY_WEI = 10n ** 15n;
   const MSG_MATH = 2n * ROY_WEI;
   const MSG_RGB = 30n * ROY_WEI;
@@ -100,6 +111,20 @@
       B = (B << 1n) | BigInt(v & 1);
     }
     return { R: R, G: G, B: B };
+  }
+
+  function paintCell(rows, i, ch) {
+    if (!Number.isInteger(i) || i < 0 || i > 255) throw new Error('grid');
+    if (COL[ch] === undefined) throw new Error('palette');
+    const y = Math.floor(i / 16);
+    const x = i % 16;
+    if (!rows[y] || rows[y].length !== 16) throw new Error('grid');
+    if (rows[y][x] === ch) return rows;
+    const next = rows.slice();
+    const row = next[y].split('');
+    row[x] = ch;
+    next[y] = row.join('');
+    return next;
   }
 
   function planesToRows(R, G, B) {
@@ -569,6 +594,8 @@
   return {
     PAL: PAL,
     COL: COL,
+    SWATCHES: SWATCHES,
+    paintCell: paintCell,
     HEART_SHAPE: HEART_SHAPE,
     ROY_WEI: ROY_WEI,
     MSG_MATH: MSG_MATH,

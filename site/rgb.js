@@ -424,6 +424,17 @@
     rEl.dispatchEvent(new Event('change'));
   }
 
+  function swatchHtml() {
+    if (!P.COL[state.ink]) state.ink = 'w';
+    return '<p class="dim">Each channel is on or off per pixel.</p>' +
+      '<div class="swatches" role="group" aria-label="color">' +
+      P.SWATCHES.map(function (sw) {
+        const on = sw.ch === state.ink;
+        return '<button type="button" class="swatch ' + sw.ch + (on ? ' on' : '') + '" data-ink="' + sw.ch + '" aria-pressed="' + (on ? 'true' : 'false') + '" aria-label="' + sw.name + '"></button>';
+      }).join('') +
+      '</div>';
+  }
+
   function rgb(view) {
     if (state.arm && state.arm.kind === 'rgb') {
       syncPlanes();
@@ -441,9 +452,7 @@
       '<input type="file" id="file" accept="image/*">' +
       '<label><input type="checkbox" id="dither"> dither</label>' +
       '<button type="button" id="apply">apply image</button></div>' +
-      '<div class="row"><label>R <input type="range" id="thrR" min="0" max="100" value="50"></label>' +
-      '<label>G <input type="range" id="thrG" min="0" max="100" value="50"></label>' +
-      '<label>B <input type="range" id="thrB" min="0" max="100" value="50"></label></div>' +
+      swatchHtml() +
       '<div id="cells"></div>' +
       '<div class="row"><label class="num">R <input id="pR" spellcheck="false" inputmode="numeric" value="' + p.R + '"></label></div>' +
       '<div class="row"><label class="num">G <input id="pG" spellcheck="false" inputmode="numeric" value="' + p.G + '"></label></div>' +
@@ -459,14 +468,12 @@
     paintTraits();
     let stroke = '';
     function put(btn, ch) {
-      if (!btn || btn.className === ch) return false;
-      state.planesTouched = true;
+      if (!btn || !btn.closest('#cells')) return false;
       const i = Number(btn.dataset.i);
-      const y = Math.floor(i / 16);
-      const x = i % 16;
-      const row = state.grid[y].split('');
-      row[x] = ch;
-      state.grid[y] = row.join('');
+      const next = P.paintCell(state.grid, i, ch);
+      if (next === state.grid) return false;
+      state.planesTouched = true;
+      state.grid = next;
       btn.className = ch;
       return true;
     }
@@ -483,8 +490,7 @@
       const btn = ev.target.closest('button');
       if (!btn || ev.button > 0) return;
       ev.preventDefault();
-      const cur = P.PAL.indexOf(btn.className);
-      stroke = P.PAL[(cur + 1) % P.PAL.length];
+      stroke = state.ink;
       put(btn, stroke);
       const issues = syncGrid();
       const rule = issues.find(function (s) { return RULES.mold(s); });
@@ -504,11 +510,20 @@
       if (ev.detail !== 0) return;
       const btn = ev.target.closest('button');
       if (!btn) return;
-      const cur = P.PAL.indexOf(btn.className);
-      put(btn, P.PAL[(cur + 1) % P.PAL.length]);
+      put(btn, state.ink);
       const issues = syncGrid();
       const rule = issues.find(function (s) { return RULES.mold(s); });
       S.hit(rule || '');
+    });
+    document.querySelectorAll('.swatches button').forEach(function (b) {
+      b.onclick = function () {
+        state.ink = b.dataset.ink;
+        document.querySelectorAll('.swatches button').forEach(function (el) {
+          const on = el === b;
+          el.classList.toggle('on', on);
+          el.setAttribute('aria-pressed', on ? 'true' : 'false');
+        });
+      };
     });
     $('#heart').onclick = function () { S.applyHeart(false); };
     $('#shuffle').onclick = function () { S.applyHeart(true); };
@@ -527,7 +542,7 @@
       if (!state.sample) return;
       state.planesTouched = true;
       const px = new Float32Array(state.sample);
-      const thr = [Number($('#thrR').value) / 100, Number($('#thrG').value) / 100, Number($('#thrB').value) / 100];
+      const thr = [0.5, 0.5, 0.5];
       const dither = $('#dither').checked;
       const chars = new Array(256);
       for (let i = 0; i < 256; i++) {

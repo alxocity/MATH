@@ -33,6 +33,32 @@ assert.strictEqual(shape.G, 0n);
 assert.strictEqual(shape.B, 0n);
 assert.deepStrictEqual(P.planesToRows(shape.R, 0n, 0n), P.HEART_SHAPE);
 assert.strictEqual(P.popcount(shape.R), P.HEART_SHAPE.join('').split('').filter(function (c) { return c === 'r'; }).length);
+
+assert.deepStrictEqual(P.SWATCHES.map(function (sw) { return sw.name; }), [
+  'black', 'red', 'green', 'blue', 'yellow', 'magenta', 'cyan', 'white',
+]);
+assert.strictEqual(P.SWATCHES.length, 8);
+const seenBits = {};
+P.SWATCHES.forEach(function (sw) {
+  assert.strictEqual(typeof P.COL[sw.ch], 'number');
+  assert.strictEqual(seenBits[P.COL[sw.ch]], undefined);
+  seenBits[P.COL[sw.ch]] = sw.name;
+});
+assert.strictEqual(Object.keys(seenBits).length, 8);
+const blank = Array.from({ length: 16 }, function () { return 'kkkkkkkkkkkkkkkk'; });
+P.SWATCHES.forEach(function (sw) {
+  const rows = P.paintCell(blank, 0, sw.ch);
+  const bit = P.COL[sw.ch];
+  const planes = P.gridToPlanes(rows);
+  assert.strictEqual(rows[0][0], sw.ch);
+  assert.strictEqual(blank[0][0], 'k');
+  assert.strictEqual(planes.R, (bit & 4) ? 1n << 255n : 0n);
+  assert.strictEqual(planes.G, (bit & 2) ? 1n << 255n : 0n);
+  assert.strictEqual(planes.B, (bit & 1) ? 1n << 255n : 0n);
+  assert.strictEqual(P.paintCell(rows, 0, sw.ch), rows);
+});
+assert.throws(function () { P.paintCell(blank, 0, 'q'); }, /palette/);
+assert.throws(function () { P.paintCell(blank, 256, 'r'); }, /grid/);
 assert.strictEqual(P.isPow2(8n), true);
 assert.strictEqual(P.isPow2(6n), false);
 assert.strictEqual(P.isPal(121n), true);
