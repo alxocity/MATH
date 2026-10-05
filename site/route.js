@@ -110,7 +110,7 @@
     const warn = built.target.toString() === state.routeTarget ? '' : ' sums to ' + built.target + ', not the target.';
     if (meta) meta.innerHTML = built.mints + ' mints' + S.mark('ⓘ', S.TIPS.mints) + S.esc(', royalty ' + S.fmt(built.royalty) + ' ETH, gas ~' + S.fmt(built.gas) +
       ', msg.value ' + S.fmt(built.msgValue) + ', net ~' + S.fmt(built.net) + warn) +
-      '<br>inputs you own are free, so every token you hold makes the next build cheaper.';
+      '<br>inputs you own are free, so collecting can make future builds cheaper.';
     if (steps) {
       steps.innerHTML = built.steps.map(function (s, i) {
         const note = stepNote(s);
