@@ -91,7 +91,7 @@
     blocked: "can't receive the 0.001 ETH payout. MATH (2019) pays with transfer's 2300 gas. some contract wallets need more, so their MATH is not an input and the plan routes around them.",
     unchecked: "the payout check couldn't reach a node. holder not confirmed. simulate before sending.",
     planes: 'lit pixels per channel. a bit count, not the token id.',
-    fees: 'MATH add is 0.002 ETH, 0.001 to each input owner. RGB is 0.03 ETH, 0.01 to each channel owner. TOON is free.',
+    fees: 'MATH add is 0.002 ETH, 0.001 to each input owner. RGB is 0.03 ETH, 0.01 to each channel owner. TOON is free. Not a cut for this site. Hold the input and that share comes back. You still pay gas.',
     used: 'used as R, G, or B. each MATH id once per channel, ever.',
     simulate: 'dry run via eth_call. no gas, nothing signed. with no wallet it runs from a placeholder address.',
     mints: 'planned steps to build the target from existing tokens.',
