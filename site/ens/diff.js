@@ -128,6 +128,12 @@
     return '0x24c1af44' + node32(parentNode) + abi().word(0xe0) + abi().addr(owner) + abi().addr(resolver) + abi().word(0) + abi().word(0) + abi().word(0) + lab;
   }
 
+  function presetPath(value) {
+    const name = String(value == null ? '' : value).trim();
+    if (!/^[a-z0-9-]+$/.test(name)) throw new Error('bad preset');
+    return 'presets/' + name + '.json';
+  }
+
   function parsePreset(raw) {
     const data = typeof raw === 'string' ? JSON.parse(raw) : raw;
     if (!data || typeof data !== 'object') throw new Error('preset');
@@ -255,15 +261,16 @@
     else if (exists && ownerAfter !== wallet && !chain.approved) note = 'owner';
     else if (spec.wrapped && nextResolver && !wrapperAware(nextResolver) && (writeAddr || textWrites.length)) note = 'resolver';
 
+    const canSend = !!spec.controlsParent;
     const recordCalls = [];
-    if (recordsOk) {
+    if (canSend && recordsOk) {
       if (writeAddr) recordCalls.push(setAddrData(found.node, desiredAddr));
       textWrites.forEach(function (w) { recordCalls.push(setTextData(found.node, w.key, w.value)); });
     }
     const wroteRecords = recordCalls.length > 0;
     const full = label + '.' + parent;
     const txs = [];
-    if (needSubnode) {
+    if (canSend && needSubnode) {
       const data = spec.wrapped
         ? setSubnodeWrapped(found.parentNode || spec.parentNode, label, nextOwner, nextResolver)
         : setSubnodeUnwrapped(found.parentNode || spec.parentNode, found.labelhash, nextOwner, nextResolver);
@@ -309,8 +316,8 @@
       resolver: field(resolverKind, chainResolver, nextResolver),
       addr: Object.assign(field(addrKind, normAddr(chain.addr), desiredAddr), {}),
       texts: texts,
-      wroteOwner: needSubnode && writeOwner,
-      wroteResolver: needSubnode && writeResolver,
+      wroteOwner: canSend && needSubnode && writeOwner,
+      wroteResolver: canSend && needSubnode && writeResolver,
       wroteAddr: wroteRecords && writeAddr,
       nextOwner: needSubnode ? nextOwner : chainOwner,
       nextResolver: nextResolver,
@@ -391,6 +398,7 @@
     NEW_RESOLVER: NEW_RESOLVER,
     ZERO: ZERO,
     normAddr: normAddr,
+    presetPath: presetPath,
     parsePreset: parsePreset,
     diff: diff,
     apply: apply,
