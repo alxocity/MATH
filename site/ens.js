@@ -179,14 +179,14 @@
     return n;
   }
 
-  // Hardcoded. These names resolve on mainnet; the site does not look them up.
+  // Names only. The address is ETH.ADDR; the site does not look these up.
   const CONTRACTS = [
-    ['math.alxocity.eth', 'MATH', '0x6B4fccdd888Bb6fD3934A9e49eF64dfd2c0D8e6D'],
-    ['rgb.alxocity.eth', 'RGB', '0x9355Fb9693ffF9bB6f06721C82fe0B5F49E6c956'],
-    ['toon.alxocity.eth', 'TOON', '0x026A7D72a448D0E44d441e55F746BF56B843aEDB'],
-    ['mathrender.alxocity.eth', 'MATH_RENDER', '0xb3cA13A2722CAB48c8d9068bD67656efe2d5e376'],
-    ['rgbrender.alxocity.eth', 'RGB_RENDER', '0x62FFe75cd9824A2e8855CbC055256De229B5b936'],
-    ['toonrender.alxocity.eth', 'TOON_RENDER', '0x1E1a576e4186551e4DEdE58Ccc2DCC34697159Cb'],
+    ['math.alxocity.eth', 'MATH'],
+    ['rgb.alxocity.eth', 'RGB'],
+    ['toon.alxocity.eth', 'TOON'],
+    ['mathrender.alxocity.eth', 'MATH_RENDER'],
+    ['rgbrender.alxocity.eth', 'RGB_RENDER'],
+    ['toonrender.alxocity.eth', 'TOON_RENDER'],
   ];
 
   function contractNames(addr) {
@@ -196,9 +196,10 @@
 
   function contractLabel(addr) {
     const n = normAddr(addr);
-    if (!n) return '';
+    const book = globalThis.ETH && globalThis.ETH.ADDR;
+    if (!n || !book) return '';
     for (let i = 0; i < CONTRACTS.length; i++) {
-      if (normAddr(CONTRACTS[i][2]) === n) return CONTRACTS[i][0];
+      if (normAddr(book[CONTRACTS[i][1]]) === n) return CONTRACTS[i][0];
     }
     return '';
   }
