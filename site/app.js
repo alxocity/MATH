@@ -289,6 +289,7 @@
     });
     state.wordText = inv.words || new Map();
     state.faceText = inv.faces || new Map();
+    state.inventory = inv;
     state.unknown = new Set();
     if (inv.blocked) state.blocked = inv.blocked;
     if (inv.blockedDone) state.blockedDone = true;
@@ -1302,6 +1303,7 @@
       state.account = acc[0];
       paintWho();
       syncMine();
+      noteAccount();
       loadWallet();
     }).catch(function () {});
     if (eth.on) {
@@ -1309,6 +1311,7 @@
         state.account = acc && acc[0] ? acc[0] : null;
         paintWho();
         syncMine();
+        noteAccount();
         if (state.account) loadWallet();
         paintAccount(['toon', 'mine', 'browse']);
       });
@@ -1337,6 +1340,7 @@
     state.account = acc[0];
     paintWho();
     syncMine();
+    noteAccount();
     MOLD.say('connect', { addr: ENS.label(state.account), mine: mineCount(), math: state.math.length });
     loadWallet();
     paintAccount(['toon', 'mine']);
@@ -1563,6 +1567,66 @@
     b.setAttribute('aria-label', dark ? 'dark tile' : 'light tile');
   }
 
+  let lookWallet = '';
+
+  function noteAccount() {
+    if (globalThis.MOLD && MOLD.setAccount) MOLD.setAccount(state.account);
+  }
+
+  function ideaSnap() {
+    if (!state.inventory) return null;
+    return Object.assign({}, state.inventory, {
+      blocked: state.blocked,
+      blockedDone: !!state.blockedDone,
+    });
+  }
+
+  async function askIdeas(pasted) {
+    const raw = String(pasted || '').trim();
+    let who = '';
+    if (raw) who = await MOLD.resolveLook(raw, function (name) { return ENS.resolveForward(name); });
+    else who = IDEAS.walletOf(state.account);
+    lookWallet = who || '';
+    if (!lookWallet || !ideaSnap()) {
+      MOLD.showIdeas([]);
+      return;
+    }
+    MOLD.showIdeas(IDEAS.ideas(lookWallet, ideaSnap()));
+  }
+
+  function applyLoad(load) {
+    if (!load) return;
+    if (load.tab === 'mint') {
+      show('mint', true);
+      const a = $('#a');
+      const b = $('#b');
+      if (a && b) {
+        a.value = load.a;
+        b.value = load.b;
+        SITE.paintMint(false);
+      }
+      return;
+    }
+    if (load.tab === 'rgb') {
+      show('rgb', true);
+      state.planesTouched = true;
+      const r = $('#pR');
+      const g = $('#pG');
+      const b = $('#pB');
+      if (r && g && b) {
+        r.value = load.r;
+        g.value = load.g;
+        b.value = load.b;
+        r.dispatchEvent(new Event('change'));
+      }
+      return;
+    }
+    if (load.tab === 'toon') {
+      show('toon', true);
+      if (SITE.loadToon) SITE.loadToon(load);
+    }
+  }
+
   function boot() {
     let tile = 'light';
     try {
@@ -1623,6 +1687,14 @@
     $('#connect').onclick = function () { connect().catch(function (e) { setStatus(e.message); }); };
     $('#refresh').onclick = function () { refresh(); };
     MOLD.mount($('#mold'), function (s) {
+      if (s.act === 'ideas') {
+        askIdeas(s.pasted);
+        return;
+      }
+      if (s.act === 'load' && s.load) {
+        applyLoad(s.load);
+        return;
+      }
       if (s.act === 'mint11') {
         show('mint');
         const a = $('#a');
@@ -1649,6 +1721,7 @@
       }
       show(s.tab);
     });
+    noteAccount();
     const cached = ETH.readCache();
     if (cached) {
       indexInventory(cached);

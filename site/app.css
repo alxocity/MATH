@@ -59,6 +59,9 @@ aside {
 }
 aside .who { margin: 0 0 8px; color: var(--dim); }
 #mold-line { min-height: 4.4em; margin: 0 0 12px; }
+#mold-line:empty { display: none; min-height: 0; margin: 0; }
+#mold-ideas p { margin: 0 0 8px; }
+#mold-look { flex: 1 1 12rem; min-width: 0; }
 #mold-sug { display: flex; flex-wrap: wrap; gap: 6px; }
 #status { color: var(--dim); margin-left: auto; }
 .row { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin: 8px 0; min-width: 0; max-width: 100%; }
