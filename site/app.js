@@ -1213,6 +1213,7 @@
         }
       }
     }
+    if (tab === 'toon') ensureParts().catch(function () {});
     if (quiet) return;
     if (tab === 'browse') MOLD.say('browse');
     if (tab === 'rgb') MOLD.say('rgb');
@@ -1531,21 +1532,14 @@
       if (grew) MOLD.say('loaded', { block: state.block, math: state.math.length, rgb: state.rgb.length, toon: state.toon.length });
       if (state.account) MOLD.say('connect', { addr: short(state.account), mine: mineCount(), math: state.math.length });
       const owners = state.math.map(function (t) { return t.owner; });
-      const scan = ETH.scanResult(await ETH.scanBlocked(owners, progress));
+      const scan = ETH.scanResult(await ETH.catchHolders(owners, base, progress, inv.block));
       if (gen !== loadGen) return;
       state.blocked = scan.blocked;
       state.unknown = scan.unknown;
       state.blockedDone = scan.blockedDone;
       state.holdersReady = true;
       prepareHeart();
-      const saved = ETH.cacheScan({
-        block: state.block,
-        math: state.math,
-        rgb: state.rgb,
-        toon: state.toon,
-        words: state.wordText,
-        faces: state.faceText,
-      }, scan);
+      const saved = ETH.cacheScan(state.inventory, scan);
       if (saved) {
         MOLD.say('blocked', { n: scan.blocked.size });
         setStatus('block ' + state.block + ' · ' + scan.blocked.size + ' blocked', TIPS.blocked);
@@ -1581,6 +1575,26 @@
     });
   }
 
+  let partsFlight = null;
+
+  function ensureParts() {
+    const inv = state.inventory;
+    if (!inv || (Array.isArray(inv.wordOwners) && Array.isArray(inv.faceOwners))) return Promise.resolve(inv);
+    if (partsFlight && partsFlight.inv === inv) return partsFlight.p;
+    const p = ETH.ensurePartOwners(inv, function (msg) { setStatus(msg); }).then(function (next) {
+      if (partsFlight && partsFlight.inv === inv) partsFlight = null;
+      if (state.inventory !== inv) return state.inventory;
+      state.inventory = next;
+      if (state.blockedDone) ETH.cacheScan(next, { blocked: state.blocked, unknown: state.unknown, blockedDone: true });
+      return next;
+    }, function (e) {
+      if (partsFlight && partsFlight.inv === inv) partsFlight = null;
+      throw e;
+    });
+    partsFlight = { inv: inv, p: p };
+    return p;
+  }
+
   async function askIdeas(pasted) {
     const raw = String(pasted || '').trim();
     let who = '';
@@ -1588,6 +1602,11 @@
     else who = IDEAS.walletOf(state.account);
     lookWallet = who || '';
     if (!lookWallet || !ideaSnap()) {
+      MOLD.showIdeas([]);
+      return;
+    }
+    await ensureParts();
+    if (!ideaSnap()) {
       MOLD.showIdeas([]);
       return;
     }

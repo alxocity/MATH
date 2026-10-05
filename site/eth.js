@@ -26,6 +26,10 @@
     if (extra) RPCS.unshift(extra);
   }
   const CACHE = 'math.site.v1';
+  const HOLDERS = 'math.holders.v1';
+  const TRANSFER = '0xddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef';
+  const ZERO = '0x0000000000000000000000000000000000000000';
+  const LOG_SPAN = 2000;
   const ABI = globalThis.ABI;
 
   // Reverts, including out-of-gas, are answers. Fail over only when the node itself failed.
@@ -291,10 +295,215 @@
     });
   }
 
-  // Newer enumeration indexes only. A shorter supply means the snapshot is stale, so reload.
+  function logRangeError(error) {
+    if (!error) return false;
+    const msg = String(error.message || '');
+    return /more than|too many results|block range|query timeout|response size|10000|too large|max(?:imum)? block|logs? limited/i.test(msg);
+  }
+
+  function hexQty(n) {
+    return '0x' + BigInt(n).toString(16);
+  }
+
+  function topicAddr(topic) {
+    const h = String(topic || '').toLowerCase().replace(/^0x/, '');
+    if (h.length < 40) return null;
+    const a = '0x' + h.slice(-40);
+    if (!/^0x[0-9a-f]{40}$/.test(a)) return null;
+    return a;
+  }
+
+  function topicUint(topic) {
+    const h = String(topic || '');
+    if (!/^0x[0-9a-f]+$/i.test(h)) return null;
+    try { return BigInt(h); } catch (e) { return null; }
+  }
+
+  function parseTransfer(log) {
+    const topics = log && log.topics;
+    if (!topics || topics.length < 4) return null;
+    if (String(topics[0]).toLowerCase() !== TRANSFER) return null;
+    const from = topicAddr(topics[1]);
+    const to = topicAddr(topics[2]);
+    const id = topicUint(topics[3]);
+    if (!from || !to || id == null) return null;
+    return { from: from, to: to, id: id };
+  }
+
+  function logOrder(v) {
+    if (v == null) return 0;
+    try { return Number(BigInt(v)); } catch (e) { return 0; }
+  }
+
+  function compareLogs(a, b) {
+    const block = logOrder(a.blockNumber) - logOrder(b.blockNumber);
+    if (block) return block;
+    return logOrder(a.logIndex) - logOrder(b.logIndex);
+  }
+
+  // Mutates rows. A mint from 0x0 of an unknown id is appended. Later logs win.
+  function applyTransfers(rows, logs, opt) {
+    const allowMint = !opt || opt.mint !== false;
+    const byId = new Map();
+    rows.forEach(function (row, i) { byId.set(String(row.id), i); });
+    logs.slice().sort(compareLogs).forEach(function (log) {
+      const ev = parseTransfer(log);
+      if (!ev) return;
+      const key = ev.id.toString();
+      if (byId.has(key)) {
+        rows[byId.get(key)].owner = ev.to;
+        return;
+      }
+      if (!allowMint || ev.from !== ZERO) return;
+      byId.set(key, rows.length);
+      rows.push({ id: ev.id, owner: ev.to });
+    });
+    return rows;
+  }
+
+  async function postRpc(url, method, params, timeout) {
+    const res = await fetch(url, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ jsonrpc: '2.0', id: 1, method: method, params: params }),
+      signal: AbortSignal.timeout(timeout || 20000),
+    });
+    if (res.status === 429 || res.status >= 500) {
+      const err = new Error('http ' + res.status);
+      err.retry = true;
+      throw err;
+    }
+    return res.json();
+  }
+
+  // One pass over the RPC list. A range rejection is marked so the caller can split.
+  // It does not go through rpc(), which would sleep and retry a query the node will keep refusing.
+  async function rpcLogs(params) {
+    let last;
+    for (let i = 0; i < RPCS.length; i++) {
+      try {
+        const j = await postRpc(RPCS[i], 'eth_getLogs', params);
+        if (j.error) {
+          const err = new Error(j.error.message || 'logs');
+          if (j.error.code != null) err.code = j.error.code;
+          if (logRangeError(j.error)) err.range = true;
+          else if (!rpcRetryable(200, j.error)) throw err;
+          last = err;
+          continue;
+        }
+        if (!Array.isArray(j.result)) throw new Error('logs');
+        return j.result;
+      } catch (e) {
+        if (e.range) throw e;
+        last = e;
+      }
+    }
+    throw last || new Error('logs');
+  }
+
+  async function collectLogs(address, from, to) {
+    if (from > to) return [];
+    if (to - from + 1 > LOG_SPAN) {
+      const mid = from + LOG_SPAN - 1;
+      const left = await collectLogs(address, from, mid);
+      const right = await collectLogs(address, mid + 1, to);
+      return left.concat(right);
+    }
+    const params = [{
+      address: address,
+      fromBlock: hexQty(from),
+      toBlock: hexQty(to),
+      topics: [TRANSFER],
+    }];
+    try {
+      return await rpcLogs(params);
+    } catch (e) {
+      if (!e.range || from >= to) throw e;
+      const mid = from + Math.floor((to - from) / 2);
+      const left = await collectLogs(address, from, mid);
+      const right = await collectLogs(address, mid + 1, to);
+      return left.concat(right);
+    }
+  }
+
+  async function getTransferLogs(address, from, to) {
+    const logs = await collectLogs(address, from, to);
+    logs.sort(compareLogs);
+    return logs;
+  }
+
+  function cloneRow(t, fields) {
+    const row = { id: t.id, owner: t.owner };
+    fields.forEach(function (k) { row[k] = t[k]; });
+    return row;
+  }
+
+  async function syncRows(address, rows, fromBlock, head, progress, label, allowMint) {
+    if (!(head > fromBlock)) return rows;
+    if (progress) progress(label + ' logs');
+    try {
+      const logs = await getTransferLogs(address, fromBlock + 1, head);
+      applyTransfers(rows, logs, { mint: allowMint });
+      return rows;
+    } catch (e) {
+      const owners = await loadOwners(address, rows.map(function (t) { return t.id; }), progress, label);
+      rows.forEach(function (row, i) { row.owner = owners[i]; });
+      return rows;
+    }
+  }
+
+  // WORD/FACE arrays are indexed by token id. Logs move owners; holes get one ownerOf.
+  async function syncPartOwners(address, list, fromBlock, head, progress, label) {
+    if (!Array.isArray(list)) return null;
+    if (!(head > fromBlock)) return list.slice();
+    try {
+      if (progress) progress(label + ' logs');
+      const rows = list.map(function (owner, i) {
+        return { id: BigInt(i), owner: String(owner || '').toLowerCase() };
+      });
+      const logs = await getTransferLogs(address, fromBlock + 1, head);
+      applyTransfers(rows, logs);
+      const raw = await ethCall(address, '0x' + ABI.SEL.totalSupply);
+      const supply = Number(ABI.decodeUint(raw));
+      if (!Number.isSafeInteger(supply) || supply < 1) throw new Error(label + ' supply');
+      if (supply < list.length) throw new Error(label + ' supply');
+      const out = new Array(supply).fill('');
+      rows.forEach(function (row) {
+        const i = Number(row.id);
+        if (Number.isSafeInteger(i) && i >= 0 && i < supply) out[i] = row.owner;
+      });
+      const missing = [];
+      for (let i = 0; i < supply; i++) {
+        if (!/^0x[0-9a-f]{40}$/.test(String(out[i] || ''))) missing.push(BigInt(i));
+      }
+      if (missing.length) {
+        const got = await loadOwners(address, missing, progress, label);
+        missing.forEach(function (id, i) { out[Number(id)] = got[i]; });
+      }
+      return out;
+    } catch (e) {
+      return loadPartOwners(address, progress, label);
+    }
+  }
+
+  async function ensurePartOwners(inv, progress) {
+    if (!inv) return inv;
+    const wordOwners = Array.isArray(inv.wordOwners) ? inv.wordOwners : await loadPartOwners(ADDR.WORD, progress, 'WORD');
+    const faceOwners = Array.isArray(inv.faceOwners) ? inv.faceOwners : await loadPartOwners(ADDR.FACE, progress, 'FACE');
+    if (wordOwners === inv.wordOwners && faceOwners === inv.faceOwners) return inv;
+    return Object.assign({}, inv, { wordOwners: wordOwners, faceOwners: faceOwners });
+  }
+
+  // Newer enumeration indexes, then Transfer logs from the snapshot block.
+  // A shorter supply, or a head behind the snapshot, reloads. WORD/FACE stay
+  // unset until something asks, when the base has no index for them.
   async function loadDelta(base, progress, trusted) {
     const block = await rpc('eth_blockNumber', []);
     if (block.error) throw new Error(block.error.message || 'block');
+    const head = blockNum(block.result);
+    if (head === null) throw new Error('block');
+    const from = blockNum(base.block);
+    if (from === null || head < from) return loadInventory(progress);
     const supplies = await multicall([
       { to: ADDR.MATH, data: '0x' + ABI.SEL.totalSupply },
       { to: ADDR.RGB, data: '0x' + ABI.SEL.totalSupply },
@@ -326,21 +535,17 @@
         row.rgb = gets[i][2];
       };
     });
-    const mathRows = base.math.concat(mathMore);
-    const rgbRows = base.rgb.concat(rgbMore);
-    const toonRows = base.toon.concat(toonMore);
-    const mathOwners = await loadOwners(ADDR.MATH, mathRows.map(function (t) { return t.id; }), progress, 'MATH');
-    const rgbOwners = await loadOwners(ADDR.RGB, rgbRows.map(function (t) { return t.id; }), progress, 'RGB');
-    const toonOwners = await loadOwners(ADDR.TOON, toonRows.map(function (t) { return t.id; }), progress, 'TOON');
-    const toon = toonRows.map(function (t, i) { return { id: t.id, owner: toonOwners[i], word: t.word, face: t.face, rgb: t.rgb }; });
+    const math = await syncRows(ADDR.MATH, base.math.map(function (t) { return cloneRow(t, []); }).concat(mathMore), from, head, progress, 'MATH', true);
+    const rgb = await syncRows(ADDR.RGB, base.rgb.map(function (t) { return cloneRow(t, ['r', 'g', 'b']); }).concat(rgbMore), from, head, progress, 'RGB', false);
+    const toon = await syncRows(ADDR.TOON, base.toon.map(function (t) { return cloneRow(t, ['word', 'face', 'rgb']); }).concat(toonMore), from, head, progress, 'TOON', false);
     const words = await fillTexts(base.words, toon.map(function (t) { return t.word; }), ADDR.WORD, ABI.SEL.getWord, progress, 'WORD', trusted && trusted.words);
     const faces = await fillTexts(base.faces, toon.map(function (t) { return t.face; }), ADDR.FACE, ABI.SEL.getFace, progress, 'FACE', trusted && trusted.faces);
-    const wordOwners = await loadPartOwners(ADDR.WORD, progress, 'WORD');
-    const faceOwners = await loadPartOwners(ADDR.FACE, progress, 'FACE');
+    const wordOwners = await syncPartOwners(ADDR.WORD, base.wordOwners, from, head, progress, 'WORD');
+    const faceOwners = await syncPartOwners(ADDR.FACE, base.faceOwners, from, head, progress, 'FACE');
     return {
-      block: blockNum(block.result),
-      math: mathRows.map(function (t, i) { return { id: t.id, owner: mathOwners[i] }; }),
-      rgb: rgbRows.map(function (t, i) { return { id: t.id, owner: rgbOwners[i], r: t.r, g: t.g, b: t.b }; }),
+      block: head,
+      math: math,
+      rgb: rgb,
       toon: toon,
       words: words,
       faces: faces,
@@ -577,6 +782,99 @@
     return true;
   }
 
+  function holderStorage() {
+    try {
+      if (typeof localStorage === 'undefined' || !localStorage || typeof localStorage.getItem !== 'function') return null;
+      return localStorage;
+    } catch (e) { return null; }
+  }
+
+  function readHolders() {
+    const store = holderStorage();
+    if (!store) return { block: 0, holders: {} };
+    try {
+      const raw = JSON.parse(store.getItem(HOLDERS));
+      if (!raw || typeof raw !== 'object' || !raw.holders || typeof raw.holders !== 'object' || Array.isArray(raw.holders)) {
+        return { block: 0, holders: {} };
+      }
+      return { block: blockNum(raw.block) || 0, holders: raw.holders };
+    } catch (e) { return { block: 0, holders: {} }; }
+  }
+
+  function writeHolders(cache) {
+    const store = holderStorage();
+    if (!store) return;
+    try { store.setItem(HOLDERS, JSON.stringify({ block: cache.block, holders: cache.holders })); } catch (e) { /* quota */ }
+  }
+
+  function holderFlag(entry) {
+    if (!entry || typeof entry !== 'object') return '';
+    if (entry.flag === 'blocked' || entry.flag === 'clear') return entry.flag;
+    return '';
+  }
+
+  // Holders already in a finished snapshot are not probed again. New ones are,
+  // and a clear or blocked answer is kept under math.holders.v1 by address and block.
+  async function catchHolders(owners, base, progress, block) {
+    const list = [];
+    const seen = new Set();
+    (owners || []).forEach(function (a) {
+      const x = String(a || '').toLowerCase();
+      if (!/^0x[0-9a-f]{40}$/.test(x) || seen.has(x)) return;
+      seen.add(x);
+      list.push(x);
+    });
+    const known = new Set();
+    const knownBlocked = new Set();
+    if (base && base.blockedDone && Array.isArray(base.math)) {
+      base.math.forEach(function (t) {
+        const a = String(t.owner || '').toLowerCase();
+        if (/^0x[0-9a-f]{40}$/.test(a)) known.add(a);
+      });
+      if (base.blocked && typeof base.blocked.forEach === 'function') {
+        base.blocked.forEach(function (a) {
+          const x = String(a).toLowerCase();
+          if (/^0x[0-9a-f]{40}$/.test(x)) knownBlocked.add(x);
+        });
+      }
+    }
+    const cache = readHolders();
+    const fresh = [];
+    list.forEach(function (a) {
+      if (known.has(a)) return;
+      if (holderFlag(cache.holders[a])) return;
+      fresh.push(a);
+    });
+    const scan = fresh.length ? await scanBlocked(fresh, progress) : { blocked: new Set(), unknown: new Set() };
+    const blocked = new Set();
+    const unknown = new Set();
+    const at = blockNum(block);
+    const stamp = at == null ? ((base && blockNum(base.block)) || 0) : at;
+    list.forEach(function (a) {
+      if (known.has(a) && knownBlocked.has(a)) blocked.add(a);
+      if (holderFlag(cache.holders[a]) === 'blocked') blocked.add(a);
+    });
+    scan.blocked.forEach(function (a) {
+      const x = String(a).toLowerCase();
+      blocked.add(x);
+      cache.holders[x] = { flag: 'blocked', block: stamp };
+    });
+    scan.unknown.forEach(function (a) { unknown.add(String(a).toLowerCase()); });
+    fresh.forEach(function (a) {
+      if (scan.blocked.has(a) || unknown.has(a)) return;
+      cache.holders[a] = { flag: 'clear', block: stamp };
+    });
+    if (base && base.blockedDone) {
+      known.forEach(function (a) {
+        if (holderFlag(cache.holders[a])) return;
+        cache.holders[a] = { flag: knownBlocked.has(a) ? 'blocked' : 'clear', block: blockNum(base.block) || stamp };
+      });
+    }
+    cache.block = stamp;
+    writeHolders(cache);
+    return { blocked: blocked, unknown: unknown };
+  }
+
   async function owned(contract, account, cap) {
     const raw = await ethCall(contract, ABI.call(ABI.SEL.balanceOf, [BigInt(account)]));
     const n = Number(ABI.decodeUint(raw));
@@ -697,6 +995,10 @@
     balance: balance,
     loadInventory: loadInventory,
     loadDelta: loadDelta,
+    applyTransfers: applyTransfers,
+    getTransferLogs: getTransferLogs,
+    ensurePartOwners: ensurePartOwners,
+    catchHolders: catchHolders,
     loadTexts: loadTexts,
     fillTexts: fillTexts,
     overlayTexts: overlayTexts,
