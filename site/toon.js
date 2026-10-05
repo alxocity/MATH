@@ -526,6 +526,31 @@
     });
   }
 
+  S.loadToon = function (spec) {
+    toonFillGen++;
+    const tm = $('#tm');
+    const tw = $('#tw');
+    const tf = $('#tf');
+    const tr = $('#tr');
+    if (!tm || !tw || !tf || !tr || !spec) return;
+    choose(tm, spec.math);
+    choose(tw, spec.word);
+    choose(tf, spec.face);
+    choose(tr, spec.rgb);
+    toonHint = {
+      math: tm.value,
+      word: tw.value,
+      face: tf.value,
+      rgb: tr.value,
+      ownMath: false,
+      ownWord: false,
+      ownFace: false,
+      ownRgb: false,
+      example: !state.account,
+    };
+    previewToon();
+  };
+
   S.toon = toon;
   S.fillToon = fillToon;
 })();

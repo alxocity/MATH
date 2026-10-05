@@ -28,11 +28,13 @@
     return fieldFree(value, hint && own ? hint.value : null);
   }
 
-  function asId(v) {
+  function asId(v, allowZero) {
     if (v == null || String(v).trim() === '') return null;
     try {
       const x = BigInt(String(v).trim());
-      return x > 0n ? x : null;
+      if (x > 0n) return x;
+      if (allowZero && x === 0n) return x;
+      return null;
     } catch (e) { return null; }
   }
 
@@ -199,12 +201,13 @@
   }
 
   function partList(ids, kind, by, lock) {
-    if (lock != null && String(lock).trim() !== '' && asId(lock) == null) return [];
-    const only = lock != null && String(lock).trim() !== '' ? asId(lock) : null;
+    const allowZero = kind === 'word' || kind === 'face';
+    if (lock != null && String(lock).trim() !== '' && asId(lock, allowZero) == null) return [];
+    const only = lock != null && String(lock).trim() !== '' ? asId(lock, allowZero) : null;
     const out = [];
     const seen = new Set();
     (ids || []).forEach(function (id) {
-      const x = asId(id);
+      const x = asId(id, allowZero);
       if (x == null || (only != null && x !== only)) return;
       const k = x.toString();
       if (seen.has(k)) return;
