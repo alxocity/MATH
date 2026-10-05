@@ -1,0 +1,144 @@
+{
+  "math": {
+    "v": 1,
+    "ok": true,
+    "kind": "math",
+    "target": "3",
+    "block": 42,
+    "wallet": "0xabcabcabcabcabcabcabcabcabcabcabcabcabca",
+    "exists": false,
+    "txs": [
+      {
+        "to": "0x6B4fccdd888Bb6fD3934A9e49eF64dfd2c0D8e6D",
+        "data": "0x771602f700000000000000000000000000000000000000000000000000000000000000010000000000000000000000000000000000000000000000000000000000000002",
+        "value": "0x71afd498d0000"
+      }
+    ],
+    "royalty": "0",
+    "shares": [
+      {
+        "id": "1",
+        "holder": "0xabcabcabcabcabcabcabcabcabcabcabcabcabca",
+        "wei": "0",
+        "owned": true
+      },
+      {
+        "id": "2",
+        "holder": "0xabcabcabcabcabcabcabcabcabcabcabcabcabca",
+        "wei": "0",
+        "owned": true
+      }
+    ],
+    "owned": [
+      "1",
+      "2"
+    ],
+    "note": "A human signs. This does not. MATH.add value is 0.002 ETH: 0.001 to each input holder, sent with a 2300-gas transfer, so some contract wallets cannot receive it. Hold an input and that share is 0. The snapshot does not list those contracts. You still pay gas."
+  },
+  "rgb": {
+    "v": 1,
+    "ok": true,
+    "kind": "rgb",
+    "target": "8,16,32",
+    "block": 42,
+    "wallet": "0xabcabcabcabcabcabcabcabcabcabcabcabcabca",
+    "exists": false,
+    "txs": [
+      {
+        "to": "0x6B4fccdd888Bb6fD3934A9e49eF64dfd2c0D8e6D",
+        "data": "0x771602f700000000000000000000000000000000000000000000000000000000000000100000000000000000000000000000000000000000000000000000000000000010",
+        "value": "0x71afd498d0000"
+      },
+      {
+        "to": "0x9355Fb9693ffF9bB6f06721C82fe0B5F49E6c956",
+        "data": "0x505fb46c000000000000000000000000000000000000000000000000000000000000000800000000000000000000000000000000000000000000000000000000000000100000000000000000000000000000000000000000000000000000000000000020",
+        "value": "0x6a94d74f430000"
+      }
+    ],
+    "royalty": "10000000000000000",
+    "shares": [
+      {
+        "id": "16",
+        "holder": "0xabcabcabcabcabcabcabcabcabcabcabcabcabca",
+        "wei": "0",
+        "owned": true
+      },
+      {
+        "id": "16",
+        "holder": "0xabcabcabcabcabcabcabcabcabcabcabcabcabca",
+        "wei": "0",
+        "owned": true
+      },
+      {
+        "id": "8",
+        "holder": "0xdefdefdefdefdefdefdefdefdefdefdefdefdefd",
+        "wei": "10000000000000000",
+        "owned": false
+      },
+      {
+        "id": "16",
+        "holder": "0xabcabcabcabcabcabcabcabcabcabcabcabcabca",
+        "wei": "0",
+        "owned": true
+      },
+      {
+        "id": "32",
+        "holder": "0xabcabcabcabcabcabcabcabcabcabcabcabcabca",
+        "wei": "0",
+        "owned": false
+      }
+    ],
+    "owned": [
+      "16"
+    ],
+    "note": "A human signs. This does not. RGB.add value is 0.03 ETH: 0.01 to each MATH channel holder. Hold a channel, or mint it earlier in this plan, and that share is 0. You still pay gas."
+  },
+  "toon": {
+    "v": 1,
+    "ok": true,
+    "kind": "toon",
+    "target": "16,7,8,10",
+    "block": 42,
+    "wallet": "0xabcabcabcabcabcabcabcabcabcabcabcabcabca",
+    "exists": false,
+    "txs": [
+      {
+        "to": "0x026A7D72a448D0E44d441e55F746BF56B843aEDB",
+        "data": "0xe022d77c000000000000000000000000000000000000000000000000000000000000001000000000000000000000000000000000000000000000000000000000000000070000000000000000000000000000000000000000000000000000000000000008000000000000000000000000000000000000000000000000000000000000000a",
+        "value": "0x0"
+      }
+    ],
+    "royalty": "0",
+    "shares": [
+      {
+        "id": "16",
+        "holder": "0xabcabcabcabcabcabcabcabcabcabcabcabcabca",
+        "wei": "0",
+        "owned": true
+      },
+      {
+        "id": "7",
+        "holder": "",
+        "wei": "0",
+        "owned": null
+      },
+      {
+        "id": "8",
+        "holder": "",
+        "wei": "0",
+        "owned": null
+      },
+      {
+        "id": "10",
+        "holder": "0xabcabcabcabcabcabcabcabcabcabcabcabcabca",
+        "wei": "0",
+        "owned": true
+      }
+    ],
+    "owned": [
+      "10",
+      "16"
+    ],
+    "note": "A human signs. This does not. TOON.add is free. It reverts unless the signer holds the MATH, WORD, FACE, and RGB. WORD and FACE owners are not in the snapshot."
+  }
+}

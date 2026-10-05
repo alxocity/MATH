@@ -1,0 +1,78 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src 'self'; base-uri 'none'; form-action 'none'">
+<title>agents</title>
+<link rel="stylesheet" href="../app.css">
+</head>
+<body class="doc">
+<h1>agents</h1>
+<p>Read the snapshot. Ask for unsigned transactions. A human signs them in their own wallet. No server, no key, no MCP.</p>
+
+<h2>files</h2>
+<ul>
+<li><a href="../index.json">/index.json</a> — tokens, owners, values, RGB and TOON parts, word and face text. The site loads this file. <code>script/snapshot.js</code> rewrites it, and the weekly workflow commits that same file.</li>
+<li><a href="../plan.js">/plan.js</a> — <code>plan(wallet, target, snapshot)</code>.</li>
+<li><a href="../llms.txt">/llms.txt</a> — short pointer.</li>
+<li><a href="example.json">/agents/example.json</a> — three worked plans on a tiny fixture.</li>
+</ul>
+
+<h2>snapshot</h2>
+<pre>{
+  block: number,
+  owners: ["0x…"],
+  math: [["id", ownerIndex]],
+  rgb: [["id", ownerIndex, r, g, b]],
+  toon: [["id", ownerIndex, word, face, rgb]],
+  words: { "id": "text" },
+  faces: { "id": "text" }
+}</pre>
+<p>Ids are decimal strings. <code>ownerIndex</code> indexes <code>owners</code>, which are lowercase. A used channel is an <code>r</code>, <code>g</code>, or <code>b</code> on an RGB row. WORD and FACE owners are not in the file. The list of holders who revert MATH's payout is not in the file either.</p>
+
+<h2>plan</h2>
+<p><code>AGENT.plan(wallet, target, snapshot)</code></p>
+<pre>AGENT.plan(wallet, "3", snap)
+AGENT.plan(wallet, { math: "3" }, snap)
+AGENT.plan(wallet, { r: "1", g: "2", b: "4" }, snap)
+AGENT.plan(wallet, { math: "1", word: "2", face: "3", rgb: "4" }, snap)</pre>
+<p>In the browser, load <code>abi.js</code>, <code>planner.js</code>, <code>eth.js</code>, then <code>plan.js</code>. <code>AGENT</code> is the global. The workshop page already loads them. In Node, from <code>site/</code>:</p>
+<pre>const AGENT = require('./plan')
+const snap = JSON.parse(fs.readFileSync('./index.json', 'utf8'))
+AGENT.plan(wallet, '3', snap)</pre>
+<p>The result is JSON. <code>v</code> is 1.</p>
+<pre>{
+  ok, kind, target, block, wallet, exists,
+  txs: [{ to, data, value }],
+  royalty, shares: [{ id, holder, wei, owned }],
+  owned, note
+}</pre>
+<p><code>value</code> is hex wei. MATH sends 0.002 ETH. RGB sends 0.03 ETH. TOON sends <code>0x0</code>. <code>royalty</code> and each share's <code>wei</code> are decimal wei, the part holders receive, not gas. <code>owned</code> lists input ids this address already holds. A share's <code>owned</code> is null when the snapshot has no owner for it.</p>
+<p><code>ok: false</code> means the snapshot shows the call reverting (a channel already used, a TOON part already used, or a missing MATH or RGB). The transactions are still returned. <code>exists: true</code> means that target is already minted, so <code>txs</code> is empty.</p>
+
+<h2>caveats</h2>
+<ul>
+<li>A human signs. <code>plan</code> does not.</li>
+<li>TOON.add is free. It reverts unless the signer holds the MATH, WORD, FACE, and RGB.</li>
+<li>MATH pays each input holder 0.001 ETH with a 2300-gas transfer. Some contract wallets cannot receive it. This snapshot does not list those contracts, so a route can still name one.</li>
+<li>RGB pays 0.01 ETH to each MATH channel holder. Hold a channel, or mint it earlier in the same plan, and that share is 0.</li>
+<li>You still pay gas. <code>value</code> is only the msg.value.</li>
+<li>The file is current as of <code>block</code>. It lags mainnet until the next snapshot.</li>
+</ul>
+
+<h2>contracts</h2>
+<ul>
+<li><a href="https://etherscan.io/address/0x6B4fccdd888Bb6fD3934A9e49eF64dfd2c0D8e6D">MATH</a></li>
+<li><a href="https://etherscan.io/address/0x9355Fb9693ffF9bB6f06721C82fe0B5F49E6c956">RGB</a></li>
+<li><a href="https://etherscan.io/address/0x026A7D72a448D0E44d441e55F746BF56B843aEDB">TOON</a></li>
+<li><a href="https://etherscan.io/address/0xAc1AEe5027FCC98d40a26588aC0841a44f53A8Fe">WORD</a></li>
+<li><a href="https://etherscan.io/address/0x91047Abf3cAb8da5A9515c8750Ab33B4f1560a7A">FACE</a></li>
+<li><a href="https://etherscan.io/address/0xb3cA13A2722CAB48c8d9068bD67656efe2d5e376">MATHRender</a></li>
+<li><a href="https://etherscan.io/address/0x62FFe75cd9824A2e8855CbC055256De229B5b936">RGBRender</a></li>
+<li><a href="https://etherscan.io/address/0x1E1a576e4186551e4DEdE58Ccc2DCC34697159Cb">TOONRender</a></li>
+</ul>
+<p>MATH, RGB, TOON, and the renderers have no admin key and no upgrade.</p>
+<p><a href="../">workshop</a></p>
+</body>
+</html>
