@@ -206,9 +206,27 @@ footer a { color: var(--dim); }
 @media (max-width: 480px) {
   body { overflow-x: hidden; }
   main { padding: 12px 12px 32px; }
-  button, select, input, .mark-hit { min-height: 40px; }
+  button, select, input:not([type="checkbox"]), .mark-hit { min-height: 40px; }
   button, select, .mark-hit { min-width: 40px; }
-  input[type="checkbox"] { width: 40px; height: 40px; }
+  input[type="checkbox"] {
+    width: 1em;
+    height: 1em;
+    min-width: 1em;
+    min-height: 1em;
+    max-width: none;
+    margin: 0;
+    padding: 0;
+    flex: none;
+    vertical-align: middle;
+  }
+  label:has(> input[type="checkbox"]) {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.45em;
+    max-width: 100%;
+    overflow-wrap: normal;
+    word-break: normal;
+  }
   .cells button, .bits i { min-width: 0; min-height: 0; }
   .piece { flex-wrap: wrap; }
   header, nav, footer { min-width: 0; max-width: 100%; }
