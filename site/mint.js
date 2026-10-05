@@ -228,6 +228,22 @@
     paintMint(false);
   }
 
+  function loadMint(spec) {
+    const aEl = $('#a');
+    const bEl = $('#b');
+    if (!aEl || !bEl || !spec) return;
+    aEl.value = String(spec.a);
+    bEl.value = String(spec.b);
+    mathHint = {
+      a: aEl.value,
+      b: bEl.value,
+      ownA: false,
+      ownB: false,
+      example: !state.account,
+    };
+    paintMint(false);
+  }
+
   function mint(view) {
     view.innerHTML =
       '<div class="row"><label class="num">a <input id="a" spellcheck="false" inputmode="numeric"></label>' +
@@ -269,4 +285,5 @@
   S.mint = mint;
   S.paintMint = paintMint;
   S.fillMint = fillMint;
+  S.loadMint = loadMint;
 })();

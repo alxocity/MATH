@@ -192,10 +192,13 @@
     if (idea.kind === 'math') {
       const sent = sentOf(idea);
       const back = sent - BigInt(plan.royalty || '0');
+      const shares = plan.shares || [];
+      const last = shares.length;
       return {
-        a: plan.shares && plan.shares[0] ? plan.shares[0].id : '',
-        b: plan.shares && plan.shares[1] ? plan.shares[1].id : '',
+        a: last >= 2 ? shares[last - 2].id : '',
+        b: last >= 1 ? shares[last - 1].id : '',
         n: plan.target,
+        mints: String((plan.txs || []).length),
         out: wei(sent),
         back: wei(back < 0n ? 0n : back),
         net: wei(BigInt(plan.royalty || '0')),
@@ -214,6 +217,10 @@
 
   function template(idea, ok) {
     if (!ok) return LINES.ideaBad[0];
+    const plan = idea.plan || {};
+    if (idea.kind === 'math' && (plan.txs || []).length > 1) {
+      return '{a} + {b} = {n}. {mints} mints. {out} out, {back} back to you. gas yours.';
+    }
     const list = LINES.idea[idea.kind] || LINES.idea.math;
     return list[0];
   }
@@ -222,8 +229,10 @@
     const plan = idea.plan;
     if (!plan || !plan.ok || plan.exists) return null;
     if (idea.kind === 'math') {
-      if (!plan.shares || plan.shares.length < 2) return null;
-      return { tab: 'mint', a: plan.shares[0].id, b: plan.shares[1].id };
+      const txs = plan.txs || [];
+      if (txs.length !== 1 || !plan.shares || plan.shares.length < 2) return null;
+      const last = plan.shares.length;
+      return { tab: 'mint', a: plan.shares[last - 2].id, b: plan.shares[last - 1].id };
     }
     if (idea.kind === 'rgb') {
       const p = String(plan.target || '').split(',');
