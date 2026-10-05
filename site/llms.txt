@@ -1,11 +1,12 @@
 # MATH
 
-> math.alxo.city. Read /index.json. plan() returns unsigned transactions. A human signs. No server.
+> math.alxo.city. Read /index.json. plan() returns unsigned transactions. ideas() ranks up to three cheap ones. A human signs. No server.
 
 ## Files
 
 - /index.json — snapshot the site already builds. script/snapshot.js rewrites it; the weekly workflow commits that file.
 - /plan.js — AGENT.plan(wallet, target, snapshot). Browser global after abi.js, planner.js, and eth.js. Node: require('./plan').
+- /ideas.js — IDEAS.ideas(wallet, snapshot). Up to three cheap plans. Browser global after suggest.js, eth.js, and plan.js. Node: require('./ideas').
 - /agents/ — schema, calls, caveats, contracts.
 - /ens/ — subname batch tool. Reads a parent, diffs records, and waits for a signature.
 - /agents/example.json — MATH, RGB, and TOON plans on a tiny fixture.
@@ -37,6 +38,15 @@ Returns v, ok, kind, target, block, wallet, exists, txs, royalty, shares, owned,
 txs items are { to, data, value }. value is hex wei: MATH 0.002 ETH, RGB 0.03 ETH, TOON 0x0. royalty is decimal wei paid to holders, not gas. shares items are { id, holder, wei, owned }. owned is the input ids this address already holds. owned is null only when the WORD or FACE owner index is missing. shares.holder is the owner in the snapshot. The contract pays whoever holds the input at send time.
 
 ok: false means the snapshot shows the call reverting (a channel already used, a TOON part already used, a missing MATH or RGB, a WORD or FACE the signer does not hold, or a MATH input held by an address in blocked). The transactions are still returned. exists: true means that target is already minted, so txs is empty. A TOON plan is ok: true when the signer holds the MATH, WORD, FACE, and RGB.
+
+## ideas(wallet, snapshot)
+
+- wallet: 0x address. The zero address returns []. Moldemort takes a pasted address or ENS name, resolves it, then calls ideas().
+- snapshot: the index.json object.
+
+At most one math, one rgb, and one toon. Cheapest royalty first, then smallest value sent. Each item is { kind, target, ok, cost, sent, plan }. cost is the royalty in wei. sent is the sum of tx value. Both are BigInt. plan is the AGENT.plan result. Already minted targets are omitted. An ok: false plan is still returned. No chain calls.
+
+Load it fills the mint, rgb, or toon form from an ok plan. A human signs. A MATH plan with more than one transaction has no load.
 
 ## Caveats
 

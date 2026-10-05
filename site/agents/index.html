@@ -15,6 +15,7 @@
 <ul>
 <li><a href="../index.json">/index.json</a> — tokens, owners, values, RGB and TOON parts, word and face text. The site loads this file. <code>script/snapshot.js</code> rewrites it, and the weekly workflow commits that same file.</li>
 <li><a href="../plan.js">/plan.js</a> — <code>plan(wallet, target, snapshot)</code>.</li>
+<li><a href="../ideas.js">/ideas.js</a> — <code>ideas(wallet, snapshot)</code>.</li>
 <li><a href="../llms.txt">/llms.txt</a> — short pointer.</li>
 <li><a href="example.json">/agents/example.json</a> — three worked plans on a tiny fixture.</li>
 </ul>
@@ -54,6 +55,15 @@ AGENT.plan(wallet, '3', snap)</pre>
 }</pre>
 <p><code>value</code> is hex wei. MATH sends 0.002 ETH. RGB sends 0.03 ETH. TOON sends <code>0x0</code>. <code>royalty</code> and each share's <code>wei</code> are decimal wei, the part holders receive, not gas. <code>owned</code> lists input ids this address already holds. A share's <code>owned</code> is null only when the WORD or FACE owner index is missing. <code>shares.holder</code> is the owner in the snapshot. The contract pays whoever holds the input at send time.</p>
 <p><code>ok: false</code> means the snapshot shows the call reverting (a channel already used, a TOON part already used, a missing MATH or RGB, a WORD or FACE the signer does not hold, or a MATH input held by an address in <code>blocked</code>). The transactions are still returned. <code>exists: true</code> means that target is already minted, so <code>txs</code> is empty. A TOON plan is <code>ok: true</code> when the signer holds the MATH, WORD, FACE, and RGB.</p>
+
+<h2>ideas</h2>
+<p><code>IDEAS.ideas(wallet, snapshot)</code></p>
+<p><code>wallet</code> is a 0x address. The zero address returns <code>[]</code>. Moldemort takes a pasted address or ENS name, resolves the name, then calls this. <code>snapshot</code> is the same object as <code>plan</code>. No chain calls inside <code>ideas</code>.</p>
+<p>At most one math, one rgb, and one toon, cheapest royalty first, then smallest value sent. Each item is <code>{ kind, target, ok, cost, sent, plan }</code>. <code>cost</code> is the royalty in wei. <code>sent</code> is the sum of tx value. Both are BigInt. <code>plan</code> is the <code>AGENT.plan</code> result. Already minted targets are omitted. An <code>ok: false</code> plan is still returned.</p>
+<pre>const IDEAS = require('./ideas')
+IDEAS.ideas(wallet, snap)</pre>
+<p>In the browser, load <code>suggest.js</code>, <code>eth.js</code>, <code>plan.js</code>, then <code>ideas.js</code>. <code>IDEAS</code> is the global. The workshop page already loads them.</p>
+<p><code>load it</code> fills the mint, rgb, or toon form from an ok plan. A human signs. A MATH plan with more than one transaction has no load.</p>
 
 <h2>caveats</h2>
 <ul>
