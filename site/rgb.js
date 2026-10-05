@@ -258,7 +258,7 @@
         if (!(owner === S.me() || minted)) roy += P.RGB_ROY;
       });
       const net = P.G_ADD * state.gasPrice * BigInt(mathMints) + P.G_RGB * state.gasPrice + roy;
-      if (meta) meta.textContent = queue.length + ' txs. net ~' + S.fmt(net) + ' ETH. the wallet still shows 0.002 or 0.03 on each send.';
+      if (meta) meta.textContent = queue.length + ' txs. net ~' + S.fmt(net) + ' ETH. the wallet still shows 0.002 or 0.03 on each send. inputs you own are free, so every token you hold makes the next build cheaper.';
     } catch (e) {
       state.queue = [];
       if (meta) meta.textContent = e.message;
