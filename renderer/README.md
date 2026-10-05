@@ -43,6 +43,8 @@ cd renderer
 forge test
 ```
 
+On Windows, Python 3 is usually `python` or `py`, not `python3`. The tests try `python3`, then `python`, then `py`. If the interpreter has another name, set `PYTHON` to it (`set PYTHON=C:\Path\python.exe` in cmd, `$env:PYTHON="C:\Path\python.exe"` in PowerShell) and run `forge test` again. `node` has to be on `PATH` for the text-hex check. `lib/forge-std` is v1.12.0, the release Foundry 1.5.1 ships with, so `forge test` on that release does not call a cheatcode it does not have. A newer Foundry runs the same tests.
+
 Fork tests use the latest block on `https://ethereum.publicnode.com`. That node is not an archive, so the tests do not pin an old block unless `MAINNET_RPC_URL` is set to an archive endpoint, in which case the fork is block 26,098,697. No key is required. `ffi` is enabled in `foundry.toml` because the tests decode the data URI in Python and compare it to the Azure snapshots in `test/fixtures/`.
 
 Those snapshots still match at a later block. MATH's picture is the id. RGB's planes and TOON's word, face and rgb ids are written at mint and those contracts have no setter. ChainFaces' face and colours and the WORD string are the same kind of mint-time storage. A transfer changes `ownerOf`, which the renderer uses only to revert when the token is missing. `0` can never be minted. An id that is merely unminted today, such as TOON 1 or RGB 188, could be minted later; the tests do not treat those as permanently missing.

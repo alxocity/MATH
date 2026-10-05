@@ -1,10 +1,10 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity 0.8.24;
 
-import {Test} from "forge-std/Test.sol";
 import {MATHRender, IERC721} from "../src/Render.sol";
+import {Py} from "./Py.sol";
 
-contract MathTest is Test {
+contract MathTest is Py {
     MATHRender math = new MATHRender();
     address constant NFT = 0x6B4fccdd888Bb6fD3934A9e49eF64dfd2c0D8e6D;
 
@@ -14,12 +14,7 @@ contract MathTest is Test {
     }
 
     function _ffi(string memory uri, string memory fixture) internal {
-        string[] memory cmd = new string[](4);
-        cmd[0] = "python3";
-        cmd[1] = "test/compare.py";
-        cmd[2] = uri;
-        cmd[3] = fixture;
-        assertEq(string(vm.ffi(cmd)), "ok");
+        assertEq(_pyOut("test/compare.py", uri, fixture), "ok");
     }
 
     function test_math_samples() public {
