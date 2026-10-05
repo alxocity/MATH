@@ -453,7 +453,7 @@
       '<p class="dim" id="batchNote" hidden>A batch may ask MetaMask for a one-time smart account upgrade (EIP-7702). That delegates this address for the calls. You approve it in the wallet. This page does not sign by itself.</p>' +
       '<div id="run"></div>' +
       '<div class="row"><button type="button" id="planRgb">plan routes</button><button type="button" id="sendQueueAll">send</button></div>' +
-      '<div class="preview" id="preview">MATH mints, then RGB.add at 0.03 ETH. send signs the next batch.' + S.mark('ⓘ', S.TIPS.fees) + '</div>';
+      '<div class="preview" id="preview">MATH mints, then RGB.add at 0.03 ETH, paid to the channel owners. send signs the next batch.' + S.mark('ⓘ', S.TIPS.fees) + '</div>';
     const grid = $('#cells');
     grid.innerHTML = S.cellsHtml(state.grid);
     paintTraits();
