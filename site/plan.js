@@ -21,20 +21,20 @@
     return { ABI: g.ABI, PLAN: g.PLAN, ETH: g.ETH };
   }
 
-  function idOf(v) {
+  function idOf(v, opt) {
+    const allowZero = !!(opt && opt.allowZero);
     const MAX = g.PLAN ? g.PLAN.MAX : ((1n << 256n) - 1n);
-    if (typeof v === 'bigint') {
-      if (v <= 0n || v > MAX) throw new Error('target');
-      return v;
+    let n;
+    if (typeof v === 'bigint') n = v;
+    else if (typeof v === 'number') {
+      if (!Number.isSafeInteger(v)) throw new Error('target');
+      n = BigInt(v);
+    } else {
+      const s = String(v == null ? '' : v).trim();
+      if (!(allowZero ? /^(0|[1-9]\d*)$/ : /^[1-9]\d*$/).test(s) || s.length > 78) throw new Error('target');
+      n = BigInt(s);
     }
-    if (typeof v === 'number') {
-      if (!Number.isSafeInteger(v) || v <= 0) throw new Error('target');
-      return BigInt(v);
-    }
-    const s = String(v == null ? '' : v).trim();
-    if (!/^[1-9]\d*$/.test(s) || s.length > 78) throw new Error('target');
-    const n = BigInt(s);
-    if (n <= 0n || n > MAX) throw new Error('target');
+    if (n < 0n || n > MAX || (n === 0n && !allowZero)) throw new Error('target');
     return n;
   }
 
@@ -55,8 +55,8 @@
       return {
         kind: 'toon',
         math: idOf(target.math),
-        word: idOf(target.word),
-        face: idOf(target.face),
+        word: idOf(target.word, { allowZero: true }),
+        face: idOf(target.face, { allowZero: true }),
         rgb: idOf(target.rgb),
       };
     }
