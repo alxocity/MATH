@@ -4,6 +4,7 @@
     boot: [
       'spores on the glass. the numbers are already underneath.',
       '1 + 1 = 2. carry is just rot moving house.',
+      'math, rgb, toon, and the renderers. no admin key. no upgrade. they just sit.',
     ],
     connect: [
       'wallet {addr}. {mine} of {math} MATH tokens answer to you.',
@@ -13,6 +14,7 @@
     ],
     browse: [
       'filter the fruiting bodies. popcount, palindrome, a power of two.',
+      'after the first, every MATH is a sum. hold one and a later mint can pay you.',
     ],
     loading: [
       'pulling the index. {n}',
@@ -25,6 +27,7 @@
     ],
     mintReady: [
       '{a} + {b} = {n}. {roy}. simulate, then the wallet signs.',
+      'own the inputs and the royalty comes back. some contract wallets can\'t take math\'s payout.',
     ],
     route: [
       '{mints} mints. net about {net} ETH. pin a piece if the path smells wrong.',
@@ -34,6 +37,7 @@
     ],
     rgb: [
       'pixel i is bit 255-i. the first cell is the high bit. three planes, then one add.',
+      'the 0.03 goes to the three channel holders. hold them and it comes back. gas stays.',
     ],
     heart: [
       'red heart. R {r}, {mints} mints. green {g}, blue {b}. a fresh triple, still the same shape.',
@@ -49,6 +53,7 @@
     ],
     toon: [
       'four tokens you already hold. grey picks say why.',
+      'toon is free. math and rgb pay the holders they are built on.',
     ],
     rgbTaken: [
       "that {color}'s taken. forever. pick another.",

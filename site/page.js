@@ -105,9 +105,14 @@
     const head = kind === 'toon' && tok.word != null
       ? S.esc(nameOf(kind, tok)) + ' <span class="dim">' + id + '</span>'
       : S.esc(id.toString());
+    let note = '';
+    if (kind === 'math') note = '<p class="dim">A later mint that uses this pays its holder.</p>';
+    else if (kind === 'rgb' && tok.r != null) note = '<p class="dim">The mint paid whoever held these three MATH tokens.</p>';
+    else if (kind === 'toon') note = '<p class="dim">No fee. You had to hold the MATH, WORD, FACE, and RGB.</p>';
     view.innerHTML =
       '<h2>' + head + ' ' + shareBtn(kind, id, document.title) + '</h2>' +
       '<p class="dim">' + S.addr(tok.owner) + '</p>' +
+      note +
       '<img class="token" alt="" data-svg="' + kind + ':' + id + '">' +
       extra + grid + traitsHtml(traitsOf(kind, tok)) +
       '<div class="outs">' + S.links(kind, id) + '</div>' +
