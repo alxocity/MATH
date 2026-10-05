@@ -62,6 +62,12 @@ assert.strictEqual(ETH.preferIndex(bare, indexed), indexed);
 assert.strictEqual(ETH.preferIndex(indexed, bare), indexed);
 const bothParts = { math: [1, 2], rgb: [], toon: [], blockedDone: false, wordOwners: [owner], faceOwners: [owner] };
 assert.strictEqual(ETH.preferIndex(indexed, bothParts), bothParts);
+const stale = { math: [1], rgb: [1], toon: [1], blockedDone: true, block: 10 };
+const newer = { math: [1], rgb: [1], toon: [1], blockedDone: true, block: 20 };
+assert.strictEqual(ETH.preferIndex(stale, newer), newer);
+assert.strictEqual(ETH.preferIndex(newer, stale), newer);
+const tied = { math: [1], rgb: [], toon: [], blockedDone: false, block: 8 };
+assert.strictEqual(ETH.preferIndex(tied, { math: [1], rgb: [], toon: [], blockedDone: false, block: 8 }), tied);
 
 const rawSnap = JSON.parse(fs.readFileSync(__dirname + '/index.json', 'utf8'));
 assert.ok(Array.isArray(rawSnap.owners) && rawSnap.owners.length > 100);
