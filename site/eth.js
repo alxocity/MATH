@@ -711,6 +711,7 @@
   }
 
   // After the WORD/FACE index ships, an old cache lacks it. Keep the side that has it.
+  // Same length: the higher block is newer.
   function preferIndex(a, b) {
     if (!a) return b || null;
     if (!b) return a;
@@ -720,6 +721,13 @@
     if (a.math.length !== b.math.length) return a.math.length > b.math.length ? a : b;
     if (a.rgb.length !== b.rgb.length) return a.rgb.length > b.rgb.length ? a : b;
     if (a.toon.length !== b.toon.length) return a.toon.length > b.toon.length ? a : b;
+    const aBlock = blockNum(a.block);
+    const bBlock = blockNum(b.block);
+    if (aBlock !== bBlock) {
+      if (aBlock == null) return b;
+      if (bBlock == null) return a;
+      return aBlock > bBlock ? a : b;
+    }
     if (!!a.blockedDone !== !!b.blockedDone) return a.blockedDone ? a : b;
     return a;
   }
