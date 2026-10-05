@@ -61,6 +61,25 @@ assert.strictEqual(shown[0].text, 'toon. you hold all four. free.');
 assert.deepStrictEqual(shown[0].load, { tab: 'toon', math: '2', word: '7', face: '8', rgb: '10' });
 assert.strictEqual(shown[1].text, '1 + 2 = 3. 0.002 out, 0.002 back to you. gas yours.');
 assert.deepStrictEqual(shown[1].load, { tab: 'mint', a: '1', b: '2' });
+
+const multiSnap = {
+  block: 7,
+  owners: [user, stranger],
+  math: [['205', 1], ['306', 0], ['510', 0]],
+  rgb: [],
+  toon: [],
+  blocked: [],
+  blockedDone: true,
+};
+const multiPlan = AGENT.plan(user, '1021', multiSnap);
+assert.strictEqual(multiPlan.ok, true);
+assert.strictEqual(multiPlan.txs.length, 2);
+assert.deepStrictEqual(multiPlan.shares.map(function (row) { return row.id; }), ['510', '306', '816', '205']);
+const multiRow = MOLD.rows([{ kind: 'math', plan: multiPlan }])[0];
+assert.strictEqual(multiRow.load, null);
+assert.ok(multiRow.text.indexOf('816 + 205 = 1021') === 0);
+assert.ok(multiRow.text.indexOf('510 + 306') === -1);
+assert.ok(multiRow.text.indexOf('2 mints') !== -1);
 assert.strictEqual(shown[2].load.tab, 'rgb');
 assert.ok(shown[2].text.indexOf('0.03') !== -1);
 
@@ -183,6 +202,57 @@ MOLD.resolveLook(user.toUpperCase(), function () { forwardCalls++; throw new Err
   assert.ok(ask.indexOf('resolveLook') !== -1);
   assert.ok(ask.indexOf('IDEAS.walletOf') !== -1);
   assert.ok(app.indexOf('let lookWallet') !== -1);
+  assert.ok(app.indexOf('SITE.loadMint') !== -1);
+
+  const boxes = {};
+  function box(id) {
+    return { id: id, value: '', textContent: '', innerHTML: '', disabled: false };
+  }
+  ['a', 'b', 'eq', 'hintNote', 'grid', 'mintMeta', 'send', 'sendWhy', 'preview'].forEach(function (id) {
+    boxes[id] = box(id);
+  });
+  const mintState = {
+    account: null,
+    tab: 'mint',
+    gasPrice: 1n,
+    blocked: new Set(),
+    unknown: new Set(),
+    heldMath: [],
+    math: [{ id: 1n, owner: user }, { id: 2n, owner: user }],
+    supply: new Map([[1n, user], [2n, user]]),
+  };
+  global.TOKEN = { sumHtml: function () { return '1 + 2'; } };
+  global.LIST = { ownedRows: function () { return []; } };
+  const want = ENS.want;
+  const flush = ENS.flush;
+  ENS.want = function () {};
+  ENS.flush = function () { return Promise.resolve(false); };
+  global.SITE = {
+    state: mintState,
+    $: function (sel) { return boxes[String(sel).replace('#', '')] || null; },
+    me: function () { return mintState.account || ZERO; },
+    openMints: function () { return new Set(); },
+    fmt: function (w) { return w.toString(); },
+    esc: function (s) { return String(s); },
+    mark: function () { return ''; },
+    bitHtml: function () { return ''; },
+    addr: function (a) { return String(a); },
+    hit: function () {},
+    TIPS: { fees: '', blocked: '', unchecked: '', simulate: '' },
+  };
+  eval(fs.readFileSync(__dirname + '/mint.js', 'utf8'));
+  global.SITE.fillMint(false);
+  assert.strictEqual(boxes.a.value, '1');
+  assert.strictEqual(boxes.b.value, '2');
+  global.SITE.loadMint({ a: '16', b: '64' });
+  assert.strictEqual(boxes.a.value, '16');
+  assert.strictEqual(boxes.b.value, '64');
+  mintState.account = user;
+  global.SITE.fillMint(false);
+  assert.strictEqual(boxes.a.value, '16');
+  assert.strictEqual(boxes.b.value, '64');
+  ENS.want = want;
+  ENS.flush = flush;
   console.log('ideas.test.js ok');
 }).catch(function (e) {
   ENS.resolveForward = oldForward;

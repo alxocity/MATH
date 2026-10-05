@@ -1598,13 +1598,7 @@
     if (!load) return;
     if (load.tab === 'mint') {
       show('mint', true);
-      const a = $('#a');
-      const b = $('#b');
-      if (a && b) {
-        a.value = load.a;
-        b.value = load.b;
-        SITE.paintMint(false);
-      }
+      if (SITE.loadMint) SITE.loadMint(load);
       return;
     }
     if (load.tab === 'rgb') {
