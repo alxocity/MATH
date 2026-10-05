@@ -501,9 +501,17 @@
     return map;
   }
 
+  function hasPartOwners(inv) {
+    return Array.isArray(inv.wordOwners) && Array.isArray(inv.faceOwners);
+  }
+
+  // After the WORD/FACE index ships, an old cache lacks it. Keep the side that has it.
   function preferIndex(a, b) {
     if (!a) return b || null;
     if (!b) return a;
+    const aParts = hasPartOwners(a);
+    const bParts = hasPartOwners(b);
+    if (aParts !== bParts) return aParts ? a : b;
     if (a.math.length !== b.math.length) return a.math.length > b.math.length ? a : b;
     if (a.rgb.length !== b.rgb.length) return a.rgb.length > b.rgb.length ? a : b;
     if (a.toon.length !== b.toon.length) return a.toon.length > b.toon.length ? a : b;
