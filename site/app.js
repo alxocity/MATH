@@ -149,50 +149,29 @@
   }
 
   function namedAddr(a) {
-    let name = '';
-    ENS.contractNames(ADDR).forEach(function (row) {
-      if (ENS.normAddr(row[1]) !== ENS.normAddr(a)) return;
-      name = ENS.matchedName(row[0], row[1], ENS.forwardCached(row[0]));
-    });
+    const name = ENS.contractLabel(a);
     if (!name) return esc(a);
-    return esc(name) + ' ' + esc(short(a));
+    return esc(name);
   }
 
-  function paintContractNames(repaint) {
-    const bits = ENS.contractNames(ADDR).filter(function (row) {
-      return row[0].indexOf('render') === -1;
-    }).map(function (row) {
-      const name = ENS.matchedName(row[0], row[1], ENS.forwardCached(row[0]));
-      if (!name) return '';
-      return name + ' ' + short(row[1]);
-    }).filter(Boolean);
+  function contractLink(addr) {
+    const name = ENS.contractLabel(addr);
+    const title = name ? ' title="' + esc(short(addr)) + '"' : '';
+    const text = name || addr;
+    return '<a href="https://etherscan.io/address/' + addr + '"' + title + ' target="_blank" rel="noopener noreferrer">' + esc(text) + '</a>';
+  }
+
+  function paintContractNames() {
     let host = $('#contracts');
-    if (!bits.length) {
-      if (host) host.remove();
-    } else {
-      if (!host) {
-        host = document.createElement('span');
-        host.id = 'contracts';
-        const tile = $('#tile');
-        if (tile && tile.parentNode) tile.parentNode.insertBefore(host, tile);
-      }
-      if (host) host.textContent = bits.join(' · ');
+    if (!host) {
+      host = document.createElement('span');
+      host.id = 'contracts';
+      const tile = $('#tile');
+      if (tile && tile.parentNode) tile.parentNode.insertBefore(host, tile);
     }
-    if (repaint && state.tab === 'about' && $('#view') && SITE.about) SITE.about($('#view'));
-  }
-
-  function watchContractNames() {
-    paintContractNames(false);
-    const rows = ENS.contractNames(ADDR).filter(function (row) {
-      return !ENS.hasForward(row[0]);
-    });
-    if (!rows.length) return;
-    ENS.resolveForwards(rows.map(function (row) { return row[0]; })).then(function (got) {
-      const hit = rows.some(function (row) {
-        return !!ENS.matchedName(row[0], row[1], got && got[String(row[0]).toLowerCase()]);
-      });
-      if (hit) paintContractNames(true);
-    }, function () {});
+    host.innerHTML = ENS.contractNames(ADDR).map(function (row) {
+      return contractLink(row[1]);
+    }).join(' · ');
   }
 
   function addr(a) {
@@ -1269,6 +1248,7 @@
     hex: hex,
     short: short,
     namedAddr: namedAddr,
+    contractLink: contractLink,
     addr: addr,
     me: me,
     ctx: ctx,
@@ -1754,7 +1734,7 @@
       show(TABS.indexOf(tab) === -1 ? 'browse' : tab);
     }
     ETH.gasPrice().then(function (g) { state.gasPrice = g; }).catch(function () {});
-    watchContractNames();
+    paintContractNames();
     watchEthereum();
     refresh();
   }
