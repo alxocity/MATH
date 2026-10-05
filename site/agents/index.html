@@ -52,6 +52,7 @@ AGENT.plan(wallet, '3', snap)</pre>
 }</pre>
 <p><code>value</code> is hex wei. MATH sends 0.002 ETH. RGB sends 0.03 ETH. TOON sends <code>0x0</code>. <code>royalty</code> and each share's <code>wei</code> are decimal wei, the part holders receive, not gas. <code>owned</code> lists input ids this address already holds. A share's <code>owned</code> is null when the snapshot has no owner for it. <code>shares.holder</code> is the owner in the snapshot. The contract pays whoever holds the input at send time.</p>
 <p><code>ok: false</code> means the snapshot shows the call reverting (a channel already used, a TOON part already used, a missing MATH or RGB, a WORD or FACE whose owner is not in the snapshot, or a MATH input held by an address in <code>blocked</code>). The transactions are still returned. <code>exists: true</code> means that target is already minted, so <code>txs</code> is empty.</p>
+<p>TOON mint plans are always <code>ok: false</code> until WORD and FACE owners are indexed in the snapshot. The transactions are still returned for inspection.</p>
 
 <h2>caveats</h2>
 <ul>

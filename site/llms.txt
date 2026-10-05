@@ -36,6 +36,8 @@ txs items are { to, data, value }. value is hex wei: MATH 0.002 ETH, RGB 0.03 ET
 
 ok: false means the snapshot shows the call reverting (a channel already used, a TOON part already used, a missing MATH or RGB, a WORD or FACE whose owner is not in the snapshot, or a MATH input held by an address in blocked). The transactions are still returned. exists: true means that target is already minted, so txs is empty.
 
+TOON mint plans are always ok: false until WORD and FACE owners are indexed in the snapshot. The transactions are still returned for inspection.
+
 ## Caveats
 
 - A human signs. This returns transactions and holds no key.
