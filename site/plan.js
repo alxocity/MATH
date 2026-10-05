@@ -298,25 +298,23 @@
         note: NOTES.exists,
       });
     }
-    const routes = [r, g, b].map(function (n) { return routeFor(L.PLAN, n, ix.supply, wallet, inv.blocked); });
-    const have = new Set(ix.supply.keys());
+    // cheapest, gasWei 0: AGENT.plan has no route-mode argument. The site passes routeMode.
+    const built = L.PLAN.planRgb([r, g, b], {
+      supply: ix.supply,
+      user: wallet,
+      blocked: inv.blocked,
+      gasWei: 0n,
+      mode: 'cheapest',
+    }, true);
     const minted = new Set();
     const txs = [];
     const shares = [];
     const already = new Set();
-    const mathSteps = [];
-    routes.forEach(function (route) {
-      route.steps.forEach(function (step) {
-        if (step.exists || have.has(step.result)) {
-          have.add(step.result);
-          return;
-        }
-        mathSteps.push(step);
-        txs.push(mathTx(L.ABI, L.ETH.ADDR, L.PLAN, step));
-        mathShares(L.PLAN, step, ix.supply, wallet, already).forEach(function (row) { shares.push(row); });
-        minted.add(step.result);
-        have.add(step.result);
-      });
+    const mathSteps = built.steps;
+    mathSteps.forEach(function (step) {
+      txs.push(mathTx(L.ABI, L.ETH.ADDR, L.PLAN, step));
+      mathShares(L.PLAN, step, ix.supply, wallet, already).forEach(function (row) { shares.push(row); });
+      minted.add(step.result);
     });
     txs.push({
       to: L.ETH.ADDR.RGB,

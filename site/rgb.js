@@ -230,35 +230,15 @@
     }
     const p = state.planes;
     try {
-      const routes = [p.R, p.G, p.B].map(function (n) { return P.plan(n, S.ctx()); });
-      const have = new Set(state.supply.keys());
-      const queue = [];
-      routes.forEach(function (route) {
-        route.steps.forEach(function (step) {
-          if (step.exists || have.has(step.result)) {
-            have.add(step.result);
-            return;
-          }
-          queue.push({ kind: 'math', step: step });
-          have.add(step.result);
-        });
-      });
+      const built = P.planRgb([p.R, p.G, p.B], S.ctx());
+      const queue = built.steps.map(function (step) { return { kind: 'math', step: step }; });
       queue.push({ kind: 'rgb', r: p.R, g: p.G, b: p.B });
       state.queue = queue;
-      let roy = 0n;
-      let mathMints = 0;
-      queue.forEach(function (item) {
-        if (item.kind !== 'math') return;
-        roy += item.step.royalty;
-        mathMints++;
-      });
-      [p.R, p.G, p.B].forEach(function (id) {
-        const owner = state.supply.get(id);
-        const minted = queue.some(function (item) { return item.kind === 'math' && item.step.result === id; });
-        if (!(owner === S.me() || minted)) roy += P.RGB_ROY;
-      });
-      const net = P.G_ADD * state.gasPrice * BigInt(mathMints) + P.G_RGB * state.gasPrice + roy;
-      if (meta) meta.textContent = queue.length + ' txs. net ~' + S.fmt(net) + ' ETH. the wallet still shows 0.002 or 0.03 on each send. inputs you own are free, so collecting can make future builds cheaper.';
+      if (meta) {
+        const line = queue.length + ' txs. net ~' + S.fmt(built.net) + ' ETH. the wallet still shows 0.002 or 0.03 on each send. inputs you own are free, so collecting can make future builds cheaper.';
+        if (built.note) meta.innerHTML = S.esc(line) + ' <span class="dim">' + S.esc(built.note) + '</span>';
+        else meta.textContent = line;
+      }
     } catch (e) {
       state.queue = [];
       if (meta) meta.textContent = e.message;
