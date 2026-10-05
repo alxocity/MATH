@@ -70,7 +70,7 @@
     const net = (oa && oa === S.me() ? 0n : P.ROY_WEI) + (ob && ob === S.me() ? 0n : P.ROY_WEI) + P.G_ADD * state.gasPrice;
     const pay = 'pays ' + (oa ? S.addr(oa) : '?') + ' and ' + (ob ? S.addr(ob) : '?');
     lines.push('msg.value 0.002, net about ' + S.fmt(net) + ' ETH after refunds and gas');
-    lines.push('inputs you own are free, so every token you hold makes the next build cheaper.');
+    lines.push('inputs you own are free, so collecting can make future builds cheaper.');
     if (meta) meta.innerHTML = lines.map(function (l) {
       let html = S.esc(l);
       if (l === RULES.payout()) html += S.mark('ⓘ', S.TIPS.blocked);

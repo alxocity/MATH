@@ -60,11 +60,13 @@ const mold = fs.readFileSync(__dirname + '/mold.js', 'utf8');
 
 const about = fs.readFileSync(__dirname + '/about.js', 'utf8');
 assert.ok(about.indexOf('rules') !== -1 && about.indexOf('RULES.about') !== -1);
-assert.ok(about.indexOf('inputs you own are free') !== -1);
-assert.ok(about.indexOf('route shorter') !== -1);
+assert.ok(about.indexOf('so the more MATH you collect, the cheaper and shorter future builds can get.') !== -1);
+assert.ok(about.indexOf('You still pay gas.') !== -1);
+assert.ok(about.indexOf('contract wallets') !== -1);
+assert.ok(about.indexOf('<p>inputs you own are free') === -1);
 ['mint.js', 'rgb.js', 'route.js'].forEach(function (name) {
   const src = fs.readFileSync(__dirname + '/' + name, 'utf8');
-  assert.ok(src.indexOf('inputs you own are free, so every token you hold makes the next build cheaper.') !== -1, name);
+  assert.ok(src.indexOf('inputs you own are free, so collecting can make future builds cheaper.') !== -1, name);
 });
 const html = fs.readFileSync(__dirname + '/index.html', 'utf8');
 assert.ok(html.indexOf('rules.js') !== -1);
