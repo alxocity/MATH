@@ -342,13 +342,14 @@
   }
 
   // Mutates rows. A mint from 0x0 of an unknown id is appended. Later logs win.
+  // A burn (to 0x0) is skipped. The row keeps its last real owner, so 0x0 never enters the owners map.
   function applyTransfers(rows, logs, opt) {
     const allowMint = !opt || opt.mint !== false;
     const byId = new Map();
     rows.forEach(function (row, i) { byId.set(String(row.id), i); });
     logs.slice().sort(compareLogs).forEach(function (log) {
       const ev = parseTransfer(log);
-      if (!ev) return;
+      if (!ev || ev.to === ZERO) return;
       const key = ev.id.toString();
       if (byId.has(key)) {
         rows[byId.get(key)].owner = ev.to;

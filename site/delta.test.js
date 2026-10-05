@@ -74,6 +74,21 @@ assert.strictEqual(rows.length, 2);
 assert.strictEqual(rows[1].id, 8n);
 assert.strictEqual(rows[1].owner, bob);
 
+const burned = [{ id: 7n, owner: alice }];
+ETH.applyTransfers(burned, [
+  transferLog(alice, bob, 7, 3, 0),
+  transferLog(bob, ZERO, 7, 4, 0),
+]);
+assert.strictEqual(burned.length, 1);
+assert.strictEqual(burned[0].owner, bob);
+const held = [{ id: 4n, owner: alice }];
+ETH.applyTransfers(held, [
+  transferLog(alice, ZERO, 4, 5, 0),
+  transferLog(ZERO, carol, 4, 6, 0),
+]);
+assert.strictEqual(held.length, 1);
+assert.strictEqual(held[0].owner, carol);
+
 const rgb = [{ id: 1n, owner: alice, r: 1n, g: 2n, b: 3n }];
 ETH.applyTransfers(rgb, [transferLog(ZERO, bob, 9, 1, 0)], { mint: false });
 assert.strictEqual(rgb.length, 1);
