@@ -19,10 +19,11 @@ index.json fields:
 - rgb: [id, ownerIndex, r, g, b]
 - toon: [id, ownerIndex, word, face, rgb]
 - words, faces: { id: text }
+- wordOwners, faceOwners: [ownerIndex, ...]. The array index is the token id.
 - blocked: lowercase addresses that revert MATH's 2300-gas payout
 - blockedDone: true when that list was scanned
 
-Ids are decimal strings. ownerIndex indexes owners. A used RGB channel is an r, g, or b value. WORD and FACE owners are not in the file.
+Ids are decimal strings. ownerIndex indexes owners. A used RGB channel is an r, g, or b value. WORD and FACE ids run from 0, and wordOwners[id] / faceOwners[id] is the holder. owned is null only when those arrays are missing.
 
 ## plan(wallet, target, snapshot)
 
@@ -32,11 +33,9 @@ Ids are decimal strings. ownerIndex indexes owners. A used RGB channel is an r, 
 
 Returns v, ok, kind, target, block, wallet, exists, txs, royalty, shares, owned, note.
 
-txs items are { to, data, value }. value is hex wei: MATH 0.002 ETH, RGB 0.03 ETH, TOON 0x0. royalty is decimal wei paid to holders, not gas. shares items are { id, holder, wei, owned }. owned is the input ids this address already holds. owned null means the snapshot has no owner (WORD and FACE). shares.holder is the owner in the snapshot. The contract pays whoever holds the input at send time.
+txs items are { to, data, value }. value is hex wei: MATH 0.002 ETH, RGB 0.03 ETH, TOON 0x0. royalty is decimal wei paid to holders, not gas. shares items are { id, holder, wei, owned }. owned is the input ids this address already holds. owned is null only when the WORD or FACE owner index is missing. shares.holder is the owner in the snapshot. The contract pays whoever holds the input at send time.
 
-ok: false means the snapshot shows the call reverting (a channel already used, a TOON part already used, a missing MATH or RGB, a WORD or FACE whose owner is not in the snapshot, or a MATH input held by an address in blocked). The transactions are still returned. exists: true means that target is already minted, so txs is empty.
-
-TOON mint plans are always ok: false until WORD and FACE owners are indexed in the snapshot. The transactions are still returned for inspection.
+ok: false means the snapshot shows the call reverting (a channel already used, a TOON part already used, a missing MATH or RGB, a WORD or FACE the signer does not hold, or a MATH input held by an address in blocked). The transactions are still returned. exists: true means that target is already minted, so txs is empty. A TOON plan is ok: true when the signer holds the MATH, WORD, FACE, and RGB.
 
 ## Caveats
 

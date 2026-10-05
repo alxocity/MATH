@@ -95,7 +95,7 @@
   },
   "toon": {
     "v": 1,
-    "ok": false,
+    "ok": true,
     "kind": "toon",
     "target": "16,7,8,10",
     "block": 42,
@@ -118,15 +118,15 @@
       },
       {
         "id": "7",
-        "holder": "",
+        "holder": "0xabcabcabcabcabcabcabcabcabcabcabcabcabca",
         "wei": "0",
-        "owned": null
+        "owned": true
       },
       {
         "id": "8",
-        "holder": "",
+        "holder": "0xabcabcabcabcabcabcabcabcabcabcabcabcabca",
         "wei": "0",
-        "owned": null
+        "owned": true
       },
       {
         "id": "10",
@@ -136,9 +136,11 @@
       }
     ],
     "owned": [
+      "7",
+      "8",
       "10",
       "16"
     ],
-    "note": "A human signs. This does not. TOON.add is free. It reverts unless the signer holds the MATH, WORD, FACE, and RGB. WORD and FACE owners are not in the snapshot. WORD/FACE owners are not in the snapshot; confirm the signer holds them before sending."
+    "note": "A human signs. This does not. TOON.add is free. It reverts unless the signer holds the MATH, WORD, FACE, and RGB."
   }
 }

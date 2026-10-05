@@ -9,7 +9,7 @@
   const NOTES = {
     math: SIGN + ' MATH.add value is 0.002 ETH: 0.001 to each input holder, sent with a 2300-gas transfer, so some contract wallets cannot receive it. Hold an input and that share is 0. You still pay gas.',
     rgb: SIGN + ' RGB.add value is 0.03 ETH: 0.01 to each MATH channel holder. Hold a channel, or mint it earlier in this plan, and that share is 0. You still pay gas.',
-    toon: SIGN + ' TOON.add is free. It reverts unless the signer holds the MATH, WORD, FACE, and RGB. WORD and FACE owners are not in the snapshot.',
+    toon: SIGN + ' TOON.add is free. It reverts unless the signer holds the MATH, WORD, FACE, and RGB.',
     exists: 'Already minted. Nothing to sign.',
   };
 
@@ -125,7 +125,29 @@
       toonBy.face.set(t.face, t.id);
       toonBy.rgb.set(t.rgb, t.id);
     });
-    return { supply: supply, used: used, rgbById: rgbById, toonBy: toonBy };
+    return {
+      supply: supply,
+      used: used,
+      rgbById: rgbById,
+      toonBy: toonBy,
+      wordOwners: inv.wordOwners,
+      faceOwners: inv.faceOwners,
+    };
+  }
+
+  // null list means the index was not published. A short list means that id is absent.
+  function partShare(list, id, wallet, already, label, reasons) {
+    if (list == null) return share(id, '', 0n, null);
+    const n = Number(id);
+    if (!Number.isSafeInteger(n) || n < 0 || n >= list.length) {
+      reasons.push(label + ' #' + id + ' is not in the snapshot.');
+      return share(id, '', 0n, false);
+    }
+    const holder = String(list[n]).toLowerCase();
+    const owned = holder === wallet;
+    if (owned) already.add(id.toString());
+    else reasons.push('This address does not hold ' + label + ' #' + id + '.');
+    return share(id, holder, 0n, owned);
   }
 
   function done(inv, wallet, fields) {
@@ -363,11 +385,11 @@
     if (rgb && rgb.owner.toLowerCase() === wallet) already.add(spec.rgb.toString());
     const shares = [
       share(spec.math, ix.supply.get(spec.math) || '', 0n, holds(ix.supply, spec.math, wallet)),
-      share(spec.word, '', 0n, null),
-      share(spec.face, '', 0n, null),
+      partShare(ix.wordOwners, spec.word, wallet, already, 'WORD', reasons),
+      partShare(ix.faceOwners, spec.face, wallet, already, 'FACE', reasons),
       share(spec.rgb, rgb ? rgb.owner : '', 0n, rgb ? rgb.owner.toLowerCase() === wallet : false),
     ];
-    if (shares.some(function (row) { return row.owned === null; })) {
+    if (ix.wordOwners == null || ix.faceOwners == null) {
       reasons.push('WORD/FACE owners are not in the snapshot; confirm the signer holds them before sending.');
     }
     let note = NOTES.toon;
