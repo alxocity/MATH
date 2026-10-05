@@ -956,10 +956,7 @@
   }
 
   function presetUrl(value) {
-    const v = String(value || '').trim();
-    if (/^[a-z0-9-]+$/.test(v)) return new URL('presets/' + v + '.json', pageDir()).href;
-    if (/^https:\/\//i.test(v)) return v;
-    throw new Error('preset');
+    return new URL(D.presetPath(value), pageDir()).href;
   }
 
   async function loadPresetParam(value) {

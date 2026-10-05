@@ -192,6 +192,28 @@ const idle = D.diff(spec({}, {}, {
 assert.strictEqual(idle.txs.length, 0);
 assert.strictEqual(D.diff(D.apply(spec(), missing)).txs.length, 0);
 
+assert.throws(function () { D.presetPath('https://evil.example/math.json'); }, /bad preset/);
+assert.throws(function () { D.presetPath('https://math.alxo.city/ens/presets/math.json'); }, /bad preset/);
+assert.throws(function () { D.presetPath('../math'); }, /bad preset/);
+assert.throws(function () { D.presetPath('math.json'); }, /bad preset/);
+assert.throws(function () { D.presetPath(''); }, /bad preset/);
+const mathPath = D.presetPath('math');
+assert.strictEqual(mathPath, 'presets/math.json');
+const loaded = D.parsePreset(fs.readFileSync(path.join(__dirname, mathPath), 'utf8'));
+assert.strictEqual(loaded.parent, 'alxocity.eth');
+assert.strictEqual(loaded.names.length, 6);
+
+const locked = spec({ controlsParent: false });
+const lockedPlan = D.diff(locked);
+assert.strictEqual(lockedPlan.blocked, 'parent');
+assert.strictEqual(lockedPlan.txs.length, 0);
+assert.strictEqual(lockedPlan.names[0].txs.length, 0);
+assert.strictEqual(lockedPlan.names[0].addr.kind, 'new');
+const lockedNext = D.apply(locked, lockedPlan);
+assert.strictEqual(lockedNext.names[0].chain.exists, false);
+assert.strictEqual(D.diff(lockedNext).txs.length, 0);
+assert.strictEqual(D.diff(lockedNext).names[0].addr.kind, 'new');
+
 const raw = fs.readFileSync(path.join(__dirname, 'presets/math.json'), 'utf8');
 const preset = D.parsePreset(raw);
 assert.strictEqual(preset.parent, 'alxocity.eth');
