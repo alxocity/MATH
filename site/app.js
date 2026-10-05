@@ -148,17 +148,11 @@
     return a.slice(0, 6) + '…' + a.slice(-4);
   }
 
-  function namedAddr(a) {
-    const name = ENS.contractLabel(a);
-    if (!name) return esc(a);
-    return esc(name);
-  }
-
   function contractLink(addr) {
     const name = ENS.contractLabel(addr);
     const title = name ? ' title="' + esc(short(addr)) + '"' : '';
     const text = name || addr;
-    return '<a href="https://etherscan.io/address/' + addr + '"' + title + ' target="_blank" rel="noopener noreferrer">' + esc(text) + '</a>';
+    return '<a href="https://etherscan.io/address/' + esc(addr) + '"' + title + ' target="_blank" rel="noopener noreferrer">' + esc(text) + '</a>';
   }
 
   function paintContractNames() {
@@ -1247,7 +1241,6 @@
     fmt: fmt,
     hex: hex,
     short: short,
-    namedAddr: namedAddr,
     contractLink: contractLink,
     addr: addr,
     me: me,
