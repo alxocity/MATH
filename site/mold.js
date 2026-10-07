@@ -25,9 +25,15 @@
     exists: [
       '{n} already fruited. owner {owner}. do not mint it again.',
     ],
+    mint: [
+      'two numbers you can reach. the sum is the new token. the mark beside the fee says who is paid.',
+    ],
     mintReady: [
       '{a} + {b} = {n}. {roy}. simulate, then the wallet signs.',
       'own the inputs and the royalty comes back. some contract wallets can\'t take math\'s payout.',
+    ],
+    routeOpen: [
+      'the mints that build one number. pin a piece if the path smells wrong.',
     ],
     route: [
       '{mints} mints. net about {net} ETH. pin a piece if the path smells wrong.',

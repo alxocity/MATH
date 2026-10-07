@@ -78,6 +78,14 @@ aside {
   min-width: 0;
   overflow-wrap: anywhere;
 }
+.intro {
+  flex: 1 1 100%;
+  margin: 4px 0 0;
+  max-width: 46rem;
+  color: var(--dim);
+}
+.intro a { margin-left: 6px; }
+.intro button { margin-left: 6px; }
 aside .who { margin: 0 0 8px; color: var(--dim); }
 #mold-line { min-height: 4.4em; margin: 0 0 12px; }
 #mold-line:empty { display: none; min-height: 0; margin: 0; }
@@ -186,6 +194,10 @@ button.share { color: var(--dim); }
 .w { background: #f4f4f4; }
 .step { border-top: 1px solid var(--line); padding: 8px 0; }
 .run { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; border-top: 1px solid var(--line); padding: 8px 0; min-width: 0; }
+.run.done { color: var(--dim); }
+.run.now { color: var(--fg); }
+.run.failed { color: var(--bad); }
+#runCount { margin: 8px 0 0; }
 #batchNote { margin: 8px 0; max-width: 40rem; }
 .piece { display: flex; gap: 6px; align-items: center; margin: 4px 0; min-width: 0; max-width: 100%; }
 .piece input[type="text"] { width: min(18em, 100%); max-width: 100%; }
@@ -219,9 +231,18 @@ footer {
   color: var(--dim);
 }
 footer a { color: var(--dim); }
+@media (min-width: 861px) {
+  aside {
+    position: sticky;
+    top: 12px;
+    align-self: start;
+    max-height: calc(100vh - 24px);
+    overflow: auto;
+  }
+}
 @media (max-width: 860px) {
   body { grid-template-columns: minmax(0, 1fr); }
-  aside { border-left: 0; border-top: 1px solid var(--line); }
+  aside { border-left: 0; border-top: 1px solid var(--line); position: static; max-height: none; }
   #status { margin-left: 0; }
 }
 @media (max-width: 480px) {

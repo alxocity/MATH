@@ -166,4 +166,26 @@ assert.strictEqual(RUN.unsupported({ code: 4200 }), true);
 assert.strictEqual(RUN.unsupported({ message: 'method not found' }), true);
 assert.strictEqual(RUN.unsupported({ code: 4001, message: 'user rejected' }), false);
 
+assert.strictEqual(RUN.bulkWhy(0, 'ready'), 'nothing to send');
+assert.strictEqual(RUN.bulkWhy(1, 'ready'), 'only one transaction');
+assert.strictEqual(RUN.bulkWhy(1, 'ready', 'change'), "there's only one change");
+assert.strictEqual(RUN.bulkWhy(3, 'none'), 'connect a wallet to batch');
+assert.strictEqual(RUN.bulkWhy(3, 'checking'), 'checking whether this wallet can batch');
+assert.strictEqual(RUN.bulkWhy(3, 'unsupported'), "the wallet doesn't support batched sends");
+assert.strictEqual(RUN.bulkWhy(3, 'ready'), '');
+assert.strictEqual(RUN.bulkWhy(3, 'ready', 'change'), '');
+
+const counted = RUN.runCount([
+  { status: 'confirmed' },
+  { status: 'pending' },
+  { status: 'submitted' },
+  { status: 'failed' },
+]);
+assert.strictEqual(counted.n, 4);
+assert.strictEqual(counted.done, 1);
+assert.strictEqual(counted.pending, 2);
+assert.strictEqual(counted.failed, 1);
+assert.strictEqual(counted.text, '4 steps. 1 done, 2 pending, 1 failed');
+assert.strictEqual(RUN.runCount([{ status: 'confirmed' }]).text, '1 step. 1 done, 0 pending, 0 failed');
+
 console.log('run.test.js ok');

@@ -104,6 +104,8 @@
       if (steps) steps.innerHTML = '';
       const sendAll = $('#sendRoute');
       if (sendAll) sendAll.disabled = true;
+      const bulk = $('#sendBatch');
+      if (bulk) bulk.onclick = function () { sendRoute(); };
       S.paintSavedRun();
       return;
     }
@@ -150,6 +152,8 @@
       sendAll.disabled = flying || !open.length || !!(open[0] && open[0].blocked);
       sendAll.onclick = function () { sendRoute(); };
     }
+    const bulk = $('#sendBatch');
+    if (bulk) bulk.onclick = function () { sendRoute(); };
     const box = $('#preview');
     if (box && state.preview) box.textContent = state.preview;
     if (built) {
@@ -197,15 +201,25 @@
     paintRoute();
   }
 
+  function rememberRoute() {
+    const input = $('#target');
+    if (!input || !globalThis.QUERY) return;
+    state.routeTarget = input.value.trim();
+    S.rememberQuery({ n: QUERY.digits(state.routeTarget) });
+  }
+
   function route(view) {
     view.innerHTML =
+      S.lead('A route is the mints that build one number.', 'mints') +
       '<div class="row"><label>n <input id="target" spellcheck="false" value="' + S.esc(state.routeTarget) + '"></label>' +
       '<button type="button" id="mode" class="on">' + state.routeMode + '</button>' +
       '<button type="button" id="plan">plan</button></div>' +
       '<p class="dim" id="routeMeta"></p><div id="pieces"></div><div id="steps"></div>' +
       '<p class="dim" id="batchNote" hidden>A batch may ask MetaMask for a one-time smart account upgrade (EIP-7702). That delegates this address for the calls. You approve it in the wallet. This page does not sign by itself.</p>' +
       '<div id="run"></div>' +
-      '<div class="row"><button type="button" id="sendRoute">send</button></div>' +
+      '<div class="row"><button type="button" id="sendRoute">send</button>' +
+      '<button type="button" id="sendBatch" disabled>send as one batch</button>' +
+      '<span id="batchWhy" class="dim"></span></div>' +
       '<div class="preview" id="preview">' + S.esc(state.preview || 'send signs the next batch. this page does not sign by itself.') + '</div>';
     $('#mode').onclick = function () {
       state.routeMode = state.routeMode === 'fewest' ? 'cheapest' : 'fewest';
@@ -213,7 +227,9 @@
     };
     state.runSend = function () { sendRoute(); };
     $('#plan').onclick = planRoute;
-    $('#target').addEventListener('change', function () { state.routeTarget = $('#target').value.trim(); });
+    $('#target').addEventListener('input', rememberRoute);
+    $('#target').addEventListener('change', rememberRoute);
+    rememberRoute();
     paintRoute();
   }
 

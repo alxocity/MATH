@@ -60,6 +60,10 @@
     routePinned: [],
     routeBuilt: null,
     routeTarget: '',
+    batchKnown: false,
+    batchCaps: null,
+    mintQuery: null,
+    toonQuery: null,
     routeMode: 'cheapest',
     txLock: null,
     preview: '',
@@ -104,6 +108,59 @@
     const id = 't' + (++tipSeq);
     return '<span class="mark"><button type="button" class="mark-hit" aria-label="info" aria-describedby="' + id + '">' + glyph +
       '</button><span class="tip" id="' + id + '" role="tooltip">' + t + '</span></span>';
+  }
+
+  function lead(text, tipKey) {
+    return '<p class="dim">' + esc(text) + (tipKey ? mark('ⓘ', TIPS[tipKey]) : '') + '</p>';
+  }
+
+  function rememberQuery(patch) {
+    if (!globalThis.QUERY) return;
+    const next = QUERY.href({
+      pathname: location.pathname,
+      search: location.search,
+      hash: location.hash,
+    }, patch);
+    if (next !== location.pathname + location.search + location.hash) history.replaceState(null, '', next);
+  }
+
+  const INTRO_KEY = 'math.intro.v1';
+
+  function introOff() {
+    try { return localStorage.getItem(INTRO_KEY) === '1'; }
+    catch (e) { return false; }
+  }
+
+  function paintIntro() {
+    const el = $('#intro');
+    if (!el) return;
+    el.hidden = introOff();
+    const btn = $('#introDismiss');
+    if (btn && !btn.dataset.bound) {
+      btn.dataset.bound = '1';
+      btn.addEventListener('click', function () {
+        try { localStorage.setItem(INTRO_KEY, '1'); } catch (e) { /* ignore */ }
+        el.hidden = true;
+      });
+    }
+  }
+
+  function applyQuery() {
+    if (!globalThis.QUERY) return;
+    const q = QUERY.read(location.search);
+    state.mintQuery = { a: q.a, b: q.b };
+    state.toonQuery = { math: q.math, word: q.word, face: q.face, rgb: q.rgb };
+    if (q.n) state.routeTarget = q.n;
+    if (q.R !== '' || q.G !== '' || q.B !== '') {
+      try {
+        const R = q.R !== '' ? BigInt(q.R) : 0n;
+        const G = q.G !== '' ? BigInt(q.G) : 0n;
+        const B = q.B !== '' ? BigInt(q.B) : 0n;
+        state.planes = { R: R, G: G, B: B };
+        state.grid = P.planesToRows(R, G, B);
+        state.planesTouched = q.R !== '' && q.G !== '' && q.B !== '';
+      } catch (e) { /* leave the grid */ }
+    }
   }
 
   function bindTips() {
@@ -519,9 +576,14 @@
     saveSums();
   }
 
-  function syncNote(steps) {
-    const note = $('#batchNote');
-    if (!note) return;
+  function batchPhase() {
+    if (!globalThis.ethereum || !state.account) return 'none';
+    if (!state.batchKnown) return 'checking';
+    if (globalThis.RUN.atomicReady(state.batchCaps)) return 'ready';
+    return 'unsupported';
+  }
+
+  function openBatch(steps) {
     const list = steps || [];
     const seeded = list.filter(function (s) {
       return (s.status === 'confirmed' || s.status === 'submitted' || globalThis.RUN.isUnknown(s.status)) && s.result != null;
@@ -529,28 +591,72 @@
     const open = list.filter(function (s) {
       return s.status !== 'confirmed' && s.status !== 'submitted' && !globalThis.RUN.isUnknown(s.status);
     });
-    const first = (globalThis.RUN.splitCalls(open, seeded)[0]) || [];
-    note.hidden = first.length < 2;
+    return (globalThis.RUN.splitCalls(open, seeded)[0]) || [];
+  }
+
+  function syncNote(steps) {
+    const note = $('#batchNote');
+    const btn = $('#sendBatch');
+    const whyEl = $('#batchWhy');
+    if (!note && !btn && !whyEl) return;
+    const first = openBatch(steps);
+    const why = globalThis.RUN.bulkWhy(first.length, batchPhase(), 'transaction');
+    if (note) note.hidden = !!why;
+    if (whyEl) whyEl.textContent = why;
+    if (btn) {
+      const flying = (steps || []).some(function (s) {
+        return s.status === 'submitted' || s.status === 'signing' || globalThis.RUN.isUnknown(s.status);
+      });
+      const blocked = !!(first[0] && first[0].blocked);
+      btn.disabled = !!why || flying || blocked;
+    }
+  }
+
+  async function probeBatch() {
+    if (!globalThis.ethereum || !state.account) {
+      state.batchCaps = null;
+      state.batchKnown = false;
+      syncNote(state.run);
+      return;
+    }
+    state.batchKnown = false;
+    syncNote(state.run);
+    try {
+      state.batchCaps = await withTimeout(ethereum.request({
+        method: 'wallet_getCapabilities',
+        params: [state.account],
+      }), 8000);
+    } catch (e) {
+      state.batchCaps = null;
+    }
+    state.batchKnown = true;
+    syncNote(state.run);
   }
 
   function paintRun() {
     const host = $('#run');
     if (!host) return;
     const rows = state.run || [];
-    host.innerHTML = rows.map(function (s, i) {
+    if (!rows.length) {
+      host.innerHTML = '';
+      return;
+    }
+    const count = globalThis.RUN.runCount(rows);
+    host.innerHTML = '<p class="dim" id="runCount">' + esc(count.text) + '</p>' + rows.map(function (s, i) {
       const hash = s.hash && /^0x[0-9a-fA-F]{64}$/.test(s.hash)
         ? ' <a href="https://etherscan.io/tx/' + s.hash + '" target="_blank" rel="noopener noreferrer">tx</a>'
         : '';
       const err = (s.status === 'failed' || globalThis.RUN.isUnknown(s.status)) && s.error
         ? ' <span class="bad">' + esc(s.error) + '</span>' : '';
       let btn = '';
-      if (s.status === 'failed') btn = ' <button type="button" data-retry="1">retry</button>';
+      if (s.status === 'failed') btn = ' <button type="button" data-retry="1">resume</button>';
       else if (globalThis.RUN.isUnknown(s.status)) {
         btn = ' <button type="button" data-check="1">check</button>';
         if (s.chain !== false) btn += ' <button type="button" data-clear="' + i + '">clear</button>';
       } else if (s.status === 'submitted') btn = ' <button type="button" data-check="1">check</button>';
       const label = globalThis.TOKEN.labelHtml(s.label) || esc(s.label);
-      return '<div class="run">' + (i + 1) + '/' + rows.length + ' ' + esc(s.status || 'pending') + ' ' + label + hash + err + btn + '</div>';
+      const cls = s.status === 'confirmed' ? ' done' : s.status === 'failed' ? ' failed' : (s.status === 'submitted' || s.status === 'signing') ? ' now' : '';
+      return '<div class="run' + cls + '">' + (i + 1) + '/' + rows.length + ' ' + esc(s.status || 'pending') + ' ' + label + hash + err + btn + '</div>';
     }).join('');
     host.querySelectorAll('[data-retry]').forEach(function (b) {
       b.onclick = function () { if (state.runSend) state.runSend(); };
@@ -677,7 +783,10 @@
       return;
     }
     const saved = readRun();
-    if (!saved.length) return;
+    if (!saved.length) {
+      syncNote(state.run);
+      return;
+    }
     state.run = saved.map(function (s) {
       return {
         label: s.label,
@@ -692,6 +801,7 @@
       };
     });
     paintRun();
+    syncNote(state.run);
     resumeIfSubmitted();
   }
 
@@ -1082,7 +1192,7 @@
         work = (globalThis.RUN.splitCalls(open, seeded)[0]) || [];
       }
       if (!work.length) return;
-      if (work.length > 1) await sendBatch(work, gen);
+      if ((opt && opt.batch) || work.length > 1) await sendBatch(work, gen);
       else await sendSeq(work, gen);
     } catch (e) {
       const msg = globalThis.RUN.rejected(e) ? 'rejected' : clip(e && e.message ? e.message : e);
@@ -1176,7 +1286,12 @@
     const view = $('#view');
     SITE[tab](view);
     paintPending();
-    if (location.hash !== '#' + tab) location.hash = tab;
+    const nextHash = '#' + tab;
+    if (location.hash !== nextHash) {
+      if (!location.hash || location.hash === '#') {
+        history.replaceState(null, '', location.pathname + location.search + nextHash);
+      } else location.hash = tab;
+    }
     if (same && focusId) {
       const next = document.getElementById(focusId);
       if (next && next !== ae) {
@@ -1189,6 +1304,8 @@
     if (tab === 'toon') ensureParts().catch(function () {});
     if (quiet) return;
     if (tab === 'browse') MOLD.say('browse');
+    if (tab === 'mint') MOLD.say('mint');
+    if (tab === 'route') MOLD.say('routeOpen');
     if (tab === 'rgb') MOLD.say('rgb');
     if (tab === 'toon') MOLD.say('toon');
   }
@@ -1216,7 +1333,8 @@
       openToken(tok);
       return;
     }
-    let name = (location.hash || '#browse').slice(1);
+    const raw = location.hash ? location.hash.slice(1) : '';
+    let name = raw || 'rgb';
     if (TABS.indexOf(name) === -1) name = 'browse';
     if (state.tab === name && !state.token) {
       if (location.hash !== '#' + name) history.replaceState(null, '', '#' + name);
@@ -1254,6 +1372,8 @@
     noteSent: noteSent,
     sendStep: sendStep,
     runSteps: runSteps,
+    rememberQuery: rememberQuery,
+    lead: lead,
     hydrateRun: hydrateRun,
     paintRun: paintRun,
     paintSavedRun: paintSavedRun,
@@ -1274,11 +1394,13 @@
     eth.request({ method: 'eth_chainId' }).then(onChain).catch(function () {});
     eth.request({ method: 'eth_accounts' }).then(function (acc) {
       if (!acc || !acc[0]) return;
-      state.account = acc[0];
-      paintWho();
-      syncMine();
-      noteAccount();
-      loadWallet();
+    state.account = acc[0];
+    paintWho();
+    syncMine();
+    noteAccount();
+    loadWallet();
+    probeBatch();
+      probeBatch();
     }).catch(function () {});
     if (eth.on) {
       eth.on('accountsChanged', function (acc) {
@@ -1286,7 +1408,12 @@
         paintWho();
         syncMine();
         noteAccount();
-        if (state.account) loadWallet();
+        state.batchKnown = false;
+        state.batchCaps = null;
+        if (state.account) {
+          loadWallet();
+          probeBatch();
+        } else syncNote(state.run);
         paintAccount(['toon', 'mine', 'browse']);
       });
       eth.on('chainChanged', onChain);
@@ -1627,6 +1754,8 @@
       applyTile(next);
     };
     bindTips();
+    paintIntro();
+    applyQuery();
     document.querySelectorAll('nav button').forEach(function (b) {
       b.onclick = function () { show(b.dataset.tab); };
     });
@@ -1723,8 +1852,9 @@
     const tok = globalThis.TOKEN.parse(location.hash);
     if (tok) openToken(tok);
     else {
-      const tab = (location.hash || '#browse').slice(1);
-      show(TABS.indexOf(tab) === -1 ? 'browse' : tab);
+      const raw = location.hash ? location.hash.slice(1) : '';
+      const tab = raw ? (TABS.indexOf(raw) === -1 ? 'browse' : raw) : 'rgb';
+      show(tab);
     }
     ETH.gasPrice().then(function (g) { state.gasPrice = g; }).catch(function () {});
     paintContractNames();
