@@ -144,6 +144,35 @@
     return 'steps 2–' + n + " can't be simulated until step 1 is minted";
   }
 
+  // Why a bulk send stays disabled. Empty means the wallet can batch this plan.
+  // `phase` is none, checking, ready, or unsupported. ENS uses the noun "change".
+  function bulkWhy(count, phase, noun) {
+    const n = Number(count);
+    const c = n !== n ? 0 : Math.max(0, Math.floor(n));
+    const one = noun === 'change' ? "there's only one change" : 'only one transaction';
+    if (c < 1) return 'nothing to send';
+    if (c < 2) return one;
+    if (phase === 'ready') return '';
+    if (phase === 'checking') return 'checking whether this wallet can batch';
+    if (phase === 'unsupported') return "the wallet doesn't support batched sends";
+    return 'connect a wallet to batch';
+  }
+
+  function runCount(rows) {
+    let done = 0;
+    let failed = 0;
+    let pending = 0;
+    (rows || []).forEach(function (s) {
+      if (!s) return;
+      if (s.status === 'confirmed') done += 1;
+      else if (s.status === 'failed') failed += 1;
+      else pending += 1;
+    });
+    const n = done + failed + pending;
+    const text = n + (n === 1 ? ' step' : ' steps') + '. ' + done + ' done, ' + pending + ' pending, ' + failed + ' failed';
+    return { n: n, done: done, pending: pending, failed: failed, text: text };
+  }
+
   function callsId(res) {
     if (!res) return '';
     if (typeof res === 'string') return res;
@@ -187,6 +216,8 @@
     atomicReady: atomicReady,
     deferSim: deferSim,
     batchSimNote: batchSimNote,
+    bulkWhy: bulkWhy,
+    runCount: runCount,
     callsId: callsId,
     receiptOk: receiptOk,
     callsOutcome: callsOutcome,

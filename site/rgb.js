@@ -213,6 +213,17 @@
       btn.disabled = !state.queue.length || flying || !open.length || !!(open[0] && open[0].blocked);
       btn.onclick = sendAllQueue;
     }
+    const bulk = $('#sendBatch');
+    if (bulk) bulk.onclick = sendAllQueue;
+  }
+
+  function rememberPlanes() {
+    if (!state.planesTouched || !state.planes || !globalThis.QUERY) return;
+    S.rememberQuery({
+      R: state.planes.R.toString(),
+      G: state.planes.G.toString(),
+      B: state.planes.B.toString(),
+    });
   }
 
   function planRgb() {
@@ -427,6 +438,7 @@
     syncPlanes();
     const p = state.planes || { R: 0n, G: 0n, B: 0n };
     view.innerHTML =
+      S.lead('Paint three channels. Each one is a MATH id.', 'planes') +
       '<div class="row"><button type="button" id="heart">heart</button>' +
       '<button type="button" id="shuffle">shuffle</button>' +
       '<input type="file" id="file" accept="image/*">' +
@@ -441,7 +453,9 @@
       '<p id="rgbTraits" class="dim"></p><p id="rgbMeta"></p><div id="queue"></div>' +
       '<p class="dim" id="batchNote" hidden>A batch may ask MetaMask for a one-time smart account upgrade (EIP-7702). That delegates this address for the calls. You approve it in the wallet. This page does not sign by itself.</p>' +
       '<div id="run"></div>' +
-      '<div class="row"><button type="button" id="planRgb">plan routes</button><button type="button" id="sendQueueAll">send</button></div>' +
+      '<div class="row"><button type="button" id="planRgb">plan routes</button><button type="button" id="sendQueueAll">send</button>' +
+      '<button type="button" id="sendBatch" disabled>send as one batch</button>' +
+      '<span id="batchWhy" class="dim"></span></div>' +
       '<div class="preview" id="preview">MATH mints, then RGB.add at 0.03 ETH, paid to the channel owners. send signs the next batch.' + S.mark('ⓘ', S.TIPS.fees) + '</div>';
     const grid = $('#cells');
     grid.innerHTML = S.cellsHtml(state.grid);
@@ -461,6 +475,7 @@
       syncPlanes();
       writePlaneInputs();
       paintTraits();
+      rememberPlanes();
       const issues = planeIssues(state.planes);
       const meta = $('#rgbMeta');
       if (meta) meta.innerHTML = issuesHtml(issues);
@@ -573,9 +588,11 @@
           }
           const rule = issues.find(function (s) { return RULES.mold(s); });
           S.hit(rule || '');
+          rememberPlanes();
         } catch (e) { /* keep grid */ }
       });
     });
+    rememberPlanes();
     state.runSend = function () { sendAllQueue(); };
     $('#planRgb').onclick = planRgb;
     $('#suggest').onclick = function () { fillRgb(true); };

@@ -245,10 +245,28 @@
     paintMint(false);
   }
 
+  function mintQueryValue(key) {
+    const q = state.mintQuery;
+    return q && q[key] ? S.esc(q[key]) : '';
+  }
+
+  function rememberMint() {
+    const a = $('#a');
+    const b = $('#b');
+    if (!a || !b || !globalThis.QUERY) return;
+    const next = {
+      a: QUERY.digits(a.value),
+      b: QUERY.digits(b.value),
+    };
+    state.mintQuery = next;
+    S.rememberQuery(next);
+  }
+
   function mint(view) {
     view.innerHTML =
-      '<div class="row"><label class="num">a <input id="a" spellcheck="false" inputmode="numeric"></label>' +
-      '<label class="num">b <input id="b" spellcheck="false" inputmode="numeric"></label></div>' +
+      S.lead('Add two MATH ids. The sum is the new token.', 'fees') +
+      '<div class="row"><label class="num">a <input id="a" spellcheck="false" inputmode="numeric" value="' + mintQueryValue('a') + '"></label>' +
+      '<label class="num">b <input id="b" spellcheck="false" inputmode="numeric" value="' + mintQueryValue('b') + '"></label></div>' +
       '<div class="row"><button type="button" id="suggest">suggest another</button>' +
       '<span id="hintNote" class="dim"></span></div>' +
       '<div class="eq" id="eq">a + b = ?</div>' +
@@ -269,8 +287,8 @@
         draw();
       };
     }
-    $('#a').addEventListener('input', typed('ownA'));
-    $('#b').addEventListener('input', typed('ownB'));
+    $('#a').addEventListener('input', function (ev) { typed('ownA')(ev); rememberMint(); });
+    $('#b').addEventListener('input', function (ev) { typed('ownB')(ev); rememberMint(); });
     $('#suggest').onclick = function () { fillMint(true); };
     $('#sim').onclick = function () { paintMint(true, true); };
     $('#send').onclick = function () {

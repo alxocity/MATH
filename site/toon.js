@@ -294,11 +294,58 @@
     });
   }
 
+  function setToonSelect(el, value) {
+    if (!el || value == null || value === '') return;
+    const v = String(value);
+    let has = false;
+    for (let i = 0; i < el.options.length; i++) if (el.options[i].value === v) has = true;
+    if (!has) {
+      const o = document.createElement('option');
+      o.value = v;
+      o.textContent = v;
+      el.appendChild(o);
+    }
+    el.value = v;
+  }
+
+  function seedToonQuery() {
+    const q = state.toonQuery;
+    if (!q || (!q.math && !q.word && !q.face && !q.rgb)) return;
+    setToonSelect($('#tm'), q.math);
+    setToonSelect($('#tw'), q.word);
+    setToonSelect($('#tf'), q.face);
+    setToonSelect($('#tr'), q.rgb);
+    toonHint = {
+      math: $('#tm').value,
+      word: $('#tw').value,
+      face: $('#tf').value,
+      rgb: $('#tr').value,
+      ownMath: false,
+      ownWord: false,
+      ownFace: false,
+      ownRgb: false,
+      example: !state.account,
+    };
+  }
+
+  function rememberToon() {
+    if (!globalThis.QUERY || !$('#tm')) return;
+    const next = {
+      math: QUERY.digits($('#tm').value),
+      word: QUERY.digits($('#tw').value, true),
+      face: QUERY.digits($('#tf').value, true),
+      rgb: QUERY.digits($('#tr').value),
+    };
+    state.toonQuery = next;
+    S.rememberQuery(next);
+  }
+
   function toon(view) {
     shiftAccount();
     const maths = listed(state.math, state.heldMath);
     const rgbs = listed(state.rgb, state.heldRgb);
     view.innerHTML =
+      S.lead('A TOON takes a MATH, a WORD, a FACE, and an RGB you hold.', 'fees') +
       '<div class="row"><label class="num">MATH <select id="tm"><option value="">—</option>' + opt(maths, 'math', function (id) { return id; }) + '</select> <span id="tmLink"></span></label></div>' +
       '<div class="row"><label class="num">WORD <select id="tw"><option value="">—</option>' + opt(state.words, 'word', function (id) { return state.wordText.get(BigInt(id)) || id; }) + '</select></label>' +
       '<span class="dim">' + S.esc(state.wordNote) + '</span></div>' +
@@ -309,6 +356,8 @@
       '<div id="toonPrev"><p class="dim toon-wait">pick four.</p></div>' +
       '<div class="preview" id="preview">TOON.add has no fee. you must own all four. grey picks say why.' + S.mark('ⓘ', S.TIPS.fees) + '</div>' +
       '<div class="row"><button type="button" id="simToon">simulate</button>' + S.mark('ⓘ', S.TIPS.simulate) + '<button type="button" id="sendToon">send add</button>' +
+      '<button type="button" id="sendToonBatch" disabled>send as one batch</button>' +
+      '<span id="batchWhy" class="dim">only one transaction</span>' +
       '<span id="toonWhy" class="bad"></span></div>';
     const pickKey = { tm: 'math', tw: 'word', tf: 'face', tr: 'rgb' };
     const pickOwn = { tm: 'ownMath', tw: 'ownWord', tf: 'ownFace', tr: 'ownRgb' };
@@ -329,11 +378,13 @@
            $('#tf').value !== toonHint.face || $('#tr').value !== toonHint.rgb)) el.textContent = '';
         paintPartLinks();
         previewToon();
+        if (ev.isTrusted) rememberToon();
       });
     });
     $('#suggest').onclick = function () { fillToon(true); };
     $('#simToon').onclick = function () { sendToon(false); };
     $('#sendToon').onclick = function () { sendToon(true); };
+    seedToonQuery();
     paintToonWhy();
     if (state.arm && state.arm.kind === 'toon') {
       const el = $('#' + state.arm.slot);

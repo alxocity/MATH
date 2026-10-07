@@ -4,6 +4,7 @@
   const state = {
     wallet: '',
     batch: false,
+    batchKnown: false,
     busy: false,
     names: [],
     byLabel: {},
@@ -508,8 +509,12 @@
     const signed = ready && state.simHash && state.simHash === planHash(txs);
     document.getElementById('sign').disabled = !signed || state.busy;
     const batchBtn = document.getElementById('batch');
-    batchBtn.hidden = !state.batch;
-    batchBtn.disabled = !signed || state.busy;
+    const phase = !state.wallet ? 'none' : (!state.batchKnown ? 'checking' : (state.batch ? 'ready' : 'unsupported'));
+    const why = globalThis.RUN.bulkWhy(txs.length, phase, 'change');
+    const whyEl = document.getElementById('batchWhy');
+    if (whyEl) whyEl.textContent = why;
+    batchBtn.hidden = false;
+    batchBtn.disabled = !!why || !signed || state.busy;
     document.getElementById('read').disabled = !!state.busy;
     document.getElementById('connect').disabled = !!state.busy;
   }
@@ -912,12 +917,7 @@
       state.wallet = accounts && accounts[0] || '';
       whoEl.textContent = state.wallet ? brief(state.wallet) : '';
       whoEl.title = state.wallet || '';
-      try {
-        const caps = await ethereum.request({ method: 'wallet_getCapabilities', params: [state.wallet] });
-        state.batch = atomicReady(caps);
-      } catch (e) {
-        state.batch = false;
-      }
+      await probeBatch();
     } catch (e) {
       if (!rejected(e)) setStatus(clip(e.message || e));
       state.busy = false;
@@ -928,7 +928,33 @@
     await read();
   }
 
-  function applyPreset(preset) {
+  async function probeBatch() {
+    if (!state.wallet || !globalThis.ethereum) {
+      state.batch = false;
+      state.batchKnown = false;
+      return;
+    }
+    state.batchKnown = false;
+    try {
+      const caps = await ethereum.request({ method: 'wallet_getCapabilities', params: [state.wallet] });
+      state.batch = atomicReady(caps);
+    } catch (e) {
+      state.batch = false;
+    }
+    state.batchKnown = true;
+  }
+
+  function rememberPreset(name) {
+    if (!globalThis.QUERY) return;
+    const next = QUERY.href({
+      pathname: location.pathname,
+      search: location.search,
+      hash: location.hash,
+    }, { preset: name || '' });
+    if (next !== location.pathname + location.search + location.hash) history.replaceState(null, '', next);
+  }
+
+  function applyPreset(preset, name) {
     parentEl.value = preset.parent;
     state.names = preset.names.map(function (n) {
       return {
@@ -943,6 +969,7 @@
     state.parentChain = null;
     state.simHash = '';
     state.logsNote = '';
+    rememberPreset(name || '');
     render();
     read();
   }
@@ -964,7 +991,7 @@
       setStatus('loading preset');
       const res = await fetch(presetUrl(value));
       if (!res.ok) throw new Error('preset');
-      applyPreset(D.parsePreset(await res.json()));
+      applyPreset(D.parsePreset(await res.json()), value);
     } catch (e) {
       setStatus(clip(e.message || e));
     }
@@ -972,6 +999,7 @@
 
   function onEdit() {
     state.simHash = '';
+    rememberPreset('');
     refresh();
   }
 
@@ -985,6 +1013,7 @@
       capture();
       state.names.push(blankName());
       state.simHash = '';
+      rememberPreset('');
       render();
     });
     document.getElementById('newres').addEventListener('change', onEdit);
@@ -993,6 +1022,7 @@
       state.byLabel = {};
       state.simHash = '';
       state.logsNote = '';
+      rememberPreset('');
       refresh();
     });
     namesEl.addEventListener('input', onEdit);
@@ -1006,12 +1036,14 @@
         line.querySelector('[data-k]').readOnly = false;
         section.querySelector('.texts').appendChild(line);
         state.simHash = '';
+        rememberPreset('');
         refresh();
       }
       if (btn.dataset.act === 'remove') {
         section.remove();
         capture();
         state.simHash = '';
+        rememberPreset('');
         refresh();
       }
     });
@@ -1020,7 +1052,7 @@
       if (!file) return;
       const reader = new FileReader();
       reader.onload = function () {
-        try { applyPreset(D.parsePreset(String(reader.result))); }
+        try { applyPreset(D.parsePreset(String(reader.result)), ''); }
         catch (err) { setStatus(clip(err.message || err)); }
       };
       reader.readAsText(file);
@@ -1030,9 +1062,13 @@
         state.wallet = accounts && accounts[0] || '';
         whoEl.textContent = state.wallet ? brief(state.wallet) : '';
         whoEl.title = state.wallet || '';
+        state.batch = false;
+        state.batchKnown = false;
         state.simHash = '';
-        if (state.wallet) read();
-        else refresh();
+        probeBatch().then(function () {
+          if (state.wallet) read();
+          else refresh();
+        });
       });
     }
   }
