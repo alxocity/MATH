@@ -384,6 +384,80 @@ async function main() {
   assert.strictEqual(writes.length, beforeLocked);
   assert.strictEqual(loc.search, '?a=9');
 
+  global.MOLD = { say: function () {}, showIdeas: function () {}, setAccount: function () {}, mount: function () {} };
+  QUERY.writeStore(store, {
+    R: '5', G: '3', B: '2', a: '4', b: '6', n: '15', math: '7', word: '0', face: '2', rgb: '9',
+  });
+  loc.search = '';
+  loc.hash = '#rgb';
+  state.routeTarget = '7';
+  state.mintDirty = false;
+  state.routeDirty = false;
+  state.toonDirty = false;
+  state.planesDirty = false;
+  state.account = user;
+  get('simToon');
+  get('sendToon');
+  SITE.applyQuery();
+  assert.strictEqual(state.mintQuery.a, '');
+  assert.strictEqual(state.mintQuery.b, '');
+  assert.strictEqual(state.toonQuery.math, '');
+  assert.strictEqual(state.routeTarget, '7');
+  assert.strictEqual(state.planes.R, 5n);
+  const beforeGroups = writes.length;
+  SITE.show('mint', true);
+  assert.strictEqual(state.mintQuery.a, '4');
+  assert.strictEqual(state.mintQuery.b, '6');
+  assert.strictEqual(state.mintDirty, false);
+  SITE.show('route', true);
+  assert.strictEqual(state.routeTarget, '15');
+  assert.strictEqual(state.routeDirty, false);
+  SITE.show('toon', true);
+  assert.strictEqual(state.toonQuery.math, '7');
+  assert.strictEqual(state.toonQuery.word, '0');
+  assert.strictEqual(state.toonQuery.face, '2');
+  assert.strictEqual(state.toonQuery.rgb, '9');
+  assert.strictEqual(state.toonDirty, false);
+  assert.strictEqual(writes.length, beforeGroups);
+  assert.strictEqual(loc.search, '');
+
+  loc.search = '';
+  loc.hash = '#rgb';
+  state.mintDirty = false;
+  state.routeDirty = false;
+  state.toonDirty = false;
+  state.planesDirty = false;
+  SITE.applyQuery();
+  state.mintQuery = { a: '8', b: '9' };
+  state.mintDirty = true;
+  SITE.show('mint', true);
+  assert.strictEqual(state.mintQuery.a, '8');
+  assert.strictEqual(state.mintQuery.b, '9');
+  assert.strictEqual(state.mintDirty, true);
+  assert.strictEqual(loc.search, '');
+
+  QUERY.writeStore(store, { R: '1', G: '1', B: '1', math: '7', word: '0', face: '2', rgb: '9' });
+  state.planesDirty = false;
+  state.mintDirty = false;
+  state.routeDirty = false;
+  state.toonDirty = false;
+  get('tm').value = '4';
+  get('tw').value = '5';
+  get('tf').value = '6';
+  get('tr').value = '8';
+  const toonRaw = store.getItem(QUERY.URL_KEY);
+  fakeDoc.visibilityState = 'hidden';
+  seen.visibilitychange();
+  assert.strictEqual(store.getItem(QUERY.URL_KEY), toonRaw);
+  assert.strictEqual(QUERY.readStore(store).math, '7');
+  state.toonDirty = true;
+  seen.visibilitychange();
+  assert.strictEqual(QUERY.readStore(store).math, '4');
+  assert.strictEqual(QUERY.readStore(store).word, '5');
+  assert.strictEqual(QUERY.readStore(store).face, '6');
+  assert.strictEqual(QUERY.readStore(store).rgb, '8');
+  assert.strictEqual(QUERY.readStore(store).R, '1');
+
   console.log('persist.test.js ok');
 }
 
