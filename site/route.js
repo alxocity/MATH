@@ -231,14 +231,12 @@
     $('#target').addEventListener('input', rememberRoute);
     $('#target').addEventListener('change', rememberRoute);
     QUERY.attachCopy(view.querySelector('.copy-link'), function () {
-      return QUERY.shareHref({
+      return QUERY.shareTab({
         origin: location.origin,
         pathname: location.pathname,
-        search: location.search,
         hash: '#route',
-      }, { n: QUERY.digits($('#target').value.trim()) });
+      }, 'route', { n: QUERY.digits($('#target').value.trim()) });
     });
-    rememberRoute();
     paintRoute();
   }
 

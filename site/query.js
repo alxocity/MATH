@@ -14,6 +14,7 @@
 
   function presetName(raw) {
     const s = String(raw == null ? '' : raw).trim().toLowerCase();
+    if (s.length > 64) return '';
     return /^[a-z0-9-]+$/.test(s) ? s : '';
   }
 
@@ -79,33 +80,50 @@
     const src = q && typeof q === 'object' ? q : {};
     const raw = blank();
     KEYS.forEach(function (k) {
-      if (src[k] == null) return;
-      raw[k] = String(src[k]);
+      if (!Object.prototype.hasOwnProperty.call(src, k)) return;
+      const v = src[k];
+      if (typeof v !== 'string' && typeof v !== 'number' && typeof v !== 'bigint') return;
+      raw[k] = String(v);
     });
     return read(serialize(raw));
+  }
+
+  function urlLocked(bag) {
+    return KEYS.some(function (k) { return bag[k] !== ''; });
   }
 
   function groupHas(bag, keys) {
     return keys.some(function (k) { return bag[k] !== ''; });
   }
 
-  // Each group is separate. Params already in the URL win for that group.
-  // A group with none restores from storage. A shared link is left alone.
+  // Any known param locks the page to the URL. Bare and hash-only addresses
+  // still restore from storage. Nothing here is written back into the URL.
   function restoreBag(url, stored) {
     const fromUrl = asBag(url);
     const fromStore = asBag(stored);
     const values = blank();
     const sources = {};
+    const locked = urlLocked(fromUrl);
     Object.keys(GROUPS).forEach(function (name) {
       const keys = GROUPS[name];
-      const urlHas = groupHas(fromUrl, keys);
+      if (locked) {
+        const urlHas = groupHas(fromUrl, keys);
+        sources[name] = urlHas ? 'url' : '';
+        if (!urlHas) return;
+        keys.forEach(function (k) { values[k] = fromUrl[k]; });
+        return;
+      }
       const storeHas = groupHas(fromStore, keys);
-      const src = urlHas ? fromUrl : (storeHas ? fromStore : null);
-      sources[name] = urlHas ? 'url' : (storeHas ? 'store' : '');
-      if (!src) return;
-      keys.forEach(function (k) { values[k] = src[k]; });
+      sources[name] = storeHas ? 'store' : '';
+      if (!storeHas) return;
+      keys.forEach(function (k) { values[k] = fromStore[k]; });
     });
     return { values: values, sources: sources };
+  }
+
+  function ensBoot(search, stored) {
+    const restored = restoreBag(search, stored);
+    return { preset: restored.values.preset || '', writeUrl: false };
   }
 
   function storePatch(restored, names) {
@@ -131,6 +149,82 @@
   function shareHref(loc, patch) {
     const origin = loc && loc.origin ? String(loc.origin) : '';
     return origin + href(loc, patch);
+  }
+
+  function shareTab(loc, tab, patch) {
+    const keys = GROUPS[tab] || [];
+    const only = {};
+    keys.forEach(function (k) {
+      if (!patch || patch[k] == null) return;
+      only[k] = patch[k];
+    });
+    return shareHref({
+      origin: loc && loc.origin || '',
+      pathname: loc && loc.pathname || '',
+      search: '',
+      hash: loc && loc.hash || '',
+    }, only);
+  }
+
+  function fullPlanes(q) {
+    const p = planeBag(q);
+    return p.R !== '' && p.G !== '' && p.B !== '';
+  }
+
+  function planeFields(raw) {
+    const R = digits(raw && raw.R, true);
+    const G = digits(raw && raw.G, true);
+    const B = digits(raw && raw.B, true);
+    if (R === '' || G === '' || B === '') return null;
+    return { R: R, G: G, B: B };
+  }
+
+  function livePatch(view) {
+    const src = view || {};
+    const patch = {};
+    if (src.mintOpen) {
+      patch.a = digits(src.a);
+      patch.b = digits(src.b);
+    } else if (src.mint && (src.mint.a || src.mint.b)) {
+      patch.a = src.mint.a || '';
+      patch.b = src.mint.b || '';
+    }
+    if (src.routeOpen) patch.n = digits(src.n);
+    else if (src.routeTarget) patch.n = digits(src.routeTarget);
+    if (src.planesTouched) {
+      const planes = src.rgbInputs ? planeFields(src.rgbInputs) : planeFields(src.planes);
+      if (planes) {
+        patch.R = planes.R;
+        patch.G = planes.G;
+        patch.B = planes.B;
+      }
+    }
+    if (src.toonOpen) {
+      const t = src.toonInputs || {};
+      patch.math = digits(t.math);
+      patch.word = digits(t.word, true);
+      patch.face = digits(t.face, true);
+      patch.rgb = digits(t.rgb);
+    } else if (src.toon && (src.toon.math || src.toon.word || src.toon.face || src.toon.rgb)) {
+      patch.math = src.toon.math || '';
+      patch.word = src.toon.word || '';
+      patch.face = src.toon.face || '';
+      patch.rgb = src.toon.rgb || '';
+    }
+    return patch;
+  }
+
+  function hideWrite(kind, visibility) {
+    return kind === 'pagehide' || visibility === 'hidden';
+  }
+
+  function userCommit(reason, opt) {
+    const o = opt || {};
+    if (reason === 'paint' || reason === 'plan' || reason === 'edit' || reason === 'load') return true;
+    if (reason === 'fill') return !!o.advance;
+    if (reason === 'change') return !!o.fromUser;
+    if (reason === 'swatch') return !!o.touched;
+    return false;
   }
 
   function choosePlanes(url, saved) {
@@ -198,7 +292,7 @@
             catch (e2) { /* leave the field */ }
           }
         }
-        mark('copied');
+        mark('press copy');
       }
       const view = doc && doc.defaultView;
       const clip = view && view.navigator && view.navigator.clipboard;
@@ -224,10 +318,17 @@
     write: write,
     href: href,
     hasPlanes: hasPlanes,
+    fullPlanes: fullPlanes,
+    planeFields: planeFields,
+    livePatch: livePatch,
+    hideWrite: hideWrite,
+    userCommit: userCommit,
     restoreBag: restoreBag,
+    ensBoot: ensBoot,
     storePatch: storePatch,
     mergeStore: mergeStore,
     shareHref: shareHref,
+    shareTab: shareTab,
     choosePlanes: choosePlanes,
     readStore: readStore,
     writeStore: writeStore,

@@ -270,7 +270,7 @@
       previewToon();
     } finally {
       paintPartLinks();
-      rememberToon();
+      if (globalThis.QUERY && QUERY.userCommit('fill', { advance: advance })) rememberToon();
     }
   }
 
@@ -380,17 +380,16 @@
            $('#tf').value !== toonHint.face || $('#tr').value !== toonHint.rgb)) el.textContent = '';
         paintPartLinks();
         previewToon();
-        rememberToon();
+        if (ev.isTrusted && QUERY.userCommit('edit')) rememberToon();
       });
     });
     $('#suggest').onclick = function () { fillToon(true); };
     QUERY.attachCopy(view.querySelector('.copy-link'), function () {
-      return QUERY.shareHref({
+      return QUERY.shareTab({
         origin: location.origin,
         pathname: location.pathname,
-        search: location.search,
         hash: '#toon',
-      }, {
+      }, 'toon', {
         math: QUERY.digits($('#tm').value),
         word: QUERY.digits($('#tw').value, true),
         face: QUERY.digits($('#tf').value, true),

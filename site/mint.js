@@ -42,7 +42,6 @@
   }
 
   function paintMint(doSim, speak) {
-    if ($('#a') && $('#b')) rememberMint();
     const pair = readPair();
     const eq = $('#eq');
     const meta = $('#mintMeta');
@@ -176,6 +175,7 @@
     const aEl = $('#a');
     const bEl = $('#b');
     if (!aEl || !bEl) return;
+    try {
     shiftMint(aEl, bEl);
     const example = !state.account;
     const dropped = !!(mathHint && mathHint.example !== example);
@@ -228,6 +228,9 @@
     };
     paintHint(example && aFree && bFree, '');
     paintMint(false);
+    } finally {
+      if (globalThis.QUERY && QUERY.userCommit('fill', { advance: advance })) rememberMint();
+    }
   }
 
   function loadMint(spec) {
@@ -244,6 +247,7 @@
       example: !state.account,
     };
     paintMint(false);
+    if (globalThis.QUERY && QUERY.userCommit('load')) rememberMint();
   }
 
   function mintQueryValue(key) {
@@ -292,12 +296,11 @@
     $('#b').addEventListener('input', function (ev) { typed('ownB')(ev); rememberMint(); });
     $('#suggest').onclick = function () { fillMint(true); };
     QUERY.attachCopy(view.querySelector('.copy-link'), function () {
-      return QUERY.shareHref({
+      return QUERY.shareTab({
         origin: location.origin,
         pathname: location.pathname,
-        search: location.search,
         hash: '#mint',
-      }, {
+      }, 'mint', {
         a: QUERY.digits($('#a').value),
         b: QUERY.digits($('#b').value),
       });

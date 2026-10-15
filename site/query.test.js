@@ -63,17 +63,51 @@ const urlWins = QUERY.restoreBag('?R=9&G=1&B=4', saved);
 assert.strictEqual(urlWins.sources.rgb, 'url');
 assert.strictEqual(urlWins.values.R, '9');
 assert.strictEqual(urlWins.values.G, '1');
-assert.strictEqual(urlWins.sources.mint, 'store');
-assert.strictEqual(urlWins.values.a, '1');
-assert.deepStrictEqual(QUERY.storePatch(urlWins, ['mint', 'route', 'rgb', 'toon']), { a: '1', b: '2' });
+assert.strictEqual(urlWins.sources.mint, '');
+assert.strictEqual(urlWins.sources.ens, '');
+assert.strictEqual(urlWins.sources.route, '');
+assert.strictEqual(urlWins.sources.toon, '');
+assert.strictEqual(urlWins.values.a, '');
+assert.strictEqual(urlWins.values.preset, '');
+assert.deepStrictEqual(QUERY.storePatch(urlWins, ['mint', 'route', 'rgb', 'toon', 'ens']), {});
+const onlyMint = QUERY.restoreBag('?a=1', saved);
+assert.strictEqual(onlyMint.sources.mint, 'url');
+assert.strictEqual(onlyMint.values.a, '1');
+assert.strictEqual(onlyMint.values.b, '');
+assert.strictEqual(onlyMint.sources.rgb, '');
+assert.strictEqual(onlyMint.values.R, '');
+assert.deepStrictEqual(QUERY.storePatch(onlyMint, ['mint', 'route', 'rgb', 'toon', 'ens']), {});
+assert.strictEqual(QUERY.restoreBag('#rgb', saved).sources.rgb, 'store');
+assert.strictEqual(QUERY.restoreBag('#rgb', saved).values.a, '1');
+const zeroLock = QUERY.restoreBag('?R=0', { R: '5', G: '3', B: '2', a: '4', b: '6' });
+assert.strictEqual(zeroLock.sources.rgb, 'url');
+assert.strictEqual(zeroLock.values.R, '0');
+assert.strictEqual(zeroLock.values.G, '');
+assert.strictEqual(zeroLock.sources.mint, '');
+assert.strictEqual(QUERY.fullPlanes(zeroLock.values), false);
+assert.strictEqual(QUERY.fullPlanes({ R: '5', G: '0', B: '2' }), true);
 assert.deepStrictEqual(QUERY.storePatch(fromStore, ['ens']), { preset: 'math' });
+const bareEns = QUERY.ensBoot('', { preset: 'math', a: '4', b: '6' });
+assert.strictEqual(bareEns.preset, 'math');
+assert.strictEqual(bareEns.writeUrl, false);
+assert.strictEqual(QUERY.ensBoot('#rgb', { preset: 'math' }).preset, 'math');
+assert.strictEqual(QUERY.ensBoot('#rgb', { preset: 'math' }).writeUrl, false);
+const linked = QUERY.ensBoot('?R=5&G=3&B=2', { preset: 'math' });
+assert.strictEqual(linked.preset, '');
+assert.strictEqual(linked.writeUrl, false);
+assert.strictEqual(QUERY.ensBoot('?preset=math', { preset: 'other' }).preset, 'math');
+assert.strictEqual(QUERY.ensBoot('?preset=math', { preset: 'other' }).writeUrl, false);
 assert.strictEqual(
   QUERY.shareHref({ origin: 'https://math.alxo.city', pathname: '/', search: '', hash: '#rgb' }, drawn),
   'https://math.alxo.city/?R=5&G=3&B=2#rgb'
 );
 assert.strictEqual(
-  QUERY.shareHref({ origin: 'https://math.alxo.city', pathname: '/', search: '?a=1', hash: '#rgb' }, { R: '5', G: '0', B: '2' }),
-  'https://math.alxo.city/?a=1&R=5&G=0&B=2#rgb'
+  QUERY.shareTab(
+    { origin: 'https://math.alxo.city', pathname: '/', search: '?a=1&n=9', hash: '#rgb' },
+    'rgb',
+    { R: '5', G: '0', B: '2', a: '8' }
+  ),
+  'https://math.alxo.city/?R=5&G=0&B=2#rgb'
 );
 assert.strictEqual(
   QUERY.shareHref({ origin: 'https://math.alxo.city', pathname: '/ens/', search: '', hash: '' }, { preset: 'math' }),
@@ -116,5 +150,152 @@ assert.strictEqual(QUERY.digits('007'), '7');
 assert.strictEqual(QUERY.read('?a=00').a, '');
 assert.strictEqual(QUERY.read('?R=00').R, '0');
 assert.strictEqual(QUERY.read('?n=').n, '');
+
+const presetOk = 'a'.repeat(64);
+const presetBad = 'a'.repeat(65);
+assert.strictEqual(QUERY.presetName(presetOk), presetOk);
+assert.strictEqual(QUERY.presetName(presetBad), '');
+assert.strictEqual(QUERY.read('?preset=' + presetBad).preset, '');
+assert.strictEqual(QUERY.presetName('m'.repeat(200000)), '');
+
+const hostile = memory();
+hostile.setItem(QUERY.URL_KEY, '{"__proto__":{"admin":1},"R":"nope","G":"' + '1'.repeat(80) + '","B":["1"],"preset":"' + presetBad + '","a":"12","n":{"evil":true},"constructor":{"prototype":{"pwn":1}}}');
+const hostileBag = QUERY.restoreBag('', QUERY.readStore(hostile));
+assert.strictEqual(hostileBag.values.a, '12');
+assert.strictEqual(hostileBag.values.R, '');
+assert.strictEqual(hostileBag.values.G, '');
+assert.strictEqual(hostileBag.values.B, '');
+assert.strictEqual(hostileBag.values.preset, '');
+assert.strictEqual(hostileBag.values.n, '');
+assert.strictEqual(Object.prototype.admin, undefined);
+assert.strictEqual(Object.prototype.pwn, undefined);
+const listed = memory();
+listed.setItem(QUERY.URL_KEY, '[1,2,3]');
+assert.strictEqual(QUERY.restoreBag('', QUERY.readStore(listed)).sources.rgb, '');
+
+assert.strictEqual(QUERY.planeFields({ R: '5', G: 'nope', B: '2' }), null);
+assert.deepStrictEqual(QUERY.planeFields({ R: '5', G: '03', B: '0' }), { R: '5', G: '3', B: '0' });
+assert.deepStrictEqual(QUERY.livePatch({
+  planesTouched: true,
+  rgbInputs: { R: '5', G: 'nope', B: '2' },
+}), {});
+assert.deepStrictEqual(QUERY.livePatch({
+  planesTouched: true,
+  rgbInputs: { R: '5', G: '3', B: '2' },
+}), { R: '5', G: '3', B: '2' });
+assert.strictEqual(QUERY.hideWrite('pagehide', 'visible'), true);
+assert.strictEqual(QUERY.hideWrite('visibility', 'hidden'), true);
+assert.strictEqual(QUERY.hideWrite('visibility', 'visible'), false);
+const hideStore = memory();
+QUERY.writeStore(hideStore, { R: '1', G: '1', B: '1' });
+const hiddenPatch = QUERY.livePatch({ planesTouched: true, rgbInputs: { R: '9', G: '', B: '2' } });
+if (QUERY.hideWrite('pagehide', 'visible')) QUERY.writeStore(hideStore, hiddenPatch);
+assert.strictEqual(QUERY.readStore(hideStore).R, '1');
+const keptPatch = QUERY.livePatch({ planesTouched: true, rgbInputs: { R: '9', G: '3', B: '2' } });
+if (QUERY.hideWrite('pagehide', 'visible')) QUERY.writeStore(hideStore, keptPatch);
+assert.strictEqual(QUERY.readStore(hideStore).R, '9');
+assert.strictEqual(QUERY.readStore(hideStore).G, '3');
+
+assert.strictEqual(QUERY.userCommit('fill', { advance: false }), false);
+assert.strictEqual(QUERY.userCommit('fill', { advance: true }), true);
+assert.strictEqual(QUERY.userCommit('change', { fromUser: false }), false);
+assert.strictEqual(QUERY.userCommit('change', { fromUser: true }), true);
+assert.strictEqual(QUERY.userCommit('swatch', { touched: false }), false);
+assert.strictEqual(QUERY.userCommit('swatch', { touched: true }), true);
+assert.strictEqual(QUERY.userCommit('plan'), true);
+assert.strictEqual(QUERY.userCommit('paint'), true);
+assert.strictEqual(QUERY.userCommit('edit'), true);
+assert.strictEqual(QUERY.userCommit('load'), true);
+
+function copyHarness(opt) {
+  opt = opt || {};
+  const note = { textContent: '' };
+  let field = null;
+  let prompted = null;
+  const button = {
+    dataset: {},
+    ownerDocument: {
+      createElement: function () {
+        field = {
+          className: '',
+          type: '',
+          readOnly: false,
+          value: '',
+          selectionStart: 0,
+          selectionEnd: 0,
+          setAttribute: function () {},
+          focus: function () {},
+          select: function () {
+            if (opt.selectThrows) throw new Error('no select');
+            this.selectionStart = 0;
+            this.selectionEnd = String(this.value).length;
+          },
+        };
+        return field;
+      },
+      defaultView: {
+        navigator: opt.navigator == null ? {} : opt.navigator,
+        prompt: function (_label, url) { prompted = url; },
+      },
+    },
+    parentNode: {
+      querySelector: function (sel) {
+        if (sel === '.copy-note') return note;
+        if (sel === '.copy-field') return field;
+        return null;
+      },
+    },
+    insertAdjacentElement: function (_where, el) { field = el; },
+    addEventListener: function (_type, fn) { button.fire = fn; },
+  };
+  QUERY.attachCopy(button, function () { return opt.url || 'https://math.alxo.city/?R=5#rgb'; });
+  return {
+    fire: function () { button.fire(); },
+    note: note,
+    prompted: function () { return prompted; },
+    field: function () { return field; },
+  };
+}
+
+const missingClip = copyHarness({});
+missingClip.fire();
+assert.strictEqual(missingClip.note.textContent, 'press copy');
+assert.strictEqual(missingClip.field().value, 'https://math.alxo.city/?R=5#rgb');
+assert.strictEqual(missingClip.prompted(), null);
+
+const denied = copyHarness({
+  navigator: {
+    clipboard: {
+      writeText: function () {
+        return { then: function (_ok, bad) { bad(new Error('denied')); } };
+      },
+    },
+  },
+});
+denied.fire();
+assert.strictEqual(denied.note.textContent, 'press copy');
+
+let copied = '';
+const okClip = copyHarness({
+  navigator: {
+    clipboard: {
+      writeText: function (url) {
+        copied = url;
+        return { then: function (done) { done(); } };
+      },
+    },
+  },
+});
+okClip.fire();
+assert.strictEqual(okClip.note.textContent, 'copied');
+assert.strictEqual(copied, 'https://math.alxo.city/?R=5#rgb');
+
+const thrown = copyHarness({
+  navigator: { clipboard: { writeText: function () { throw new Error('no'); } } },
+  selectThrows: true,
+});
+thrown.fire();
+assert.strictEqual(thrown.note.textContent, 'press copy');
+assert.strictEqual(thrown.prompted(), 'https://math.alxo.city/?R=5#rgb');
 
 console.log('query.test.js ok');
