@@ -437,8 +437,8 @@
   }
 
   function finishWatch(hash, rec, onOk) {
-    state.txLock = null;
-    releaseRun(state.runGen);
+    globalThis.RUN.clearHashLock(state, hash);
+    syncNote(state.run);
     state.pendingHash = null;
     state.pendingOk = null;
     if (state.pendingSums) state.pendingSums.delete(hash);
@@ -469,7 +469,7 @@
 
   function noteSent(hash, onOk) {
     state.txLock = hash;
-    releaseRun(state.runGen);
+    syncNote(state.run);
     state.pendingHash = hash;
     state.pendingOk = onOk || null;
     savePending(hash);
@@ -491,8 +491,8 @@
       return;
     }
     if (state.txLock !== hash) return;
-    state.txLock = null;
-    releaseRun(state.runGen);
+    globalThis.RUN.clearHashLock(state, hash);
+    syncNote(state.run);
     state.pendingHash = hash;
     state.pendingOk = onOk || null;
     savePending(hash);

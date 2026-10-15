@@ -272,6 +272,33 @@ assert.strictEqual(live.runBusy, true);
 assert.strictEqual(live.txLock, 'run');
 assert.strictEqual(RUN.noteWhy(two, live), 'a send is already running');
 
+const busyRun = { runBusy: true, txLock: 'run', runGen: 9 };
+assert.strictEqual(RUN.clearHashLock(busyRun, '0xold'), false);
+assert.strictEqual(busyRun.txLock, 'run');
+assert.strictEqual(busyRun.runBusy, true);
+assert.strictEqual(RUN.noteWhy(two, {
+  account: '0xabc',
+  hasWallet: true,
+  batchKnown: true,
+  batchTimed: false,
+  batchCaps: readyCaps,
+  runBusy: busyRun.runBusy,
+  txLock: busyRun.txLock,
+}), 'a send is already running');
+const ended = { runBusy: false, txLock: '0xold' };
+assert.strictEqual(RUN.clearHashLock(ended, '0xold'), true);
+assert.strictEqual(ended.txLock, null);
+assert.strictEqual(ended.runBusy, false);
+assert.strictEqual(RUN.noteWhy(two, {
+  account: '0xabc',
+  hasWallet: true,
+  batchKnown: true,
+  batchTimed: false,
+  batchCaps: readyCaps,
+  runBusy: ended.runBusy,
+  txLock: ended.txLock,
+}), '');
+
 const counted = RUN.runCount([
   { status: 'confirmed' },
   { status: 'pending' },
