@@ -1142,7 +1142,7 @@
   let storedPreset = null;
   try { storedPreset = QUERY.readStore(localStorage); }
   catch (e) { storedPreset = null; }
-  const bootPreset = QUERY.ensBoot(location.search, storedPreset);
+  const bootPreset = QUERY.ensBoot(location.search, storedPreset, location.hash);
   presetName = bootPreset.preset;
   if (presetName) loadPresetParam(presetName, { keepUrl: !bootPreset.writeUrl });
 })();

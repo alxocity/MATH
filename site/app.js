@@ -199,7 +199,7 @@
     let stored = null;
     try { stored = QUERY.readStore(localStorage); }
     catch (e) { stored = null; }
-    const restored = QUERY.restoreBag(q, stored);
+    const restored = QUERY.restoreBag(q, stored, location.hash);
     const v = restored.values;
     state.mintQuery = { a: v.a, b: v.b };
     state.toonQuery = { math: v.math, word: v.word, face: v.face, rgb: v.rgb };
