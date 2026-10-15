@@ -198,6 +198,32 @@
     return (splitCalls(open, seeded)[0]) || [];
   }
 
+  // Wallet and run flags that syncNote turns into a batch reason.
+  function noteWhy(steps, src) {
+    const s = src || {};
+    let phase = 'none';
+    if (s.hasWallet && s.account) {
+      if (!s.batchKnown) phase = 'checking';
+      else if (s.batchTimed) phase = 'timeout';
+      else if (atomicReady(s.batchCaps)) phase = 'ready';
+      else phase = 'unsupported';
+    }
+    return batchWhy(steps, {
+      phase: phase,
+      busy: !!(s.runBusy || s.txLock),
+    });
+  }
+
+  // A finished run drops its busy flags, then refreshes the note. A tx-hash
+  // lock is left in place. A stale generation does nothing.
+  function releaseRun(gen, box, note) {
+    if (!box || gen !== box.runGen) return false;
+    box.runBusy = false;
+    if (box.txLock === 'run') box.txLock = null;
+    if (typeof note === 'function') note();
+    return true;
+  }
+
   // Route and RGB: why the batch button is disabled. Empty means it can be pressed.
   function batchWhy(steps, flags) {
     const f = flags || {};
@@ -287,6 +313,8 @@
     batchHold: batchHold,
     emptyPlan: emptyPlan,
     openBatch: openBatch,
+    noteWhy: noteWhy,
+    releaseRun: releaseRun,
     batchWhy: batchWhy,
     runCount: runCount,
     callsId: callsId,
