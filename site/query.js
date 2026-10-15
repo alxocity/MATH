@@ -6,8 +6,8 @@
     const s = String(raw == null ? '' : raw).trim();
     if (!/^\d+$/.test(s)) return '';
     if (s.length > 78) return '';
-    if (s === '0') return allowZero ? '0' : '';
     const n = s.replace(/^0+(?=\d)/, '');
+    if (n === '0') return allowZero ? '0' : '';
     if (BigInt(n) >= 2n ** 256n) return '';
     return n;
   }

@@ -517,8 +517,10 @@
       else phase = state.batch ? 'ready' : 'unsupported';
     }
     const why = globalThis.RUN.batchHold(globalThis.RUN.bulkWhy(txs.length, phase, 'change'), {
-      controls: controls,
+      busy: state.busy,
+      controls: state.parentChain ? controls : undefined,
       signed: signed,
+      wallet: !!state.wallet,
     });
     const whyEl = document.getElementById('batchWhy');
     if (whyEl) whyEl.textContent = why;

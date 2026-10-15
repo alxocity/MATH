@@ -1,4 +1,5 @@
 const assert = require('assert');
+const fs = require('fs');
 const RUN = require('./run');
 
 const math = [
@@ -212,6 +213,40 @@ assert.strictEqual(RUN.batchHold('', { controls: true, signed: false }), 'simula
 assert.strictEqual(RUN.batchHold('', { controls: true, signed: '' }), 'simulate first');
 assert.strictEqual(RUN.batchHold('', { controls: true, signed: true }), '');
 assert.strictEqual(RUN.batchHold("there's only one change", { controls: false, signed: false }), "there's only one change");
+assert.strictEqual(RUN.batchHold('', { busy: true, controls: false, signed: false }), 'working…');
+assert.strictEqual(RUN.batchHold('', { busy: true, controls: undefined, wallet: true, signed: false }), 'working…');
+assert.strictEqual(RUN.batchHold('', { controls: undefined, wallet: true, signed: false }), 'read the parent first');
+assert.strictEqual(RUN.batchHold('', { controls: undefined, wallet: false, signed: true }), '');
+assert.strictEqual(RUN.batchHold('nothing to send', { busy: true, wallet: true }), 'nothing to send');
+
+const two = [
+  { status: 'pending', result: 2n, uses: [], tx: tx },
+  { status: 'pending', result: 3n, uses: [], tx: tx },
+];
+assert.strictEqual(RUN.batchWhy(two, { phase: 'none' }), 'connect a wallet to batch');
+assert.strictEqual(RUN.batchWhy(two, { phase: 'checking' }), 'checking whether this wallet can batch');
+assert.strictEqual(RUN.batchWhy(two, { phase: 'ready', busy: true }), 'a send is already running');
+assert.strictEqual(RUN.batchWhy(two.concat([
+  { status: RUN.UNKNOWN, result: 1n, tx: tx },
+]), { phase: 'ready' }), 'check your wallet');
+assert.strictEqual(RUN.batchWhy(two, { phase: 'none', busy: true }), 'connect a wallet to batch');
+
+let said = '';
+assert.strictEqual(RUN.emptyPlan([], function (why) { said = why; }), true);
+assert.strictEqual(said, 'plan routes first');
+said = '';
+assert.strictEqual(RUN.emptyPlan(two, function (why) { said = why; }), false);
+assert.strictEqual(said, '');
+
+const routeSrc = fs.readFileSync(__dirname + '/route.js', 'utf8');
+const rgbSrc = fs.readFileSync(__dirname + '/rgb.js', 'utf8');
+const toonSrc = fs.readFileSync(__dirname + '/toon.js', 'utf8');
+assert.ok(routeSrc.indexOf('function sendRoute') !== -1);
+assert.ok(routeSrc.indexOf('RUN.emptyPlan(runs, S.showBatchWhy)') !== -1);
+assert.ok(rgbSrc.indexOf('function sendAllQueue') !== -1);
+assert.ok(rgbSrc.indexOf('RUN.emptyPlan(runs, S.showBatchWhy)') !== -1);
+assert.ok(toonSrc.indexOf('id="toonBatchWhy"') !== -1);
+assert.strictEqual(toonSrc.indexOf('id="batchWhy"'), -1);
 
 const counted = RUN.runCount([
   { status: 'confirmed' },

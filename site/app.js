@@ -592,7 +592,10 @@
     if (!btn) return;
     const note = $('#batchNote');
     const whyEl = $('#batchWhy');
-    const why = globalThis.RUN.batchWhy(steps, { phase: batchPhase() });
+    const why = globalThis.RUN.batchWhy(steps, {
+      phase: batchPhase(),
+      busy: state.runBusy || !!state.txLock,
+    });
     if (note) note.hidden = !!why;
     if (whyEl) whyEl.textContent = why;
     btn.disabled = !!why;
@@ -1199,7 +1202,7 @@
         work = (globalThis.RUN.splitCalls(open, seeded)[0]) || [];
       }
       if (!work.length) return;
-      if ((opt && opt.batch) || work.length > 1) await sendBatch(work, gen);
+      if (work.length > 1) await sendBatch(work, gen);
       else await sendSeq(work, gen);
     } catch (e) {
       const msg = globalThis.RUN.rejected(e) ? 'rejected' : clip(e && e.message ? e.message : e);
@@ -1327,7 +1330,10 @@
     if (view && SITE.token) SITE.token(view);
     paintPending();
     const next = '#' + tok.kind + '/' + id;
-    if (location.hash !== next) history.replaceState(null, '', next);
+    if (location.hash !== next) {
+      try { history.replaceState(null, '', next); }
+      catch (e) {}
+    }
   }
 
   function onHash() {
@@ -1335,7 +1341,10 @@
     if (tok) {
       const next = '#' + tok.kind + '/' + tok.id.toString();
       if (state.tab === 'token' && state.token && state.token.kind === tok.kind && state.token.id === tok.id.toString()) {
-        if (location.hash !== next) history.replaceState(null, '', next);
+        if (location.hash !== next) {
+          try { history.replaceState(null, '', next); }
+          catch (e) {}
+        }
         return;
       }
       openToken(tok);
@@ -1345,7 +1354,10 @@
     let name = raw || 'rgb';
     if (TABS.indexOf(name) === -1) name = 'browse';
     if (state.tab === name && !state.token) {
-      if (location.hash !== '#' + name) history.replaceState(null, '', '#' + name);
+      if (location.hash !== '#' + name) {
+        try { history.replaceState(null, '', '#' + name); }
+        catch (e) {}
+      }
       return;
     }
     show(name);
@@ -1453,6 +1465,7 @@
     noteAccount();
     MOLD.say('connect', { addr: ENS.label(state.account), mine: mineCount(), math: state.math.length });
     loadWallet();
+    probeBatch();
     paintAccount(['toon', 'mine']);
   }
 

@@ -32,5 +32,14 @@ assert.strictEqual(QUERY.digits('1' + maxUint), '');
 assert.strictEqual(QUERY.read('?n=' + maxUint).n, maxUint);
 assert.strictEqual(QUERY.read('?a=' + (2n ** 256n).toString()).a, '');
 assert.strictEqual(QUERY.read('?b=' + ('1'.repeat(79))).b, '');
+assert.strictEqual(QUERY.digits(''), '');
+assert.strictEqual(QUERY.digits(null), '');
+assert.strictEqual(QUERY.digits('00'), '');
+assert.strictEqual(QUERY.digits('00', true), '0');
+assert.strictEqual(QUERY.digits('0'), '');
+assert.strictEqual(QUERY.digits('007'), '7');
+assert.strictEqual(QUERY.read('?a=00').a, '');
+assert.strictEqual(QUERY.read('?R=00').R, '0');
+assert.strictEqual(QUERY.read('?n=').n, '');
 
 console.log('query.test.js ok');
