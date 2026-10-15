@@ -73,6 +73,9 @@
     pendingSums: new Map(),
     planesTouched: false,
     planesDirty: false,
+    mintDirty: false,
+    toonDirty: false,
+    routeDirty: false,
     run: null,
     runBusy: false,
     runGen: 0,
@@ -145,10 +148,12 @@
       a: $('#a') && $('#a').value,
       b: $('#b') && $('#b').value,
       mint: state.mintQuery,
+      mintDirty: state.mintDirty,
       routeOpen: !!$('#target'),
       n: $('#target') && $('#target').value.trim(),
       routeTarget: state.routeTarget,
-      planesTouched: state.planesTouched,
+      routeDirty: state.routeDirty,
+      planesDirty: state.planesDirty,
       rgbInputs: (r && g && bch) ? { R: r.value, G: g.value, B: bch.value } : null,
       planes: state.planes ? {
         R: state.planes.R.toString(),
@@ -163,13 +168,17 @@
         rgb: $('#tr').value,
       } : null,
       toon: state.toonQuery,
+      toonDirty: state.toonDirty,
     });
   }
 
   function persistLive() {
     if (!globalThis.QUERY) return;
-    try { QUERY.writeStore(localStorage, livePatch()); }
-    catch (e) { /* private mode */ }
+    try {
+      const patch = livePatch();
+      if (!Object.keys(patch).length) return;
+      QUERY.writeStore(localStorage, patch);
+    } catch (e) { /* private mode */ }
   }
 
   const INTRO_KEY = 'math.intro.v1';
@@ -204,6 +213,11 @@
     state.mintQuery = { a: v.a, b: v.b };
     state.toonQuery = { math: v.math, word: v.word, face: v.face, rgb: v.rgb };
     if (v.n) state.routeTarget = v.n;
+    state.mintDirty = false;
+    state.toonDirty = false;
+    state.routeDirty = false;
+    state.planesDirty = false;
+    state.planesTouched = false;
     if (QUERY.hasPlanes(v)) {
       try {
         const R = v.R !== '' ? BigInt(v.R) : 0n;
@@ -1818,6 +1832,17 @@
     }
   }
 
+  function bindPersist(target, doc) {
+    const win = target || window;
+    const page = doc || document;
+    win.addEventListener('pagehide', function () {
+      if (globalThis.QUERY && QUERY.hideWrite('pagehide', page.visibilityState)) persistLive();
+    });
+    page.addEventListener('visibilitychange', function () {
+      if (globalThis.QUERY && QUERY.hideWrite('visibility', page.visibilityState)) persistLive();
+    });
+  }
+
   function boot() {
     let tile = 'light';
     try {
@@ -1834,12 +1859,7 @@
     bindTips();
     paintIntro();
     applyQuery();
-    window.addEventListener('pagehide', function () {
-      if (QUERY.hideWrite('pagehide', document.visibilityState)) persistLive();
-    });
-    document.addEventListener('visibilitychange', function () {
-      if (QUERY.hideWrite('visibility', document.visibilityState)) persistLive();
-    });
+    bindPersist();
     document.querySelectorAll('nav button').forEach(function (b) {
       b.onclick = function () { show(b.dataset.tab); };
     });
@@ -1947,5 +1967,8 @@
   }
 
   SITE.applyHeart = applyHeart;
+  SITE.applyQuery = applyQuery;
+  SITE.persistLive = persistLive;
+  SITE.bindPersist = bindPersist;
   SITE.boot = boot;
 })();
