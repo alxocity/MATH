@@ -996,8 +996,9 @@
     if (next === cur) return;
     try { history.replaceState(null, '', next); }
     catch (e) { return; }
-    try { QUERY.writeMark(sessionStorage, next); }
-    catch (e) { /* private mode */ }
+    try {
+      if (location.search === QUERY.hrefSearch(next)) QUERY.writeMark(sessionStorage, next);
+    } catch (e) { /* private mode, or replaceState left the address bar unchanged */ }
   }
 
   function persistPreset() {

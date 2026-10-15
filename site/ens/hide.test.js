@@ -152,12 +152,25 @@ assert.strictEqual(QUERY.readStore(store).R, '1');
 global.sessionStorage = memory();
 global.sessionStorage.setItem(QUERY.MARK_KEY, '?preset=math');
 const written = [];
-global.history.replaceState = function (_s, _t, next) { written.push(next); };
+global.history.replaceState = function (_s, _t, next) {
+  written.push(next);
+  const s = String(next);
+  const q = s.indexOf('?');
+  const h = s.indexOf('#');
+  loc.search = q === -1 ? '' : (h > q ? s.slice(q, h) : s.slice(q));
+  loc.hash = h === -1 ? '' : s.slice(h);
+};
 doc.getElementById('add').dispatchEvent({ type: 'click' });
 assert.strictEqual(written.length, 1);
+assert.strictEqual(loc.search, '');
 assert.strictEqual(global.sessionStorage.getItem(QUERY.MARK_KEY), null);
-global.history.replaceState = function () { throw new Error('no history'); };
+loc.search = '?preset=math';
 global.sessionStorage.setItem(QUERY.MARK_KEY, '?preset=math');
+global.history.replaceState = function () {};
+doc.getElementById('add').dispatchEvent({ type: 'click' });
+assert.strictEqual(loc.search, '?preset=math');
+assert.strictEqual(global.sessionStorage.getItem(QUERY.MARK_KEY), '?preset=math');
+global.history.replaceState = function () { throw new Error('no history'); };
 assert.doesNotThrow(function () { doc.getElementById('add').dispatchEvent({ type: 'click' }); });
 assert.strictEqual(global.sessionStorage.getItem(QUERY.MARK_KEY), '?preset=math');
 

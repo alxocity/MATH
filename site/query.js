@@ -386,6 +386,7 @@
     readMark: readMark,
     writeMark: writeMark,
     markedOpen: markedOpen,
+    hrefSearch: searchPart,
     digits: digits,
     presetName: presetName,
     read: read,
