@@ -103,6 +103,9 @@ assert.deepStrictEqual(QUERY.storePatch(onlyMint, ['mint', 'route', 'rgb', 'toon
 assert.strictEqual(QUERY.restoreBag('', saved, '#rgb').sources.rgb, 'store');
 assert.strictEqual(QUERY.restoreBag('', saved, '#rgb').values.a, '');
 assert.strictEqual(QUERY.restoreBag('', saved, '#rgb').writeUrl, false);
+assert.strictEqual(QUERY.restoreBag('', saved, '#mint').locked, false);
+assert.strictEqual(QUERY.restoreBag('?a=1', saved, '#rgb').locked, true);
+assert.strictEqual(QUERY.restoreBag('?R=0', saved).locked, true);
 const zeroLock = QUERY.restoreBag('?R=0', { R: '5', G: '3', B: '2', a: '4', b: '6' });
 assert.strictEqual(zeroLock.sources.rgb, 'url');
 assert.strictEqual(zeroLock.values.R, '0');
