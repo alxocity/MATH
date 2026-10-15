@@ -1002,7 +1002,7 @@
     catch (e) { /* private mode */ }
   }
 
-  function applyPreset(preset, name) {
+  function applyPreset(preset, name, opt) {
     parentEl.value = preset.parent;
     state.names = preset.names.map(function (n) {
       return {
@@ -1017,7 +1017,8 @@
     state.parentChain = null;
     state.simHash = '';
     state.logsNote = '';
-    rememberPreset(name || '');
+    if (opt && opt.keepUrl) presetName = QUERY.presetName(name || '');
+    else rememberPreset(name || '');
     render();
     read();
   }
@@ -1034,12 +1035,12 @@
     return new URL(D.presetPath(value), pageDir()).href;
   }
 
-  async function loadPresetParam(value) {
+  async function loadPresetParam(value, opt) {
     try {
       setStatus('loading preset');
       const res = await fetch(presetUrl(value));
       if (!res.ok) throw new Error('preset');
-      applyPreset(D.parsePreset(await res.json()), value);
+      applyPreset(D.parsePreset(await res.json()), value, opt);
     } catch (e) {
       setStatus(clip(e.message || e));
     }
@@ -1124,25 +1125,24 @@
 
   bind();
   QUERY.attachCopy(document.getElementById('copyLink'), function () {
-    return QUERY.shareHref({
+    return QUERY.shareTab({
       origin: location.origin,
       pathname: location.pathname,
-      search: location.search,
       hash: location.hash,
-    }, { preset: presetName });
+    }, 'ens', { preset: presetName });
   });
-  window.addEventListener('pagehide', persistPreset);
+  window.addEventListener('pagehide', function () {
+    if (QUERY.hideWrite('pagehide', document.visibilityState)) persistPreset();
+  });
   document.addEventListener('visibilitychange', function () {
-    if (document.visibilityState === 'hidden') persistPreset();
+    if (QUERY.hideWrite('visibility', document.visibilityState)) persistPreset();
   });
   state.names = [blankName()];
   render();
-  const opened = QUERY.read(location.search);
-  let stored = null;
-  try { stored = QUERY.readStore(localStorage); }
-  catch (e) { stored = null; }
-  const restored = QUERY.restoreBag(opened, stored);
-  presetName = restored.values.preset || '';
-  if (restored.sources.ens === 'store' && presetName) rememberPreset(presetName);
-  if (presetName) loadPresetParam(presetName);
+  let storedPreset = null;
+  try { storedPreset = QUERY.readStore(localStorage); }
+  catch (e) { storedPreset = null; }
+  const bootPreset = QUERY.ensBoot(location.search, storedPreset);
+  presetName = bootPreset.preset;
+  if (presetName) loadPresetParam(presetName, { keepUrl: !bootPreset.writeUrl });
 })();

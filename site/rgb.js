@@ -220,7 +220,7 @@
   }
 
   function rememberPlanes() {
-    if (!state.planesTouched || !state.planes || !globalThis.QUERY) return;
+    if (!state.planesDirty || !state.planes || !globalThis.QUERY) return;
     S.rememberQuery({
       R: state.planes.R.toString(),
       G: state.planes.G.toString(),
@@ -228,10 +228,22 @@
     });
   }
 
+  let rgbFromUser = true;
+
+  function signalPlanes(el, fromUser) {
+    const prev = rgbFromUser;
+    rgbFromUser = !!fromUser;
+    try { el.dispatchEvent(new Event('change')); }
+    finally { rgbFromUser = prev; }
+  }
+
   function planRgb() {
     syncPlanes();
-    state.planesTouched = true;
-    rememberPlanes();
+    if (QUERY.userCommit('plan')) {
+      state.planesTouched = true;
+      state.planesDirty = true;
+      rememberPlanes();
+    }
     const issues = planeIssues(state.planes);
     const meta = $('#rgbMeta');
     if (issues.length) {
@@ -363,7 +375,7 @@
       if (rgbHint.ownB && bFree) bEl.value = String(rgbHint.b);
       const pure = rEl.value === String(rgbHint.r) && gEl.value === String(rgbHint.g) && bEl.value === String(rgbHint.b);
       paintRgbHint(example && pure, '');
-      rEl.dispatchEvent(new Event('change'));
+      signalPlanes(rEl, advance);
       return;
     }
     const ids = [];
@@ -416,7 +428,7 @@
       example: example,
     };
     paintRgbHint(example && rFree && gFree && bFree, '');
-    rEl.dispatchEvent(new Event('change'));
+    signalPlanes(rEl, advance);
   }
 
   function swatchHtml() {
@@ -471,7 +483,10 @@
       const i = Number(btn.dataset.i);
       const next = P.paintCell(state.grid, i, ch);
       if (next === state.grid) return false;
-      state.planesTouched = true;
+      if (QUERY.userCommit('paint')) {
+        state.planesTouched = true;
+        state.planesDirty = true;
+      }
       state.grid = next;
       btn.className = ch;
       return true;
@@ -523,9 +538,7 @@
           el.classList.toggle('on', on);
           el.setAttribute('aria-pressed', on ? 'true' : 'false');
         });
-        if (!state.planes) syncPlanes();
-        state.planesTouched = true;
-        rememberPlanes();
+        if (QUERY.userCommit('swatch', { touched: state.planesTouched })) rememberPlanes();
       };
     });
     $('#heart').onclick = function () { S.applyHeart(false); };
@@ -544,6 +557,7 @@
     $('#apply').onclick = function () {
       if (!state.sample) return;
       state.planesTouched = true;
+      state.planesDirty = true;
       const px = new Float32Array(state.sample);
       const thr = [0.5, 0.5, 0.5];
       const dither = $('#dither').checked;
@@ -575,14 +589,18 @@
     };
     ['pR', 'pG', 'pB'].forEach(function (id) {
       $('#' + id).addEventListener('input', function () {
-        state.planesTouched = true;
+        if (QUERY.userCommit('edit')) state.planesTouched = true;
       });
       $('#' + id).addEventListener('change', function () {
         try {
           const R = BigInt($('#pR').value.trim());
           const G = BigInt($('#pG').value.trim());
           const B = BigInt($('#pB').value.trim());
-          state.planesTouched = true;
+          const commit = QUERY.userCommit('change', { fromUser: rgbFromUser });
+          if (commit) {
+            state.planesTouched = true;
+            state.planesDirty = true;
+          }
           state.grid = P.planesToRows(R, G, B);
           state.planes = { R: R, G: G, B: B };
           $('#cells').innerHTML = S.cellsHtml(state.grid);
@@ -596,7 +614,7 @@
           }
           const rule = issues.find(function (s) { return RULES.mold(s); });
           S.hit(rule || '');
-          rememberPlanes();
+          if (commit) rememberPlanes();
         } catch (e) { /* keep grid */ }
       });
     });
@@ -617,12 +635,11 @@
         G: state.planes ? state.planes.G.toString() : '0',
         B: state.planes ? state.planes.B.toString() : '0',
       };
-      return QUERY.shareHref({
+      return QUERY.shareTab({
         origin: location.origin,
         pathname: location.pathname,
-        search: location.search,
         hash: '#rgb',
-      }, patch);
+      }, 'rgb', patch);
     });
     const issues = planeIssues(state.planes);
     $('#rgbMeta').innerHTML = issuesHtml(issues);

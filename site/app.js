@@ -72,6 +72,7 @@
     pendingOk: null,
     pendingSums: new Map(),
     planesTouched: false,
+    planesDirty: false,
     run: null,
     runBusy: false,
     runGen: 0,
@@ -135,44 +136,34 @@
   }
 
   function livePatch() {
-    const patch = {};
-    const a = $('#a');
-    const b = $('#b');
-    if (a && b) {
-      patch.a = QUERY.digits(a.value);
-      patch.b = QUERY.digits(b.value);
-    } else if (state.mintQuery && (state.mintQuery.a || state.mintQuery.b)) {
-      patch.a = state.mintQuery.a || '';
-      patch.b = state.mintQuery.b || '';
-    }
-    const target = $('#target');
-    if (target) patch.n = QUERY.digits(target.value.trim());
-    else if (state.routeTarget) patch.n = QUERY.digits(state.routeTarget);
     const r = $('#pR');
     const g = $('#pG');
     const bch = $('#pB');
-    if (r && g && bch && state.planesTouched) {
-      patch.R = QUERY.digits(r.value, true);
-      patch.G = QUERY.digits(g.value, true);
-      patch.B = QUERY.digits(bch.value, true);
-    } else if (state.planesTouched && state.planes) {
-      patch.R = state.planes.R.toString();
-      patch.G = state.planes.G.toString();
-      patch.B = state.planes.B.toString();
-    }
     const tm = $('#tm');
-    if (tm && $('#tw') && $('#tf') && $('#tr')) {
-      patch.math = QUERY.digits(tm.value);
-      patch.word = QUERY.digits($('#tw').value, true);
-      patch.face = QUERY.digits($('#tf').value, true);
-      patch.rgb = QUERY.digits($('#tr').value);
-    } else if (state.toonQuery && (state.toonQuery.math || state.toonQuery.word || state.toonQuery.face || state.toonQuery.rgb)) {
-      patch.math = state.toonQuery.math || '';
-      patch.word = state.toonQuery.word || '';
-      patch.face = state.toonQuery.face || '';
-      patch.rgb = state.toonQuery.rgb || '';
-    }
-    return patch;
+    return QUERY.livePatch({
+      mintOpen: !!($('#a') && $('#b')),
+      a: $('#a') && $('#a').value,
+      b: $('#b') && $('#b').value,
+      mint: state.mintQuery,
+      routeOpen: !!$('#target'),
+      n: $('#target') && $('#target').value.trim(),
+      routeTarget: state.routeTarget,
+      planesTouched: state.planesTouched,
+      rgbInputs: (r && g && bch) ? { R: r.value, G: g.value, B: bch.value } : null,
+      planes: state.planes ? {
+        R: state.planes.R.toString(),
+        G: state.planes.G.toString(),
+        B: state.planes.B.toString(),
+      } : null,
+      toonOpen: !!(tm && $('#tw') && $('#tf') && $('#tr')),
+      toonInputs: tm ? {
+        math: tm.value,
+        word: $('#tw').value,
+        face: $('#tf').value,
+        rgb: $('#tr').value,
+      } : null,
+      toon: state.toonQuery,
+    });
   }
 
   function persistLive() {
@@ -220,11 +211,10 @@
         const B = v.B !== '' ? BigInt(v.B) : 0n;
         state.planes = { R: R, G: G, B: B };
         state.grid = P.planesToRows(R, G, B);
-        state.planesTouched = true;
+        state.planesTouched = QUERY.fullPlanes(v);
+        state.planesDirty = false;
       } catch (e) { /* leave the grid */ }
     }
-    const patch = QUERY.storePatch(restored, ['mint', 'route', 'rgb', 'toon']);
-    if (Object.keys(patch).length) rememberQuery(patch);
   }
 
   function bindTips() {
@@ -1656,6 +1646,7 @@
       return;
     }
     state.planesTouched = true;
+    state.planesDirty = true;
     state.grid = state.heartPick.rows.slice();
     show('rgb', true);
     const p = state.heartPick;
@@ -1809,6 +1800,7 @@
     if (load.tab === 'rgb') {
       show('rgb', true);
       state.planesTouched = true;
+      state.planesDirty = true;
       const r = $('#pR');
       const g = $('#pG');
       const b = $('#pB');
@@ -1842,9 +1834,11 @@
     bindTips();
     paintIntro();
     applyQuery();
-    window.addEventListener('pagehide', persistLive);
+    window.addEventListener('pagehide', function () {
+      if (QUERY.hideWrite('pagehide', document.visibilityState)) persistLive();
+    });
     document.addEventListener('visibilitychange', function () {
-      if (document.visibilityState === 'hidden') persistLive();
+      if (QUERY.hideWrite('visibility', document.visibilityState)) persistLive();
     });
     document.querySelectorAll('nav button').forEach(function (b) {
       b.onclick = function () { show(b.dataset.tab); };
