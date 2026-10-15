@@ -357,7 +357,7 @@
       '<div class="preview" id="preview">TOON.add has no fee. you must own all four. grey picks say why.' + S.mark('ⓘ', S.TIPS.fees) + '</div>' +
       '<div class="row"><button type="button" id="simToon">simulate</button>' + S.mark('ⓘ', S.TIPS.simulate) + '<button type="button" id="sendToon">send add</button>' +
       '<button type="button" id="sendToonBatch" disabled>send as one batch</button>' +
-      '<span id="batchWhy" class="dim">only one transaction</span>' +
+      '<span id="toonBatchWhy" class="dim">only one transaction</span>' +
       '<span id="toonWhy" class="bad"></span></div>';
     const pickKey = { tm: 'math', tw: 'word', tf: 'face', tr: 'rgb' };
     const pickOwn = { tm: 'ownMath', tw: 'ownWord', tf: 'ownFace', tr: 'ownRgb' };

@@ -62,6 +62,7 @@
     routeTarget: '',
     batchKnown: false,
     batchCaps: null,
+    batchTimed: false,
     mintQuery: null,
     toonQuery: null,
     routeMode: 'cheapest',
@@ -121,7 +122,9 @@
       search: location.search,
       hash: location.hash,
     }, patch);
-    if (next !== location.pathname + location.search + location.hash) history.replaceState(null, '', next);
+    if (next === location.pathname + location.search + location.hash) return;
+    try { history.replaceState(null, '', next); }
+    catch (e) {}
   }
 
   const INTRO_KEY = 'math.intro.v1';
@@ -579,56 +582,60 @@
   function batchPhase() {
     if (!globalThis.ethereum || !state.account) return 'none';
     if (!state.batchKnown) return 'checking';
+    if (state.batchTimed) return 'timeout';
     if (globalThis.RUN.atomicReady(state.batchCaps)) return 'ready';
     return 'unsupported';
   }
 
-  function openBatch(steps) {
-    const list = steps || [];
-    const seeded = list.filter(function (s) {
-      return (s.status === 'confirmed' || s.status === 'submitted' || globalThis.RUN.isUnknown(s.status)) && s.result != null;
-    }).map(function (s) { return String(s.result); });
-    const open = list.filter(function (s) {
-      return s.status !== 'confirmed' && s.status !== 'submitted' && !globalThis.RUN.isUnknown(s.status);
-    });
-    return (globalThis.RUN.splitCalls(open, seeded)[0]) || [];
-  }
-
   function syncNote(steps) {
-    const note = $('#batchNote');
     const btn = $('#sendBatch');
+    if (!btn) return;
+    const note = $('#batchNote');
     const whyEl = $('#batchWhy');
-    if (!note && !btn && !whyEl) return;
-    const first = openBatch(steps);
-    const why = globalThis.RUN.bulkWhy(first.length, batchPhase(), 'transaction');
+    const why = globalThis.RUN.batchWhy(steps, { phase: batchPhase() });
     if (note) note.hidden = !!why;
     if (whyEl) whyEl.textContent = why;
-    if (btn) {
-      const flying = (steps || []).some(function (s) {
-        return s.status === 'submitted' || s.status === 'signing' || globalThis.RUN.isUnknown(s.status);
-      });
-      const blocked = !!(first[0] && first[0].blocked);
-      btn.disabled = !!why || flying || blocked;
-    }
+    btn.disabled = !!why;
+  }
+
+  function showBatchWhy(why) {
+    const btn = $('#sendBatch');
+    const whyEl = $('#batchWhy');
+    if (btn && whyEl) whyEl.textContent = why;
+    if (btn) btn.disabled = true;
+    const note = $('#batchNote');
+    if (note) note.hidden = true;
+    const box = $('#preview');
+    if (box) box.textContent = why;
+    state.preview = why;
   }
 
   async function probeBatch() {
     if (!globalThis.ethereum || !state.account) {
       state.batchCaps = null;
       state.batchKnown = false;
+      state.batchTimed = false;
       syncNote(state.run);
       return;
     }
+    const who = state.account;
     state.batchKnown = false;
+    state.batchTimed = false;
     syncNote(state.run);
+    let caps = null;
+    let timed = false;
     try {
-      state.batchCaps = await withTimeout(ethereum.request({
+      caps = await withTimeout(ethereum.request({
         method: 'wallet_getCapabilities',
-        params: [state.account],
+        params: [who],
       }), 8000);
     } catch (e) {
-      state.batchCaps = null;
+      caps = null;
+      timed = !!(e && e.message === 'timeout');
     }
+    if (who !== state.account) return;
+    state.batchCaps = caps;
+    state.batchTimed = timed;
     state.batchKnown = true;
     syncNote(state.run);
   }
@@ -1289,7 +1296,8 @@
     const nextHash = '#' + tab;
     if (location.hash !== nextHash) {
       if (!location.hash || location.hash === '#') {
-        history.replaceState(null, '', location.pathname + location.search + nextHash);
+        try { history.replaceState(null, '', location.pathname + location.search + nextHash); }
+        catch (e) {}
       } else location.hash = tab;
     }
     if (same && focusId) {
@@ -1373,6 +1381,7 @@
     sendStep: sendStep,
     runSteps: runSteps,
     rememberQuery: rememberQuery,
+    showBatchWhy: showBatchWhy,
     lead: lead,
     hydrateRun: hydrateRun,
     paintRun: paintRun,
@@ -1394,12 +1403,11 @@
     eth.request({ method: 'eth_chainId' }).then(onChain).catch(function () {});
     eth.request({ method: 'eth_accounts' }).then(function (acc) {
       if (!acc || !acc[0]) return;
-    state.account = acc[0];
-    paintWho();
-    syncMine();
-    noteAccount();
-    loadWallet();
-    probeBatch();
+      state.account = acc[0];
+      paintWho();
+      syncMine();
+      noteAccount();
+      loadWallet();
       probeBatch();
     }).catch(function () {});
     if (eth.on) {
@@ -1410,6 +1418,7 @@
         noteAccount();
         state.batchKnown = false;
         state.batchCaps = null;
+        state.batchTimed = false;
         if (state.account) {
           loadWallet();
           probeBatch();
