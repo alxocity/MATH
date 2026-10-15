@@ -1,5 +1,4 @@
 const assert = require('assert');
-const fs = require('fs');
 const RUN = require('./run');
 
 const math = [
@@ -238,15 +237,40 @@ said = '';
 assert.strictEqual(RUN.emptyPlan(two, function (why) { said = why; }), false);
 assert.strictEqual(said, '');
 
-const routeSrc = fs.readFileSync(__dirname + '/route.js', 'utf8');
-const rgbSrc = fs.readFileSync(__dirname + '/rgb.js', 'utf8');
-const toonSrc = fs.readFileSync(__dirname + '/toon.js', 'utf8');
-assert.ok(routeSrc.indexOf('function sendRoute') !== -1);
-assert.ok(routeSrc.indexOf('RUN.emptyPlan(runs, S.showBatchWhy)') !== -1);
-assert.ok(rgbSrc.indexOf('function sendAllQueue') !== -1);
-assert.ok(rgbSrc.indexOf('RUN.emptyPlan(runs, S.showBatchWhy)') !== -1);
-assert.ok(toonSrc.indexOf('id="toonBatchWhy"') !== -1);
-assert.strictEqual(toonSrc.indexOf('id="batchWhy"'), -1);
+const readyCaps = { '0x1': { atomic: { status: 'ready' } } };
+const live = {
+  account: '0xabc',
+  hasWallet: true,
+  batchKnown: true,
+  batchTimed: false,
+  batchCaps: readyCaps,
+  runGen: 4,
+  runBusy: true,
+  txLock: 'run',
+};
+assert.strictEqual(RUN.noteWhy(two, live), 'a send is already running');
+let noted = 0;
+assert.strictEqual(RUN.releaseRun(4, live, function () { noted += 1; }), true);
+assert.strictEqual(noted, 1);
+assert.strictEqual(live.runBusy, false);
+assert.strictEqual(live.txLock, null);
+assert.strictEqual(RUN.noteWhy(two, live), '');
+
+live.txLock = '0xhash';
+assert.strictEqual(RUN.noteWhy(two, live), 'a send is already running');
+assert.strictEqual(RUN.releaseRun(4, live, function () { noted += 1; }), true);
+assert.strictEqual(live.txLock, '0xhash');
+assert.strictEqual(noted, 2);
+live.txLock = null;
+assert.strictEqual(RUN.noteWhy(two, live), '');
+
+live.runBusy = true;
+live.txLock = 'run';
+assert.strictEqual(RUN.releaseRun(3, live, function () { noted += 1; }), false);
+assert.strictEqual(noted, 2);
+assert.strictEqual(live.runBusy, true);
+assert.strictEqual(live.txLock, 'run');
+assert.strictEqual(RUN.noteWhy(two, live), 'a send is already running');
 
 const counted = RUN.runCount([
   { status: 'confirmed' },

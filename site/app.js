@@ -438,6 +438,7 @@
 
   function finishWatch(hash, rec, onOk) {
     state.txLock = null;
+    releaseRun(state.runGen);
     state.pendingHash = null;
     state.pendingOk = null;
     if (state.pendingSums) state.pendingSums.delete(hash);
@@ -468,6 +469,7 @@
 
   function noteSent(hash, onOk) {
     state.txLock = hash;
+    releaseRun(state.runGen);
     state.pendingHash = hash;
     state.pendingOk = onOk || null;
     savePending(hash);
@@ -490,6 +492,7 @@
     }
     if (state.txLock !== hash) return;
     state.txLock = null;
+    releaseRun(state.runGen);
     state.pendingHash = hash;
     state.pendingOk = onOk || null;
     savePending(hash);
@@ -579,12 +582,16 @@
     saveSums();
   }
 
-  function batchPhase() {
-    if (!globalThis.ethereum || !state.account) return 'none';
-    if (!state.batchKnown) return 'checking';
-    if (state.batchTimed) return 'timeout';
-    if (globalThis.RUN.atomicReady(state.batchCaps)) return 'ready';
-    return 'unsupported';
+  function noteState() {
+    return {
+      account: state.account,
+      hasWallet: !!globalThis.ethereum,
+      batchKnown: state.batchKnown,
+      batchTimed: state.batchTimed,
+      batchCaps: state.batchCaps,
+      runBusy: state.runBusy,
+      txLock: state.txLock,
+    };
   }
 
   function syncNote(steps) {
@@ -592,13 +599,14 @@
     if (!btn) return;
     const note = $('#batchNote');
     const whyEl = $('#batchWhy');
-    const why = globalThis.RUN.batchWhy(steps, {
-      phase: batchPhase(),
-      busy: state.runBusy || !!state.txLock,
-    });
+    const why = globalThis.RUN.noteWhy(steps, noteState());
     if (note) note.hidden = !!why;
     if (whyEl) whyEl.textContent = why;
     btn.disabled = !!why;
+  }
+
+  function releaseRun(gen) {
+    globalThis.RUN.releaseRun(gen, state, function () { syncNote(state.run); });
   }
 
   function showBatchWhy(why) {
@@ -940,9 +948,7 @@
     state.runBusy = true;
     state.txLock = 'run';
     watchOpen(gen).finally(function () {
-      if (gen !== state.runGen) return;
-      state.runBusy = false;
-      if (state.txLock === 'run') state.txLock = null;
+      releaseRun(gen);
     });
   }
 
@@ -1211,10 +1217,7 @@
       else if (msg === 'rejected') MOLD.say('rejected');
       else MOLD.say('simFail', { err: msg });
     } finally {
-      if (gen === state.runGen) {
-        state.runBusy = false;
-        if (state.txLock === 'run') state.txLock = null;
-      }
+      releaseRun(gen);
     }
   }
 
