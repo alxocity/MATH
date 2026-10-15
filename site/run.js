@@ -224,6 +224,14 @@
     return true;
   }
 
+  // A single-send watch may end after a batch has taken the lock. Only the
+  // matching hash is cleared, so a live run stays busy.
+  function clearHashLock(box, hash) {
+    if (!box || !hash || box.txLock !== hash) return false;
+    box.txLock = null;
+    return true;
+  }
+
   // Route and RGB: why the batch button is disabled. Empty means it can be pressed.
   function batchWhy(steps, flags) {
     const f = flags || {};
@@ -315,6 +323,7 @@
     openBatch: openBatch,
     noteWhy: noteWhy,
     releaseRun: releaseRun,
+    clearHashLock: clearHashLock,
     batchWhy: batchWhy,
     runCount: runCount,
     callsId: callsId,
