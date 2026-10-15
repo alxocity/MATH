@@ -214,7 +214,7 @@
       S.lead('A route is the mints that build one number.', 'mints') +
       '<div class="row"><label>n <input id="target" spellcheck="false" value="' + S.esc(state.routeTarget) + '"></label>' +
       '<button type="button" id="mode" class="on">' + state.routeMode + '</button>' +
-      '<button type="button" id="plan">plan</button></div>' +
+      '<button type="button" id="plan">plan</button>' + QUERY.copyHtml() + '</div>' +
       '<p class="dim" id="routeMeta"></p><div id="pieces"></div><div id="steps"></div>' +
       '<p class="dim" id="batchNote" hidden>A batch may ask MetaMask for a one-time smart account upgrade (EIP-7702). That delegates this address for the calls. You approve it in the wallet. This page does not sign by itself.</p>' +
       '<div id="run"></div>' +
@@ -230,6 +230,14 @@
     $('#plan').onclick = planRoute;
     $('#target').addEventListener('input', rememberRoute);
     $('#target').addEventListener('change', rememberRoute);
+    QUERY.attachCopy(view.querySelector('.copy-link'), function () {
+      return QUERY.shareHref({
+        origin: location.origin,
+        pathname: location.pathname,
+        search: location.search,
+        hash: '#route',
+      }, { n: QUERY.digits($('#target').value.trim()) });
+    });
     rememberRoute();
     paintRoute();
   }

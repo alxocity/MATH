@@ -270,6 +270,7 @@
       previewToon();
     } finally {
       paintPartLinks();
+      rememberToon();
     }
   }
 
@@ -352,7 +353,8 @@
       '<div class="row"><label class="num">FACE <select id="tf"><option value="">—</option>' + opt(state.faces, 'face', function (id) { return state.faceText.get(BigInt(id)) || id; }) + '</select></label>' +
       '<span class="dim">' + S.esc(state.faceNote) + '</span></div>' +
       '<div class="row"><label class="num">RGB <select id="tr"><option value="">—</option>' + opt(rgbs, 'rgb', rgbLabel) + '</select> <span id="trLink"></span></label></div>' +
-      '<div class="row"><button type="button" id="suggest">suggest another</button><span id="hintNote" class="dim"></span></div>' +
+      '<div class="row"><button type="button" id="suggest">suggest another</button><span id="hintNote" class="dim"></span>' +
+      QUERY.copyHtml() + '</div>' +
       '<div id="toonPrev"><p class="dim toon-wait">pick four.</p></div>' +
       '<div class="preview" id="preview">TOON.add has no fee. you must own all four. grey picks say why.' + S.mark('ⓘ', S.TIPS.fees) + '</div>' +
       '<div class="row"><button type="button" id="simToon">simulate</button>' + S.mark('ⓘ', S.TIPS.simulate) + '<button type="button" id="sendToon">send add</button>' +
@@ -378,10 +380,23 @@
            $('#tf').value !== toonHint.face || $('#tr').value !== toonHint.rgb)) el.textContent = '';
         paintPartLinks();
         previewToon();
-        if (ev.isTrusted) rememberToon();
+        rememberToon();
       });
     });
     $('#suggest').onclick = function () { fillToon(true); };
+    QUERY.attachCopy(view.querySelector('.copy-link'), function () {
+      return QUERY.shareHref({
+        origin: location.origin,
+        pathname: location.pathname,
+        search: location.search,
+        hash: '#toon',
+      }, {
+        math: QUERY.digits($('#tm').value),
+        word: QUERY.digits($('#tw').value, true),
+        face: QUERY.digits($('#tf').value, true),
+        rgb: QUERY.digits($('#tr').value),
+      });
+    });
     $('#simToon').onclick = function () { sendToon(false); };
     $('#sendToon').onclick = function () { sendToon(true); };
     seedToonQuery();
