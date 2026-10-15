@@ -96,14 +96,24 @@
     return keys.some(function (k) { return bag[k] !== ''; });
   }
 
-  // Any known param locks the page to the URL. Bare and hash-only addresses
-  // still restore from storage. Nothing here is written back into the URL.
-  function restoreBag(url, stored) {
+  // Empty and '#' are the main site's default tab. A hash that names a group
+  // restores that group. Any other hash restores nothing.
+  function namedGroup(tab) {
+    if (tab == null || tab === '' || tab === '#') return 'rgb';
+    const raw = String(tab);
+    const name = (raw.charAt(0) === '#' ? raw.slice(1) : raw).toLowerCase();
+    return GROUPS[name] ? name : '';
+  }
+
+  // A known query key uses the URL alone. A bare or hash-only address restores
+  // storage for one group, and that restore is never written back into the URL.
+  function restoreBag(url, stored, tab) {
     const fromUrl = asBag(url);
     const fromStore = asBag(stored);
     const values = blank();
     const sources = {};
     const locked = urlLocked(fromUrl);
+    const group = namedGroup(tab);
     Object.keys(GROUPS).forEach(function (name) {
       const keys = GROUPS[name];
       if (locked) {
@@ -113,17 +123,22 @@
         keys.forEach(function (k) { values[k] = fromUrl[k]; });
         return;
       }
+      if (name !== group) {
+        sources[name] = '';
+        return;
+      }
       const storeHas = groupHas(fromStore, keys);
       sources[name] = storeHas ? 'store' : '';
       if (!storeHas) return;
       keys.forEach(function (k) { values[k] = fromStore[k]; });
     });
-    return { values: values, sources: sources };
+    return { values: values, sources: sources, writeUrl: false, group: group };
   }
 
-  function ensBoot(search, stored) {
-    const restored = restoreBag(search, stored);
-    return { preset: restored.values.preset || '', writeUrl: false };
+  function ensBoot(search, stored, hash) {
+    const group = (hash == null || hash === '' || hash === '#') ? 'ens' : hash;
+    const restored = restoreBag(search, stored, group);
+    return { preset: restored.values.preset || '', writeUrl: false, group: restored.group };
   }
 
   function storePatch(restored, names) {
@@ -323,6 +338,7 @@
     livePatch: livePatch,
     hideWrite: hideWrite,
     userCommit: userCommit,
+    namedGroup: namedGroup,
     restoreBag: restoreBag,
     ensBoot: ensBoot,
     storePatch: storePatch,
