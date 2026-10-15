@@ -210,6 +210,9 @@
     catch (e) { stored = null; }
     const restored = QUERY.restoreBag(q, stored, location.hash);
     const v = restored.values;
+    bootLocked = !!restored.locked;
+    Object.keys(openedGroup).forEach(function (key) { delete openedGroup[key]; });
+    if (!bootLocked && restored.group) openedGroup[restored.group] = true;
     state.mintQuery = { a: v.a, b: v.b };
     state.toonQuery = { math: v.math, word: v.word, face: v.face, rgb: v.rgb };
     if (v.n) state.routeTarget = v.n;
@@ -1345,6 +1348,65 @@
   }
 
   const TABS = ['browse', 'mint', 'route', 'rgb', 'toon', 'about', 'mine'];
+  let bootLocked = false;
+  const openedGroup = {};
+
+  function groupDirty(name) {
+    if (name === 'mint') return !!state.mintDirty;
+    if (name === 'route') return !!state.routeDirty;
+    if (name === 'rgb') return !!state.planesDirty;
+    if (name === 'toon') return !!state.toonDirty;
+    return false;
+  }
+
+  function takeGroup(name, v) {
+    if (name === 'mint') {
+      state.mintQuery = { a: v.a || '', b: v.b || '' };
+      state.mintDirty = false;
+      return;
+    }
+    if (name === 'route') {
+      state.routeTarget = v.n || '';
+      state.routeDirty = false;
+      return;
+    }
+    if (name === 'toon') {
+      state.toonQuery = {
+        math: v.math || '',
+        word: v.word || '',
+        face: v.face || '',
+        rgb: v.rgb || '',
+      };
+      state.toonDirty = false;
+      return;
+    }
+    if (name !== 'rgb' || !QUERY.hasPlanes(v)) return;
+    try {
+      const R = v.R !== '' ? BigInt(v.R) : 0n;
+      const G = v.G !== '' ? BigInt(v.G) : 0n;
+      const B = v.B !== '' ? BigInt(v.B) : 0n;
+      state.planes = { R: R, G: G, B: B };
+      state.grid = P.planesToRows(R, G, B);
+      state.planesTouched = QUERY.fullPlanes(v);
+      state.planesDirty = false;
+    } catch (e) { /* leave the grid */ }
+  }
+
+  // First visit to a tab after a bare or hash-only open. A known param at boot
+  // blocks this, and the saved values stay out of the address bar.
+  function lazyRestore(tab) {
+    if (bootLocked || !globalThis.QUERY) return;
+    const name = QUERY.namedGroup(tab);
+    if (!name || openedGroup[name]) return;
+    openedGroup[name] = true;
+    if (groupDirty(name)) return;
+    let stored = null;
+    try { stored = QUERY.readStore(localStorage); }
+    catch (e) { stored = null; }
+    const restored = QUERY.restoreBag('', stored, name);
+    if (!restored.sources || restored.sources[name] !== 'store') return;
+    takeGroup(name, restored.values);
+  }
 
   function show(tab, quiet) {
     const prev = state.tab;
@@ -1354,6 +1416,7 @@
     const selEnd = ae && typeof ae.selectionEnd === 'number' ? ae.selectionEnd : null;
     if (tab === 'mine' && !state.account) tab = 'browse';
     if (TABS.indexOf(tab) === -1) tab = 'browse';
+    lazyRestore(tab);
     const same = tab === prev;
     state.tab = tab;
     state.token = null;

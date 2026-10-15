@@ -132,7 +132,7 @@
       if (!storeHas) return;
       keys.forEach(function (k) { values[k] = fromStore[k]; });
     });
-    return { values: values, sources: sources, writeUrl: false, group: group };
+    return { values: values, sources: sources, writeUrl: false, group: group, locked: locked };
   }
 
   function ensBoot(search, stored, hash) {
