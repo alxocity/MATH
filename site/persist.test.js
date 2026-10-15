@@ -8,6 +8,7 @@ function memory() {
   return {
     getItem: function (k) { return Object.prototype.hasOwnProperty.call(data, k) ? data[k] : null; },
     setItem: function (k, v) { data[k] = String(v); },
+    removeItem: function (k) { delete data[k]; },
   };
 }
 
@@ -136,6 +137,7 @@ load('rgb.js');
 
 const SITE = global.SITE;
 const state = SITE.state;
+const rememberQuery = SITE.rememberQuery;
 const writes = [];
 SITE.rememberQuery = function (patch) {
   writes.push(patch);
@@ -457,6 +459,120 @@ async function main() {
   assert.strictEqual(QUERY.readStore(store).face, '6');
   assert.strictEqual(QUERY.readStore(store).rgb, '8');
   assert.strictEqual(QUERY.readStore(store).R, '1');
+
+  const urlSnap = store.getItem(QUERY.URL_KEY);
+  const historySnap = global.history.replaceState;
+  const calls = [];
+  global.history.replaceState = function (_s, _t, next) { calls.push(next); };
+  loc.pathname = '/';
+  loc.search = '';
+  loc.hash = '#rgb';
+  rememberQuery({ R: '5', G: '3', B: '2' });
+  assert.strictEqual(calls.length, 1);
+  assert.strictEqual(QUERY.readMark(sessionStorage), '?R=5&G=3&B=2');
+  global.history.replaceState = function () { throw new Error('no history'); };
+  loc.search = '?R=5&G=3&B=2';
+  rememberQuery({ R: '9', G: '8', B: '7' });
+  assert.strictEqual(QUERY.readMark(sessionStorage), '?R=5&G=3&B=2');
+  loc.search = '?a=9';
+  loc.hash = '';
+  sessionStorage.setItem(QUERY.MARK_KEY, 'sentinel');
+  global.history.replaceState = function () { throw new Error('should not write'); };
+  rememberQuery({ a: '9' });
+  assert.strictEqual(sessionStorage.getItem(QUERY.MARK_KEY), 'sentinel');
+  sessionStorage.removeItem(QUERY.MARK_KEY);
+  loc.search = '?a=9';
+  loc.hash = '';
+  global.history.replaceState = historySnap;
+  SITE.show('mint', true);
+  assert.strictEqual(sessionStorage.getItem(QUERY.MARK_KEY), null);
+  if (urlSnap == null) store.removeItem(QUERY.URL_KEY);
+  else store.setItem(QUERY.URL_KEY, urlSnap);
+  loc.pathname = '/';
+  loc.hash = '#rgb';
+
+  const painted = '?R=5&G=3&B=2';
+  QUERY.writeStore(store, {
+    R: '5', G: '3', B: '2', a: '4', b: '6', n: '15', math: '7', word: '0', face: '2', rgb: '9',
+  });
+  function bootPaint(search, mark) {
+    if (mark == null) sessionStorage.removeItem(QUERY.MARK_KEY);
+    else sessionStorage.setItem(QUERY.MARK_KEY, mark);
+    loc.search = search;
+    loc.hash = '#rgb';
+    state.routeTarget = '7';
+    state.mintDirty = false;
+    state.routeDirty = false;
+    state.toonDirty = false;
+    state.planesDirty = false;
+    SITE.applyQuery();
+    state.routeTarget = '7';
+  }
+  bootPaint(painted, painted);
+  assert.strictEqual(state.planes.R, 5n);
+  assert.strictEqual(state.mintQuery.a, '');
+  assert.strictEqual(state.toonQuery.math, '');
+  const beforeOwn = writes.length;
+  SITE.show('mint', true);
+  assert.strictEqual(state.mintQuery.a, '4');
+  assert.strictEqual(state.mintQuery.b, '6');
+  assert.strictEqual(state.mintDirty, false);
+  SITE.show('route', true);
+  assert.strictEqual(state.routeTarget, '15');
+  SITE.show('toon', true);
+  assert.strictEqual(state.toonQuery.math, '7');
+  assert.strictEqual(writes.length, beforeOwn);
+  assert.strictEqual(loc.search, painted);
+
+  bootPaint(painted, null);
+  const beforeNone = writes.length;
+  SITE.show('mint', true);
+  assert.strictEqual(state.mintQuery.a, '');
+  SITE.show('route', true);
+  assert.strictEqual(state.routeTarget, '7');
+  assert.strictEqual(writes.length, beforeNone);
+  assert.strictEqual(loc.search, painted);
+
+  bootPaint(painted, '?R=1&G=1&B=1');
+  SITE.show('mint', true);
+  assert.strictEqual(state.mintQuery.a, '');
+  SITE.show('toon', true);
+  assert.strictEqual(state.toonQuery.math, '');
+  assert.strictEqual(loc.search, painted);
+
+  bootPaint(painted + '&admin=1', painted + '&admin=1');
+  SITE.show('mint', true);
+  assert.strictEqual(state.mintQuery.a, '');
+  bootPaint(painted, '?__proto__=1&constructor=1&R=5');
+  SITE.show('route', true);
+  assert.strictEqual(state.routeTarget, '7');
+  bootPaint(painted, '?R=nope');
+  SITE.show('toon', true);
+  assert.strictEqual(state.toonQuery.math, '');
+  bootPaint(painted, '?' + 'R=1&'.repeat(400));
+  SITE.show('mint', true);
+  assert.strictEqual(state.mintQuery.a, '');
+  assert.strictEqual(Object.prototype.admin, undefined);
+
+  const realSession = global.sessionStorage;
+  global.sessionStorage = {
+    getItem: function () { throw new Error('denied'); },
+    setItem: function () { throw new Error('denied'); },
+  };
+  loc.search = painted;
+  loc.hash = '#rgb';
+  state.routeTarget = '7';
+  state.mintDirty = false;
+  state.routeDirty = false;
+  state.toonDirty = false;
+  state.planesDirty = false;
+  assert.doesNotThrow(function () { SITE.applyQuery(); });
+  state.routeTarget = '7';
+  SITE.show('mint', true);
+  assert.strictEqual(state.mintQuery.a, '');
+  assert.strictEqual(loc.search, painted);
+  global.sessionStorage = realSession;
+  sessionStorage.removeItem(QUERY.MARK_KEY);
 
   console.log('persist.test.js ok');
 }

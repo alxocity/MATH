@@ -386,4 +386,42 @@ assert.strictEqual(quiet.note.textContent, '');
 assert.strictEqual(quiet.field(), null);
 assert.strictEqual(quiet.prompted(), null);
 
+const marked = memory();
+QUERY.writeMark(marked, '/?R=05&G=3&B=2&extra=1#rgb');
+assert.strictEqual(marked.getItem(QUERY.MARK_KEY), '?R=5&G=3&B=2');
+assert.strictEqual(QUERY.readMark(marked), '?R=5&G=3&B=2');
+assert.strictEqual(QUERY.markedOpen('?R=5&G=3&B=2', QUERY.readMark(marked)), true);
+assert.strictEqual(QUERY.markedOpen('?R=5&G=3&B=2', ''), false);
+assert.strictEqual(QUERY.markedOpen('?R=5&G=3&B=2', null), false);
+assert.strictEqual(QUERY.markedOpen('?R=9&G=1&B=4', '?R=5&G=3&B=2'), false);
+assert.strictEqual(QUERY.markedOpen('?R=5&G=3&B=2', '?R=5&G=3&B=2&admin=1'), false);
+assert.strictEqual(QUERY.markedOpen('?R=5&admin=1', '?R=5&admin=1'), false);
+assert.strictEqual(QUERY.markedOpen('?R=5', '?R=nope'), false);
+assert.strictEqual(QUERY.markedOpen('?R=5', '?R=05'), false);
+assert.strictEqual(QUERY.markedOpen('?R=5', 'not a search'), false);
+assert.strictEqual(QUERY.markedOpen('?R=5', '?R=' + '9'.repeat(78)), false);
+assert.strictEqual(QUERY.markedOpen('?R=5', '?' + 'R=1&'.repeat(400)), false);
+assert.strictEqual(QUERY.markedOpen('?preset=math', '?preset=math'), true);
+assert.strictEqual(QUERY.markedOpen('?preset=math', '?preset=Math'), false);
+assert.strictEqual(QUERY.markedOpen('?preset=math', '?preset=../math'), false);
+const poison = memory();
+poison.setItem(QUERY.MARK_KEY, '?__proto__=1&constructor=1&R=5');
+assert.strictEqual(QUERY.readMark(poison), '');
+assert.strictEqual(QUERY.markedOpen('?R=5', poison.getItem(QUERY.MARK_KEY)), false);
+assert.strictEqual(Object.prototype.admin, undefined);
+const boom = {
+  getItem: function () { throw new Error('denied'); },
+  setItem: function () { throw new Error('denied'); },
+  removeItem: function () { throw new Error('denied'); },
+};
+assert.strictEqual(QUERY.readMark(boom), '');
+assert.doesNotThrow(function () { QUERY.writeMark(boom, '/?R=5&G=3&B=2#rgb'); });
+assert.strictEqual(QUERY.readMark(null), '');
+assert.doesNotThrow(function () { QUERY.writeMark(null, '/?R=5'); });
+const cleared = memory();
+cleared.removeItem = function (k) { delete cleared.data[k]; };
+QUERY.writeMark(cleared, '/?R=5&G=3&B=2#rgb');
+QUERY.writeMark(cleared, '/#rgb');
+assert.strictEqual(QUERY.readMark(cleared), '');
+
 console.log('query.test.js ok');

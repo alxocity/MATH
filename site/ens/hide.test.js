@@ -8,6 +8,7 @@ function memory() {
   return {
     getItem: function (k) { return Object.prototype.hasOwnProperty.call(data, k) ? data[k] : null; },
     setItem: function (k, v) { data[k] = String(v); },
+    removeItem: function (k) { delete data[k]; },
   };
 }
 
@@ -147,5 +148,17 @@ QUERY.writeStore(store, { preset: 'kept', R: '1', G: '2', B: '3' });
 fire('pagehide');
 assert.strictEqual(QUERY.readStore(store).preset, '');
 assert.strictEqual(QUERY.readStore(store).R, '1');
+
+global.sessionStorage = memory();
+global.sessionStorage.setItem(QUERY.MARK_KEY, '?preset=math');
+const written = [];
+global.history.replaceState = function (_s, _t, next) { written.push(next); };
+doc.getElementById('add').dispatchEvent({ type: 'click' });
+assert.strictEqual(written.length, 1);
+assert.strictEqual(global.sessionStorage.getItem(QUERY.MARK_KEY), null);
+global.history.replaceState = function () { throw new Error('no history'); };
+global.sessionStorage.setItem(QUERY.MARK_KEY, '?preset=math');
+assert.doesNotThrow(function () { doc.getElementById('add').dispatchEvent({ type: 'click' }); });
+assert.strictEqual(global.sessionStorage.getItem(QUERY.MARK_KEY), '?preset=math');
 
 console.log('ens/hide.test.js ok');

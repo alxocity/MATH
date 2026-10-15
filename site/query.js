@@ -64,6 +64,54 @@
     ens: ['preset'],
   };
   const URL_KEY = 'math.url.v1';
+  const MARK_KEY = 'math.url.mark.v1';
+  const MARK_MAX = 1024;
+
+  function searchPart(value) {
+    const s = String(value == null ? '' : value);
+    const q = s.indexOf('?');
+    if (q === -1) return '';
+    const hash = s.indexOf('#', q);
+    return hash === -1 ? s.slice(q) : s.slice(q, hash);
+  }
+
+  function canonicalSearch(search) {
+    const s = String(search || '');
+    if (s.length > MARK_MAX) return '';
+    return write('', read(s));
+  }
+
+  // The marker is only the serialized known-key search. Anything else is ignored.
+  function acceptMark(raw) {
+    if (typeof raw !== 'string') return '';
+    if (!raw || raw.length > MARK_MAX || raw.charAt(0) !== '?') return '';
+    return raw === canonicalSearch(raw) ? raw : '';
+  }
+
+  function readMark(storage) {
+    try {
+      if (!storage || typeof storage.getItem !== 'function') return '';
+      return acceptMark(storage.getItem(MARK_KEY));
+    } catch (e) { return ''; }
+  }
+
+  function writeMark(storage, hrefOrSearch) {
+    try {
+      if (!storage || typeof storage.setItem !== 'function') return;
+      const canon = canonicalSearch(searchPart(hrefOrSearch));
+      if (!canon) {
+        if (typeof storage.removeItem === 'function') storage.removeItem(MARK_KEY);
+        return;
+      }
+      storage.setItem(MARK_KEY, canon);
+    } catch (e) { /* private mode */ }
+  }
+
+  function markedOpen(urlSearch, mark) {
+    const accepted = acceptMark(mark);
+    if (!accepted) return false;
+    return String(urlSearch || '') === accepted;
+  }
 
   function planeBag(q) {
     const bag = asBag(q);
@@ -334,6 +382,10 @@
     KEYS: KEYS,
     GROUPS: GROUPS,
     URL_KEY: URL_KEY,
+    MARK_KEY: MARK_KEY,
+    readMark: readMark,
+    writeMark: writeMark,
+    markedOpen: markedOpen,
     digits: digits,
     presetName: presetName,
     read: read,
