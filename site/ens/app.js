@@ -5,6 +5,7 @@
     wallet: '',
     batch: false,
     batchKnown: false,
+    batchTimed: false,
     busy: false,
     names: [],
     byLabel: {},
@@ -509,8 +510,16 @@
     const signed = ready && state.simHash && state.simHash === planHash(txs);
     document.getElementById('sign').disabled = !signed || state.busy;
     const batchBtn = document.getElementById('batch');
-    const phase = !state.wallet ? 'none' : (!state.batchKnown ? 'checking' : (state.batch ? 'ready' : 'unsupported'));
-    const why = globalThis.RUN.bulkWhy(txs.length, phase, 'change');
+    let phase = 'none';
+    if (state.wallet) {
+      if (!state.batchKnown) phase = 'checking';
+      else if (state.batchTimed) phase = 'timeout';
+      else phase = state.batch ? 'ready' : 'unsupported';
+    }
+    const why = globalThis.RUN.batchHold(globalThis.RUN.bulkWhy(txs.length, phase, 'change'), {
+      controls: controls,
+      signed: signed,
+    });
     const whyEl = document.getElementById('batchWhy');
     if (whyEl) whyEl.textContent = why;
     batchBtn.hidden = false;
@@ -932,15 +941,35 @@
     if (!state.wallet || !globalThis.ethereum) {
       state.batch = false;
       state.batchKnown = false;
+      state.batchTimed = false;
       return;
     }
+    const who = state.wallet;
     state.batchKnown = false;
+    state.batchTimed = false;
+    let caps = null;
+    let timed = false;
     try {
-      const caps = await ethereum.request({ method: 'wallet_getCapabilities', params: [state.wallet] });
-      state.batch = atomicReady(caps);
+      caps = await new Promise(function (resolve, reject) {
+        const t = setTimeout(function () { reject(new Error('timeout')); }, 8000);
+        Promise.resolve(ethereum.request({
+          method: 'wallet_getCapabilities',
+          params: [who],
+        })).then(function (v) {
+          clearTimeout(t);
+          resolve(v);
+        }, function (e) {
+          clearTimeout(t);
+          reject(e);
+        });
+      });
     } catch (e) {
-      state.batch = false;
+      caps = null;
+      timed = !!(e && e.message === 'timeout');
     }
+    if (who !== state.wallet) return;
+    state.batch = atomicReady(caps);
+    state.batchTimed = timed;
     state.batchKnown = true;
   }
 
@@ -951,7 +980,10 @@
       search: location.search,
       hash: location.hash,
     }, { preset: name || '' });
-    if (next !== location.pathname + location.search + location.hash) history.replaceState(null, '', next);
+    if (next !== location.pathname + location.search + location.hash) {
+      try { history.replaceState(null, '', next); }
+      catch (e) {}
+    }
   }
 
   function applyPreset(preset, name) {
@@ -1064,6 +1096,7 @@
         whoEl.title = state.wallet || '';
         state.batch = false;
         state.batchKnown = false;
+        state.batchTimed = false;
         state.simHash = '';
         probeBatch().then(function () {
           if (state.wallet) read();

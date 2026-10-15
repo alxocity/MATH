@@ -5,8 +5,11 @@
   function digits(raw, allowZero) {
     const s = String(raw == null ? '' : raw).trim();
     if (!/^\d+$/.test(s)) return '';
+    if (s.length > 78) return '';
     if (s === '0') return allowZero ? '0' : '';
-    return s.replace(/^0+(?=\d)/, '');
+    const n = s.replace(/^0+(?=\d)/, '');
+    if (BigInt(n) >= 2n ** 256n) return '';
+    return n;
   }
 
   function presetName(raw) {

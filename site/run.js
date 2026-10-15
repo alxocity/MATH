@@ -144,8 +144,10 @@
     return 'steps 2–' + n + " can't be simulated until step 1 is minted";
   }
 
+  const PLAN_FIRST = 'plan routes first';
+
   // Why a bulk send stays disabled. Empty means the wallet can batch this plan.
-  // `phase` is none, checking, ready, or unsupported. ENS uses the noun "change".
+  // `phase` is none, checking, ready, unsupported, or timeout. ENS uses the noun "change".
   function bulkWhy(count, phase, noun) {
     const n = Number(count);
     const c = n !== n ? 0 : Math.max(0, Math.floor(n));
@@ -154,8 +156,56 @@
     if (c < 2) return one;
     if (phase === 'ready') return '';
     if (phase === 'checking') return 'checking whether this wallet can batch';
+    if (phase === 'timeout') return "couldn't check batch support";
     if (phase === 'unsupported') return "the wallet doesn't support batched sends";
     return 'connect a wallet to batch';
+  }
+
+  // Fill a blank bulk reason. Omitted flags are left alone, so a route call
+  // does not pick up the ENS "simulate first" line.
+  function batchHold(why, flags) {
+    if (why) return why;
+    const f = flags || {};
+    if (f.flying) return 'a transaction is still in flight';
+    if (f.blocked) return f.blockWhy || "holder can't receive payout";
+    if (f.controls != null && !f.controls) return 'this wallet does not control the parent';
+    if (f.signed != null && !f.signed) return 'simulate first';
+    return '';
+  }
+
+  // First sendable batch. Restored rows have no tx, so they cannot be sent.
+  function openBatch(steps) {
+    const list = steps || [];
+    const seeded = list.filter(function (s) {
+      return s && (s.status === 'confirmed' || s.status === 'submitted' || isUnknown(s.status)) && s.result != null;
+    }).map(function (s) { return String(s.result); });
+    const open = list.filter(function (s) {
+      return s && typeof s.tx === 'function' &&
+        s.status !== 'confirmed' && s.status !== 'submitted' && !isUnknown(s.status);
+    });
+    return (splitCalls(open, seeded)[0]) || [];
+  }
+
+  // Route and RGB: why the batch button is disabled. Empty means it can be pressed.
+  function batchWhy(steps, flags) {
+    const f = flags || {};
+    const list = steps || [];
+    const waiting = list.filter(function (s) {
+      return s && s.status !== 'confirmed' && s.status !== 'submitted' && !isUnknown(s.status);
+    });
+    const first = openBatch(list);
+    const flying = list.some(function (s) {
+      return s && (s.status === 'submitted' || s.status === 'signing' || isUnknown(s.status));
+    });
+    const blocked = !!(first[0] && first[0].blocked);
+    const why = (waiting.length && !first.length) ? PLAN_FIRST : bulkWhy(first.length, f.phase, f.noun);
+    return batchHold(why, {
+      flying: flying,
+      blocked: blocked,
+      blockWhy: blocked ? first[0].blockWhy : '',
+      controls: f.controls,
+      signed: f.signed,
+    });
   }
 
   function runCount(rows) {
@@ -216,7 +266,11 @@
     atomicReady: atomicReady,
     deferSim: deferSim,
     batchSimNote: batchSimNote,
+    PLAN_FIRST: PLAN_FIRST,
     bulkWhy: bulkWhy,
+    batchHold: batchHold,
+    openBatch: openBatch,
+    batchWhy: batchWhy,
     runCount: runCount,
     callsId: callsId,
     receiptOk: receiptOk,

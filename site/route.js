@@ -51,6 +51,10 @@
   function sendRoute(only) {
     const runs = routeRuns();
     state.runSend = function () { sendRoute(); };
+    if (!runs.length) {
+      S.showBatchWhy(globalThis.RUN.PLAN_FIRST);
+      return;
+    }
     S.runSteps(runs, only ? { only: only } : null);
   }
 

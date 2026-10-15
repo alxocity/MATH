@@ -172,8 +172,46 @@ assert.strictEqual(RUN.bulkWhy(1, 'ready', 'change'), "there's only one change")
 assert.strictEqual(RUN.bulkWhy(3, 'none'), 'connect a wallet to batch');
 assert.strictEqual(RUN.bulkWhy(3, 'checking'), 'checking whether this wallet can batch');
 assert.strictEqual(RUN.bulkWhy(3, 'unsupported'), "the wallet doesn't support batched sends");
+assert.strictEqual(RUN.bulkWhy(3, 'timeout'), "couldn't check batch support");
+assert.strictEqual(RUN.bulkWhy(3, 'timeout', 'change'), "couldn't check batch support");
 assert.strictEqual(RUN.bulkWhy(3, 'ready'), '');
 assert.strictEqual(RUN.bulkWhy(3, 'ready', 'change'), '');
+
+const tx = function () { return {}; };
+const restored = [
+  { status: 'failed', label: '1 + 1 = 2' },
+  { status: 'pending', label: '2 + 2 = 4' },
+];
+assert.deepStrictEqual(RUN.openBatch(restored), []);
+assert.strictEqual(RUN.batchWhy(restored, { phase: 'ready' }), 'plan routes first');
+assert.strictEqual(RUN.PLAN_FIRST, 'plan routes first');
+
+const seededBatch = RUN.openBatch([
+  { status: 'confirmed', result: 3n },
+  { status: 'pending', result: 4n, uses: [], tx: tx },
+  { status: 'pending', result: 8n, uses: [3n], tx: tx },
+]);
+assert.strictEqual(seededBatch.length, 2);
+assert.strictEqual(RUN.batchWhy([
+  { status: 'pending', result: 2n, uses: [], tx: tx },
+  { status: 'pending', result: 3n, uses: [], tx: tx },
+], { phase: 'ready' }), '');
+
+assert.strictEqual(RUN.batchWhy([
+  { status: 'submitted', result: 1n, tx: tx },
+  { status: 'pending', result: 2n, uses: [], tx: tx },
+  { status: 'pending', result: 3n, uses: [], tx: tx },
+], { phase: 'ready' }), 'a transaction is still in flight');
+assert.strictEqual(RUN.batchWhy([
+  { status: 'pending', result: 2n, uses: [], tx: tx, blocked: true, blockWhy: "holder can't receive payout" },
+  { status: 'pending', result: 3n, uses: [], tx: tx },
+], { phase: 'ready' }), "holder can't receive payout");
+
+assert.strictEqual(RUN.batchHold('', { controls: false, signed: true }), 'this wallet does not control the parent');
+assert.strictEqual(RUN.batchHold('', { controls: true, signed: false }), 'simulate first');
+assert.strictEqual(RUN.batchHold('', { controls: true, signed: '' }), 'simulate first');
+assert.strictEqual(RUN.batchHold('', { controls: true, signed: true }), '');
+assert.strictEqual(RUN.batchHold("there's only one change", { controls: false, signed: false }), "there's only one change");
 
 const counted = RUN.runCount([
   { status: 'confirmed' },

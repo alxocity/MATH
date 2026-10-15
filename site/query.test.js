@@ -24,4 +24,13 @@ assert.strictEqual(QUERY.write('?a=1', { a: 'nope' }), '');
 assert.strictEqual(QUERY.href({ pathname: '/', search: '?a=1', hash: '#mint' }, { b: '2' }), '/?a=1&b=2#mint');
 assert.strictEqual(QUERY.href({ pathname: '/ens/', search: '', hash: '' }, { preset: 'math' }), '/ens/?preset=math');
 
+const maxUint = (2n ** 256n - 1n).toString();
+assert.strictEqual(maxUint.length, 78);
+assert.strictEqual(QUERY.digits(maxUint), maxUint);
+assert.strictEqual(QUERY.digits((2n ** 256n).toString()), '');
+assert.strictEqual(QUERY.digits('1' + maxUint), '');
+assert.strictEqual(QUERY.read('?n=' + maxUint).n, maxUint);
+assert.strictEqual(QUERY.read('?a=' + (2n ** 256n).toString()).a, '');
+assert.strictEqual(QUERY.read('?b=' + ('1'.repeat(79))).b, '');
+
 console.log('query.test.js ok');

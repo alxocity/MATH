@@ -168,7 +168,12 @@
 
   function sendAllQueue() {
     state.runSend = function () { sendAllQueue(); };
-    S.runSteps(queueRuns());
+    const runs = queueRuns();
+    if (!runs.length) {
+      S.showBatchWhy(globalThis.RUN.PLAN_FIRST);
+      return;
+    }
+    S.runSteps(runs);
   }
 
   function paintQueue() {
