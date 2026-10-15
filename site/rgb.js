@@ -230,6 +230,8 @@
 
   function planRgb() {
     syncPlanes();
+    state.planesTouched = true;
+    rememberPlanes();
     const issues = planeIssues(state.planes);
     const meta = $('#rgbMeta');
     if (issues.length) {
@@ -451,7 +453,8 @@
       '<div class="row"><label class="num">R <input id="pR" spellcheck="false" inputmode="numeric" value="' + p.R + '"></label></div>' +
       '<div class="row"><label class="num">G <input id="pG" spellcheck="false" inputmode="numeric" value="' + p.G + '"></label></div>' +
       '<div class="row"><label class="num">B <input id="pB" spellcheck="false" inputmode="numeric" value="' + p.B + '"></label></div>' +
-      '<div class="row"><button type="button" id="suggest">suggest another</button><span id="hintNote" class="dim"></span></div>' +
+      '<div class="row"><button type="button" id="suggest">suggest another</button><span id="hintNote" class="dim"></span>' +
+      QUERY.copyHtml() + '</div>' +
       '<p id="rgbTraits" class="dim"></p><p id="rgbMeta"></p><div id="queue"></div>' +
       '<p class="dim" id="batchNote" hidden>A batch may ask MetaMask for a one-time smart account upgrade (EIP-7702). That delegates this address for the calls. You approve it in the wallet. This page does not sign by itself.</p>' +
       '<div id="run"></div>' +
@@ -520,6 +523,9 @@
           el.classList.toggle('on', on);
           el.setAttribute('aria-pressed', on ? 'true' : 'false');
         });
+        if (!state.planes) syncPlanes();
+        state.planesTouched = true;
+        rememberPlanes();
       };
     });
     $('#heart').onclick = function () { S.applyHeart(false); };
@@ -568,15 +574,15 @@
       S.show('rgb');
     };
     ['pR', 'pG', 'pB'].forEach(function (id) {
-      $('#' + id).addEventListener('input', function (ev) {
-        if (ev.isTrusted) state.planesTouched = true;
+      $('#' + id).addEventListener('input', function () {
+        state.planesTouched = true;
       });
-      $('#' + id).addEventListener('change', function (ev) {
-        if (ev.isTrusted) state.planesTouched = true;
+      $('#' + id).addEventListener('change', function () {
         try {
           const R = BigInt($('#pR').value.trim());
           const G = BigInt($('#pG').value.trim());
           const B = BigInt($('#pB').value.trim());
+          state.planesTouched = true;
           state.grid = P.planesToRows(R, G, B);
           state.planes = { R: R, G: G, B: B };
           $('#cells').innerHTML = S.cellsHtml(state.grid);
@@ -598,6 +604,26 @@
     state.runSend = function () { sendAllQueue(); };
     $('#planRgb').onclick = planRgb;
     $('#suggest').onclick = function () { fillRgb(true); };
+    QUERY.attachCopy(view.querySelector('.copy-link'), function () {
+      const r = $('#pR');
+      const g = $('#pG');
+      const b = $('#pB');
+      const patch = r && g && b ? {
+        R: QUERY.digits(r.value, true),
+        G: QUERY.digits(g.value, true),
+        B: QUERY.digits(b.value, true),
+      } : {
+        R: state.planes ? state.planes.R.toString() : '0',
+        G: state.planes ? state.planes.G.toString() : '0',
+        B: state.planes ? state.planes.B.toString() : '0',
+      };
+      return QUERY.shareHref({
+        origin: location.origin,
+        pathname: location.pathname,
+        search: location.search,
+        hash: '#rgb',
+      }, patch);
+    });
     const issues = planeIssues(state.planes);
     $('#rgbMeta').innerHTML = issuesHtml(issues);
     paintQueue();

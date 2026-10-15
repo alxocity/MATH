@@ -116,15 +116,69 @@
   }
 
   function rememberQuery(patch) {
-    if (!globalThis.QUERY) return;
-    const next = QUERY.href({
-      pathname: location.pathname,
-      search: location.search,
-      hash: location.hash,
-    }, patch);
-    if (next === location.pathname + location.search + location.hash) return;
+    if (!globalThis.QUERY) return false;
+    try { QUERY.writeStore(localStorage, patch); }
+    catch (e) { /* storage can throw; the URL write still runs */ }
+    let next;
+    try {
+      next = QUERY.href({
+        pathname: location.pathname,
+        search: location.search,
+        hash: location.hash,
+      }, patch);
+    } catch (e) { return false; }
+    const cur = location.pathname + location.search + location.hash;
+    if (next === cur) return true;
     try { history.replaceState(null, '', next); }
-    catch (e) {}
+    catch (e) { return false; }
+    return true;
+  }
+
+  function livePatch() {
+    const patch = {};
+    const a = $('#a');
+    const b = $('#b');
+    if (a && b) {
+      patch.a = QUERY.digits(a.value);
+      patch.b = QUERY.digits(b.value);
+    } else if (state.mintQuery && (state.mintQuery.a || state.mintQuery.b)) {
+      patch.a = state.mintQuery.a || '';
+      patch.b = state.mintQuery.b || '';
+    }
+    const target = $('#target');
+    if (target) patch.n = QUERY.digits(target.value.trim());
+    else if (state.routeTarget) patch.n = QUERY.digits(state.routeTarget);
+    const r = $('#pR');
+    const g = $('#pG');
+    const bch = $('#pB');
+    if (r && g && bch && state.planesTouched) {
+      patch.R = QUERY.digits(r.value, true);
+      patch.G = QUERY.digits(g.value, true);
+      patch.B = QUERY.digits(bch.value, true);
+    } else if (state.planesTouched && state.planes) {
+      patch.R = state.planes.R.toString();
+      patch.G = state.planes.G.toString();
+      patch.B = state.planes.B.toString();
+    }
+    const tm = $('#tm');
+    if (tm && $('#tw') && $('#tf') && $('#tr')) {
+      patch.math = QUERY.digits(tm.value);
+      patch.word = QUERY.digits($('#tw').value, true);
+      patch.face = QUERY.digits($('#tf').value, true);
+      patch.rgb = QUERY.digits($('#tr').value);
+    } else if (state.toonQuery && (state.toonQuery.math || state.toonQuery.word || state.toonQuery.face || state.toonQuery.rgb)) {
+      patch.math = state.toonQuery.math || '';
+      patch.word = state.toonQuery.word || '';
+      patch.face = state.toonQuery.face || '';
+      patch.rgb = state.toonQuery.rgb || '';
+    }
+    return patch;
+  }
+
+  function persistLive() {
+    if (!globalThis.QUERY) return;
+    try { QUERY.writeStore(localStorage, livePatch()); }
+    catch (e) { /* private mode */ }
   }
 
   const INTRO_KEY = 'math.intro.v1';
@@ -151,19 +205,26 @@
   function applyQuery() {
     if (!globalThis.QUERY) return;
     const q = QUERY.read(location.search);
-    state.mintQuery = { a: q.a, b: q.b };
-    state.toonQuery = { math: q.math, word: q.word, face: q.face, rgb: q.rgb };
-    if (q.n) state.routeTarget = q.n;
-    if (q.R !== '' || q.G !== '' || q.B !== '') {
+    let stored = null;
+    try { stored = QUERY.readStore(localStorage); }
+    catch (e) { stored = null; }
+    const restored = QUERY.restoreBag(q, stored);
+    const v = restored.values;
+    state.mintQuery = { a: v.a, b: v.b };
+    state.toonQuery = { math: v.math, word: v.word, face: v.face, rgb: v.rgb };
+    if (v.n) state.routeTarget = v.n;
+    if (QUERY.hasPlanes(v)) {
       try {
-        const R = q.R !== '' ? BigInt(q.R) : 0n;
-        const G = q.G !== '' ? BigInt(q.G) : 0n;
-        const B = q.B !== '' ? BigInt(q.B) : 0n;
+        const R = v.R !== '' ? BigInt(v.R) : 0n;
+        const G = v.G !== '' ? BigInt(v.G) : 0n;
+        const B = v.B !== '' ? BigInt(v.B) : 0n;
         state.planes = { R: R, G: G, B: B };
         state.grid = P.planesToRows(R, G, B);
-        state.planesTouched = q.R !== '' && q.G !== '' && q.B !== '';
+        state.planesTouched = true;
       } catch (e) { /* leave the grid */ }
     }
+    const patch = QUERY.storePatch(restored, ['mint', 'route', 'rgb', 'toon']);
+    if (Object.keys(patch).length) rememberQuery(patch);
   }
 
   function bindTips() {
@@ -1334,7 +1395,7 @@
     paintPending();
     const next = '#' + tok.kind + '/' + id;
     if (location.hash !== next) {
-      try { history.replaceState(null, '', next); }
+      try { history.replaceState(null, '', location.pathname + location.search + next); }
       catch (e) {}
     }
   }
@@ -1345,7 +1406,7 @@
       const next = '#' + tok.kind + '/' + tok.id.toString();
       if (state.tab === 'token' && state.token && state.token.kind === tok.kind && state.token.id === tok.id.toString()) {
         if (location.hash !== next) {
-          try { history.replaceState(null, '', next); }
+          try { history.replaceState(null, '', location.pathname + location.search + next); }
           catch (e) {}
         }
         return;
@@ -1358,7 +1419,7 @@
     if (TABS.indexOf(name) === -1) name = 'browse';
     if (state.tab === name && !state.token) {
       if (location.hash !== '#' + name) {
-        try { history.replaceState(null, '', '#' + name); }
+        try { history.replaceState(null, '', location.pathname + location.search + '#' + name); }
         catch (e) {}
       }
       return;
@@ -1781,6 +1842,10 @@
     bindTips();
     paintIntro();
     applyQuery();
+    window.addEventListener('pagehide', persistLive);
+    document.addEventListener('visibilitychange', function () {
+      if (document.visibilityState === 'hidden') persistLive();
+    });
     document.querySelectorAll('nav button').forEach(function (b) {
       b.onclick = function () { show(b.dataset.tab); };
     });

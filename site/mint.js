@@ -42,6 +42,7 @@
   }
 
   function paintMint(doSim, speak) {
+    if ($('#a') && $('#b')) rememberMint();
     const pair = readPair();
     const eq = $('#eq');
     const meta = $('#mintMeta');
@@ -268,7 +269,7 @@
       '<div class="row"><label class="num">a <input id="a" spellcheck="false" inputmode="numeric" value="' + mintQueryValue('a') + '"></label>' +
       '<label class="num">b <input id="b" spellcheck="false" inputmode="numeric" value="' + mintQueryValue('b') + '"></label></div>' +
       '<div class="row"><button type="button" id="suggest">suggest another</button>' +
-      '<span id="hintNote" class="dim"></span></div>' +
+      '<span id="hintNote" class="dim"></span>' + QUERY.copyHtml() + '</div>' +
       '<div class="eq" id="eq">a + b = ?</div>' +
       '<div id="grid"></div>' +
       '<p id="mintMeta"></p>' +
@@ -290,6 +291,17 @@
     $('#a').addEventListener('input', function (ev) { typed('ownA')(ev); rememberMint(); });
     $('#b').addEventListener('input', function (ev) { typed('ownB')(ev); rememberMint(); });
     $('#suggest').onclick = function () { fillMint(true); };
+    QUERY.attachCopy(view.querySelector('.copy-link'), function () {
+      return QUERY.shareHref({
+        origin: location.origin,
+        pathname: location.pathname,
+        search: location.search,
+        hash: '#mint',
+      }, {
+        a: QUERY.digits($('#a').value),
+        b: QUERY.digits($('#b').value),
+      });
+    });
     $('#sim').onclick = function () { paintMint(true, true); };
     $('#send').onclick = function () {
       const pair = readPair();
