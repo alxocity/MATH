@@ -995,7 +995,9 @@
     const cur = location.pathname + location.search + location.hash;
     if (next === cur) return;
     try { history.replaceState(null, '', next); }
-    catch (e) {}
+    catch (e) { return; }
+    try { QUERY.writeMark(sessionStorage, next); }
+    catch (e) { /* private mode */ }
   }
 
   function persistPreset() {

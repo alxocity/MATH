@@ -135,6 +135,8 @@
     if (next === cur) return true;
     try { history.replaceState(null, '', next); }
     catch (e) { return false; }
+    try { QUERY.writeMark(sessionStorage, next); }
+    catch (e) { /* private mode */ }
     return true;
   }
 
@@ -204,11 +206,14 @@
 
   function applyQuery() {
     if (!globalThis.QUERY) return;
-    const q = QUERY.read(location.search);
+    let mark = '';
+    try { mark = QUERY.readMark(sessionStorage); }
+    catch (e) { mark = ''; }
+    const search = QUERY.markedOpen(location.search, mark) ? '' : location.search;
     let stored = null;
     try { stored = QUERY.readStore(localStorage); }
     catch (e) { stored = null; }
-    const restored = QUERY.restoreBag(q, stored, location.hash);
+    const restored = QUERY.restoreBag(search, stored, location.hash);
     const v = restored.values;
     bootLocked = !!restored.locked;
     Object.keys(openedGroup).forEach(function (key) { delete openedGroup[key]; });
@@ -1392,8 +1397,9 @@
     } catch (e) { /* leave the grid */ }
   }
 
-  // First visit to a tab after a bare or hash-only open. A known param at boot
-  // blocks this, and the saved values stay out of the address bar.
+  // First visit to a tab after an unlocked open: a bare address, a hash with no
+  // query, or a search this tab wrote itself. A shared link stays locked, and
+  // the saved values stay out of the address bar.
   function lazyRestore(tab) {
     if (bootLocked || !globalThis.QUERY) return;
     const name = QUERY.namedGroup(tab);
