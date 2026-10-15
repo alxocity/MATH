@@ -169,10 +169,7 @@
   function sendAllQueue() {
     state.runSend = function () { sendAllQueue(); };
     const runs = queueRuns();
-    if (!runs.length) {
-      S.showBatchWhy(globalThis.RUN.PLAN_FIRST);
-      return;
-    }
+    if (globalThis.RUN.emptyPlan(runs, S.showBatchWhy)) return;
     S.runSteps(runs);
   }
 

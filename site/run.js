@@ -162,15 +162,27 @@
   }
 
   // Fill a blank bulk reason. Omitted flags are left alone, so a route call
-  // does not pick up the ENS "simulate first" line.
+  // does not pick up the ENS "simulate first" line. `busy` is ENS work in
+  // progress. `sending` is a route or RGB send that has not marked a row yet.
   function batchHold(why, flags) {
     if (why) return why;
     const f = flags || {};
+    if (f.busy) return 'working…';
+    if (f.unknown) return 'check your wallet';
     if (f.flying) return 'a transaction is still in flight';
+    if (f.sending) return 'a send is already running';
     if (f.blocked) return f.blockWhy || "holder can't receive payout";
+    if (f.controls === undefined && f.wallet) return 'read the parent first';
     if (f.controls != null && !f.controls) return 'this wallet does not control the parent';
     if (f.signed != null && !f.signed) return 'simulate first';
     return '';
+  }
+
+  // No plan loaded. Tell the batch control instead of sending an empty list.
+  function emptyPlan(runs, show) {
+    if (runs && runs.length) return false;
+    if (show) show(PLAN_FIRST);
+    return true;
   }
 
   // First sendable batch. Restored rows have no tx, so they cannot be sent.
@@ -194,17 +206,21 @@
       return s && s.status !== 'confirmed' && s.status !== 'submitted' && !isUnknown(s.status);
     });
     const first = openBatch(list);
+    const unknown = list.some(function (s) { return s && isUnknown(s.status); });
     const flying = list.some(function (s) {
-      return s && (s.status === 'submitted' || s.status === 'signing' || isUnknown(s.status));
+      return s && (s.status === 'submitted' || s.status === 'signing');
     });
     const blocked = !!(first[0] && first[0].blocked);
     const why = (waiting.length && !first.length) ? PLAN_FIRST : bulkWhy(first.length, f.phase, f.noun);
     return batchHold(why, {
+      unknown: unknown,
       flying: flying,
+      sending: !!f.busy,
       blocked: blocked,
       blockWhy: blocked ? first[0].blockWhy : '',
       controls: f.controls,
       signed: f.signed,
+      wallet: f.wallet,
     });
   }
 
@@ -269,6 +285,7 @@
     PLAN_FIRST: PLAN_FIRST,
     bulkWhy: bulkWhy,
     batchHold: batchHold,
+    emptyPlan: emptyPlan,
     openBatch: openBatch,
     batchWhy: batchWhy,
     runCount: runCount,
