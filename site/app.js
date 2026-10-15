@@ -135,8 +135,9 @@
     if (next === cur) return true;
     try { history.replaceState(null, '', next); }
     catch (e) { return false; }
-    try { QUERY.writeMark(sessionStorage, next); }
-    catch (e) { /* private mode */ }
+    try {
+      if (location.search === QUERY.hrefSearch(next)) QUERY.writeMark(sessionStorage, next);
+    } catch (e) { /* private mode, or replaceState left the address bar unchanged */ }
     return true;
   }
 
@@ -209,15 +210,20 @@
     let mark = '';
     try { mark = QUERY.readMark(sessionStorage); }
     catch (e) { mark = ''; }
-    const search = QUERY.markedOpen(location.search, mark) ? '' : location.search;
+    const marked = QUERY.markedOpen(location.search, mark);
     let stored = null;
     try { stored = QUERY.readStore(localStorage); }
     catch (e) { stored = null; }
-    const restored = QUERY.restoreBag(search, stored, location.hash);
+    const restored = QUERY.restoreBag(location.search, stored, location.hash);
     const v = restored.values;
-    bootLocked = !!restored.locked;
+    bootLocked = marked ? false : !!restored.locked;
     Object.keys(openedGroup).forEach(function (key) { delete openedGroup[key]; });
-    if (!bootLocked && restored.group) openedGroup[restored.group] = true;
+    if (marked) {
+      const sources = restored.sources || {};
+      Object.keys(sources).forEach(function (name) {
+        if (sources[name] === 'url') openedGroup[name] = true;
+      });
+    } else if (!bootLocked && restored.group) openedGroup[restored.group] = true;
     state.mintQuery = { a: v.a, b: v.b };
     state.toonQuery = { math: v.math, word: v.word, face: v.face, rgb: v.rgb };
     if (v.n) state.routeTarget = v.n;
@@ -1397,9 +1403,9 @@
     } catch (e) { /* leave the grid */ }
   }
 
-  // First visit to a tab after an unlocked open: a bare address, a hash with no
-  // query, or a search this tab wrote itself. A shared link stays locked, and
-  // the saved values stay out of the address bar.
+  // First visit to a tab after an unlocked open. A marked search keeps the
+  // groups it names and leaves the others for this path. A shared link stays
+  // locked, and saved values stay out of the address bar.
   function lazyRestore(tab) {
     if (bootLocked || !globalThis.QUERY) return;
     const name = QUERY.namedGroup(tab);
