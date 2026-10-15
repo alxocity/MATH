@@ -206,6 +206,7 @@
     const input = $('#target');
     if (!input || !globalThis.QUERY) return;
     state.routeTarget = input.value.trim();
+    state.routeDirty = true;
     S.rememberQuery({ n: QUERY.digits(state.routeTarget) });
   }
 

@@ -338,6 +338,7 @@
       rgb: QUERY.digits($('#tr').value),
     };
     state.toonQuery = next;
+    state.toonDirty = true;
     S.rememberQuery(next);
   }
 

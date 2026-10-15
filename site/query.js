@@ -102,7 +102,7 @@
     if (tab == null || tab === '' || tab === '#') return 'rgb';
     const raw = String(tab);
     const name = (raw.charAt(0) === '#' ? raw.slice(1) : raw).toLowerCase();
-    return GROUPS[name] ? name : '';
+    return Object.prototype.hasOwnProperty.call(GROUPS, name) ? name : '';
   }
 
   // A known query key uses the URL alone. A bare or hash-only address restores
@@ -194,19 +194,24 @@
     return { R: R, G: G, B: B };
   }
 
+  // A hide write keeps groups the visitor edited. Loaded URL values are not edits.
   function livePatch(view) {
     const src = view || {};
     const patch = {};
-    if (src.mintOpen) {
-      patch.a = digits(src.a);
-      patch.b = digits(src.b);
-    } else if (src.mint && (src.mint.a || src.mint.b)) {
-      patch.a = src.mint.a || '';
-      patch.b = src.mint.b || '';
+    if (src.mintDirty) {
+      if (src.mintOpen) {
+        patch.a = digits(src.a);
+        patch.b = digits(src.b);
+      } else if (src.mint) {
+        patch.a = src.mint.a || '';
+        patch.b = src.mint.b || '';
+      }
     }
-    if (src.routeOpen) patch.n = digits(src.n);
-    else if (src.routeTarget) patch.n = digits(src.routeTarget);
-    if (src.planesTouched) {
+    if (src.routeDirty) {
+      if (src.routeOpen) patch.n = digits(src.n);
+      else patch.n = digits(src.routeTarget);
+    }
+    if (src.planesDirty) {
       const planes = src.rgbInputs ? planeFields(src.rgbInputs) : planeFields(src.planes);
       if (planes) {
         patch.R = planes.R;
@@ -214,17 +219,19 @@
         patch.B = planes.B;
       }
     }
-    if (src.toonOpen) {
-      const t = src.toonInputs || {};
-      patch.math = digits(t.math);
-      patch.word = digits(t.word, true);
-      patch.face = digits(t.face, true);
-      patch.rgb = digits(t.rgb);
-    } else if (src.toon && (src.toon.math || src.toon.word || src.toon.face || src.toon.rgb)) {
-      patch.math = src.toon.math || '';
-      patch.word = src.toon.word || '';
-      patch.face = src.toon.face || '';
-      patch.rgb = src.toon.rgb || '';
+    if (src.toonDirty) {
+      if (src.toonOpen) {
+        const t = src.toonInputs || {};
+        patch.math = digits(t.math);
+        patch.word = digits(t.word, true);
+        patch.face = digits(t.face, true);
+        patch.rgb = digits(t.rgb);
+      } else if (src.toon) {
+        patch.math = src.toon.math || '';
+        patch.word = src.toon.word || '';
+        patch.face = src.toon.face || '';
+        patch.rgb = src.toon.rgb || '';
+      }
     }
     return patch;
   }

@@ -75,6 +75,10 @@ assert.strictEqual(QUERY.restoreBag('', saved, 'mint').sources.mint, 'store');
 assert.strictEqual(QUERY.restoreBag('', saved, '#browse').sources.rgb, '');
 assert.strictEqual(QUERY.restoreBag('', saved, '#browse').sources.mint, '');
 assert.strictEqual(QUERY.restoreBag('', saved, '#math/1').group, '');
+assert.strictEqual(QUERY.namedGroup('constructor'), '');
+assert.strictEqual(QUERY.namedGroup('#constructor'), '');
+assert.strictEqual(QUERY.namedGroup('toString'), '');
+assert.strictEqual(QUERY.namedGroup('#rgb'), 'rgb');
 const urlWins = QUERY.restoreBag('?R=9&G=1&B=4', saved, '#mint');
 assert.strictEqual(urlWins.sources.rgb, 'url');
 assert.strictEqual(urlWins.values.R, '9');
@@ -203,21 +207,54 @@ assert.strictEqual(QUERY.planeFields({ R: '5', G: 'nope', B: '2' }), null);
 assert.deepStrictEqual(QUERY.planeFields({ R: '5', G: '03', B: '0' }), { R: '5', G: '3', B: '0' });
 assert.deepStrictEqual(QUERY.livePatch({
   planesTouched: true,
+  planesDirty: false,
+  rgbInputs: { R: '9', G: '8', B: '7' },
+  mint: { a: '4', b: '6' },
+  routeTarget: '15',
+  toon: { math: '1', word: '0', face: '0', rgb: '2' },
+}), {});
+assert.deepStrictEqual(QUERY.livePatch({
+  planesDirty: true,
   rgbInputs: { R: '5', G: 'nope', B: '2' },
 }), {});
 assert.deepStrictEqual(QUERY.livePatch({
-  planesTouched: true,
+  planesDirty: true,
   rgbInputs: { R: '5', G: '3', B: '2' },
 }), { R: '5', G: '3', B: '2' });
+const sharedHide = memory();
+QUERY.writeStore(sharedHide, { R: '1', G: '2', B: '3', a: '8', b: '9', preset: 'math' });
+const friend = QUERY.livePatch({
+  planesTouched: true,
+  planesDirty: false,
+  rgbInputs: { R: '5', G: '3', B: '2' },
+  mintDirty: false,
+  mint: { a: '4', b: '6' },
+  routeDirty: false,
+  routeTarget: '15',
+  toonDirty: false,
+  toon: { math: '1', word: '0', face: '0', rgb: '2' },
+});
+if (QUERY.hideWrite('pagehide', 'visible')) QUERY.writeStore(sharedHide, friend);
+assert.strictEqual(QUERY.readStore(sharedHide).R, '1');
+assert.strictEqual(QUERY.readStore(sharedHide).a, '8');
+assert.strictEqual(QUERY.readStore(sharedHide).preset, 'math');
+const editedHide = QUERY.livePatch({
+  planesDirty: true,
+  rgbInputs: { R: '9', G: '8', B: '7' },
+});
+if (QUERY.hideWrite('pagehide', 'visible')) QUERY.writeStore(sharedHide, editedHide);
+assert.strictEqual(QUERY.readStore(sharedHide).R, '9');
+assert.strictEqual(QUERY.readStore(sharedHide).G, '8');
+assert.strictEqual(QUERY.readStore(sharedHide).a, '8');
 assert.strictEqual(QUERY.hideWrite('pagehide', 'visible'), true);
 assert.strictEqual(QUERY.hideWrite('visibility', 'hidden'), true);
 assert.strictEqual(QUERY.hideWrite('visibility', 'visible'), false);
 const hideStore = memory();
 QUERY.writeStore(hideStore, { R: '1', G: '1', B: '1' });
-const hiddenPatch = QUERY.livePatch({ planesTouched: true, rgbInputs: { R: '9', G: '', B: '2' } });
+const hiddenPatch = QUERY.livePatch({ planesDirty: true, rgbInputs: { R: '9', G: '', B: '2' } });
 if (QUERY.hideWrite('pagehide', 'visible')) QUERY.writeStore(hideStore, hiddenPatch);
 assert.strictEqual(QUERY.readStore(hideStore).R, '1');
-const keptPatch = QUERY.livePatch({ planesTouched: true, rgbInputs: { R: '9', G: '3', B: '2' } });
+const keptPatch = QUERY.livePatch({ planesDirty: true, rgbInputs: { R: '9', G: '3', B: '2' } });
 if (QUERY.hideWrite('pagehide', 'visible')) QUERY.writeStore(hideStore, keptPatch);
 assert.strictEqual(QUERY.readStore(hideStore).R, '9');
 assert.strictEqual(QUERY.readStore(hideStore).G, '3');
@@ -274,7 +311,10 @@ function copyHarness(opt) {
     insertAdjacentElement: function (_where, el) { field = el; },
     addEventListener: function (_type, fn) { button.fire = fn; },
   };
-  QUERY.attachCopy(button, function () { return opt.url || 'https://math.alxo.city/?R=5#rgb'; });
+  QUERY.attachCopy(button, function () {
+    if (opt.throwGet) throw new Error('no url');
+    return opt.url || 'https://math.alxo.city/?R=5#rgb';
+  });
   return {
     fire: function () { button.fire(); },
     note: note,
@@ -323,5 +363,24 @@ const thrown = copyHarness({
 thrown.fire();
 assert.strictEqual(thrown.note.textContent, 'press copy');
 assert.strictEqual(thrown.prompted(), 'https://math.alxo.city/?R=5#rgb');
+
+let syncCopied = '';
+const syncClip = copyHarness({
+  navigator: {
+    clipboard: {
+      writeText: function (url) { syncCopied = url; },
+    },
+  },
+});
+syncClip.fire();
+assert.strictEqual(syncClip.note.textContent, 'copied');
+assert.strictEqual(syncCopied, 'https://math.alxo.city/?R=5#rgb');
+assert.strictEqual(syncClip.prompted(), null);
+
+const quiet = copyHarness({ throwGet: true });
+assert.doesNotThrow(function () { quiet.fire(); });
+assert.strictEqual(quiet.note.textContent, '');
+assert.strictEqual(quiet.field(), null);
+assert.strictEqual(quiet.prompted(), null);
 
 console.log('query.test.js ok');

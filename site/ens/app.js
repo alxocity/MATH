@@ -976,10 +976,12 @@
   }
 
   let presetName = '';
+  let presetDirty = false;
 
   function rememberPreset(name) {
     if (!globalThis.QUERY) return;
     presetName = QUERY.presetName(name || '');
+    presetDirty = true;
     try { QUERY.writeStore(localStorage, { preset: presetName }); }
     catch (e) { /* private mode */ }
     let next;
@@ -997,7 +999,7 @@
   }
 
   function persistPreset() {
-    if (!globalThis.QUERY) return;
+    if (!globalThis.QUERY || !presetDirty) return;
     try { QUERY.writeStore(localStorage, { preset: presetName }); }
     catch (e) { /* private mode */ }
   }

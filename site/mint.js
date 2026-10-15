@@ -264,6 +264,7 @@
       b: QUERY.digits(b.value),
     };
     state.mintQuery = next;
+    state.mintDirty = true;
     S.rememberQuery(next);
   }
 

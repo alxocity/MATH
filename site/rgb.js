@@ -649,6 +649,7 @@
 
   S.rgb = rgb;
   S.fillRgb = fillRgb;
+  S.signalPlanes = signalPlanes;
   S.planeIssues = planeIssues;
   S.issuesHtml = issuesHtml;
 })();
