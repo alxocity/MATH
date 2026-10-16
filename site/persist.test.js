@@ -1759,6 +1759,62 @@ async function main() {
   assert.ok(state.queue.every(function (item) { return item.kind === 'math' || item.kind === 'rgb'; }));
   assert.ok(state.run.some(function (s) { return s.label === keptLabel && s.status === 'confirmed'; }));
 
+  state.runBusy = false;
+  state.txLock = null;
+  state.run = [];
+  state.rgbLock = false;
+  state.planesTouched = true;
+  state.planes = { R: 3n, G: 1n, B: 1n };
+  state.grid = global.PLAN.planesToRows(3n, 1n, 1n);
+  [state.usedR, state.usedG, state.usedB].forEach(function (set) {
+    set.delete(1n);
+    set.delete(3n);
+  });
+  state.rgbBy.r.delete(1n);
+  state.rgbBy.g.delete(1n);
+  state.rgbBy.b.delete(1n);
+  state.rgbBy.r.delete(3n);
+  state.supply.set(1n, user);
+  state.supply.delete(3n);
+  get('pR').value = '3';
+  get('pG').value = '1';
+  get('pB').value = '1';
+  SITE.planRgb();
+  const mathRow = state.run.filter(function (s) { return s.label.indexOf('RGB.add') !== 0; })[0];
+  const rgbRow = state.run.filter(function (s) { return s.label.indexOf('RGB.add') === 0; })[0];
+  assert.ok(mathRow && rgbRow);
+  const carried = '0x' + 'cd'.repeat(32);
+  mathRow.status = 'confirmed';
+  mathRow.hash = carried;
+  rgbRow.status = 'failed';
+  rgbRow.error = 'reverted';
+  const sumEl = get('planSum');
+  let sumHtml = '1 of 1 done';
+  Object.defineProperty(sumEl, 'innerHTML', {
+    configurable: true,
+    enumerable: true,
+    get: function () { return sumHtml; },
+    set: function (v) {
+      sumHtml = String(v);
+      sumEl.textContent = '';
+      sumEl.options = [];
+    },
+  });
+  sumEl.textContent = '1 of 1 done';
+  SITE.setRgbLock(false);
+  assert.strictEqual(sumEl.textContent, '');
+  assert.strictEqual(sumHtml, '');
+  assert.ok(state.run.some(function (s) { return s.label === mathRow.label && s.status === 'confirmed' && s.hash === carried; }));
+  assert.ok(!state.run.some(function (s) { return s.status === 'failed'; }));
+  SITE.planRgb();
+  const carriedRow = state.run.filter(function (s) { return s.label === mathRow.label; })[0];
+  assert.ok(carriedRow);
+  assert.strictEqual(carriedRow.status, 'confirmed');
+  assert.strictEqual(carriedRow.hash, carried);
+  delete sumEl.innerHTML;
+  sumEl.innerHTML = '';
+  sumEl.textContent = '';
+
   state.rgbLock = false;
   state.runBusy = false;
   state.txLock = null;
