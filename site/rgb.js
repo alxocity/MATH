@@ -317,10 +317,13 @@
     state.queue = [];
     const host = $('#queue');
     if (host) host.innerHTML = '<p class="plan-sum" id="planSum" role="status"></p>';
-    if (S.decoratePlan && globalThis.RUN) S.decoratePlan([]);
+    const meta = $('#rgbMeta');
+    if (meta) meta.innerHTML = issuesHtml(planeIssues(state.planes));
+    if (S.hydrateRun && globalThis.RUN) {
+      S.hydrateRun((state.run || []).filter(function (s) { return s && s.status === 'confirmed'; }), true);
+    }
     const btn = $('#sendQueueAll');
     if (btn) btn.disabled = true;
-    paintLock();
   }
 
   function setLock(on) {
