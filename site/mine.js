@@ -76,8 +76,8 @@
       pager.innerHTML = LIST.pagerHtml(state.minePage, pages, list.length);
       const prev = S.$('#prev');
       const next = S.$('#next');
-      if (prev) prev.onclick = function () { state.minePage--; paintMine(); };
-      if (next) next.onclick = function () { state.minePage++; paintMine(); };
+      if (prev) prev.onclick = function () { state.minePage--; S.rememberList('mine'); paintMine(); };
+      if (next) next.onclick = function () { state.minePage++; S.rememberList('mine'); paintMine(); };
     }
     bindGo(cards);
     S.loadSvgs(slice.map(function (t) { return t.id; }), kind);
@@ -98,10 +98,16 @@
       '<div id="cards"></div><p id="pager" class="row"></p>' +
       '<p class="dim">low 256 bits. pictures from the renderer, this page only.</p>';
     view.querySelectorAll('[data-kind]').forEach(function (b) {
-      b.onclick = function () { state.mineKind = b.dataset.kind; state.minePage = 0; S.show('mine'); };
+      b.onclick = function () {
+        state.mineKind = b.dataset.kind;
+        state.minePage = 0;
+        S.rememberList('mine');
+        S.show('mine');
+      };
     });
     LIST.bindSearch(state.mineFilter, function () {
       state.minePage = 0;
+      S.rememberList('mine');
       paintMine();
     }, paintMine, function () { return state.tab === 'mine'; }, ENS);
     paintMine();

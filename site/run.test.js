@@ -312,4 +312,30 @@ assert.strictEqual(counted.failed, 1);
 assert.strictEqual(counted.text, '4 steps. 1 done, 2 pending, 1 failed');
 assert.strictEqual(RUN.runCount([{ status: 'confirmed' }]).text, '1 step. 1 done, 0 pending, 0 failed');
 
+const plan = [
+  { label: '1 + 1 = 2', status: 'confirmed', hash: '0x' + 'ab'.repeat(32) },
+  { label: '2 + 1 = 3', status: 'confirmed' },
+  { label: '3 + 1 = 4', status: 'failed', error: 'reverted' },
+  { label: '4 + 1 = 5', status: 'pending' },
+  { label: '5 + 1 = 6', status: 'pending' },
+  { label: '6 + 1 = 7', status: 'submitted' },
+  { label: 'RGB.add 1, 2, 3', status: 'pending' },
+];
+const prog = RUN.progressSummary(plan);
+assert.strictEqual(prog.text, '2 of 7 done, 1 failed');
+assert.strictEqual(prog.focus, 2);
+assert.strictEqual(RUN.stepClass('confirmed'), 'done');
+assert.strictEqual(RUN.stepClass('failed'), 'failed');
+assert.strictEqual(RUN.stepClass('submitted'), 'now');
+assert.strictEqual(RUN.stepClass('signing'), 'now');
+assert.strictEqual(RUN.stepClass('pending'), '');
+assert.strictEqual(RUN.stepId(plan[2].label), 'step-3-1-4');
+const quiet = RUN.progressSummary([
+  { status: 'confirmed' },
+  { status: 'pending' },
+  { status: 'pending' },
+]);
+assert.strictEqual(quiet.text, '1 of 3 done');
+assert.strictEqual(quiet.focus, 1);
+
 console.log('run.test.js ok');

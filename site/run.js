@@ -258,6 +258,36 @@
     });
   }
 
+  function stepId(label) {
+    const slug = String(label || '').replace(/[^A-Za-z0-9]+/g, '-').replace(/^-|-$/g, '');
+    return 'step-' + (slug || 'x');
+  }
+
+  function stepClass(status) {
+    if (status === 'confirmed') return 'done';
+    if (status === 'failed') return 'failed';
+    if (status === 'submitted' || status === 'signing') return 'now';
+    return '';
+  }
+
+  function progressSummary(rows) {
+    const count = runCount(rows);
+    let text = count.done + ' of ' + count.n + ' done';
+    if (count.failed) text += ', ' + count.failed + ' failed';
+    const list = rows || [];
+    let focus = -1;
+    for (let i = 0; i < list.length; i++) {
+      if (list[i] && list[i].status === 'failed') { focus = i; break; }
+    }
+    if (focus < 0) {
+      for (let i = 0; i < list.length; i++) {
+        const st = list[i] && list[i].status;
+        if (st && st !== 'confirmed') { focus = i; break; }
+      }
+    }
+    return { text: text, focus: focus, done: count.done, failed: count.failed, n: count.n };
+  }
+
   function runCount(rows) {
     let done = 0;
     let failed = 0;
@@ -326,6 +356,9 @@
     clearHashLock: clearHashLock,
     batchWhy: batchWhy,
     runCount: runCount,
+    stepId: stepId,
+    stepClass: stepClass,
+    progressSummary: progressSummary,
     callsId: callsId,
     receiptOk: receiptOk,
     callsOutcome: callsOutcome,

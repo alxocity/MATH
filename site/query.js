@@ -1,6 +1,6 @@
 (function () {
-  const KEYS = ['a', 'b', 'n', 'R', 'G', 'B', 'math', 'word', 'face', 'rgb', 'preset'];
-  const ZERO = { word: true, face: true, R: true, G: true, B: true };
+  const KEYS = ['a', 'b', 'n', 'R', 'G', 'B', 'math', 'word', 'face', 'rgb', 'preset', 'lock', 'bk', 'pg', 'so', 'pal', 'pow', 'p0', 'p1', 'us', 'mk', 'mp', 'ms', 'm0', 'm1', 'ml', 'mw', 'mu'];
+  const ZERO = { word: true, face: true, R: true, G: true, B: true, p0: true, p1: true, m0: true, m1: true, pg: true, mp: true };
 
   function digits(raw, allowZero) {
     const s = String(raw == null ? '' : raw).trim();
@@ -18,8 +18,27 @@
     return /^[a-z0-9-]+$/.test(s) ? s : '';
   }
 
+  function flag(raw) {
+    return digits(raw, false) === '1' ? '1' : '';
+  }
+
+  function oneOf(raw, allowed) {
+    const n = digits(raw, false);
+    return allowed.indexOf(n) === -1 ? '' : n;
+  }
+
+  function pageDigits(raw) {
+    const n = digits(raw, true);
+    if (n === '' || n.length > 6) return '';
+    return n;
+  }
+
   function blank() {
-    return { a: '', b: '', n: '', R: '', G: '', B: '', math: '', word: '', face: '', rgb: '', preset: '' };
+    return {
+      a: '', b: '', n: '', R: '', G: '', B: '', math: '', word: '', face: '', rgb: '', preset: '',
+      lock: '', bk: '', pg: '', so: '', pal: '', pow: '', p0: '', p1: '', us: '',
+      mk: '', mp: '', ms: '', m0: '', m1: '', ml: '', mw: '', mu: '',
+    };
   }
 
   function read(search) {
@@ -27,6 +46,11 @@
     const out = blank();
     KEYS.forEach(function (k) {
       if (k === 'preset') out[k] = presetName(q.get(k));
+      else if (k === 'lock' || k === 'pal' || k === 'pow' || k === 'ml' || k === 'mw') out[k] = flag(q.get(k));
+      else if (k === 'bk' || k === 'mk') out[k] = oneOf(q.get(k), ['1', '2']);
+      else if (k === 'so' || k === 'ms') out[k] = oneOf(q.get(k), ['1', '2']);
+      else if (k === 'us' || k === 'mu') out[k] = oneOf(q.get(k), ['1', '2', '3', '4']);
+      else if (k === 'pg' || k === 'mp') out[k] = pageDigits(q.get(k));
       else out[k] = digits(q.get(k), !!ZERO[k]);
     });
     return out;
@@ -62,10 +86,127 @@
     rgb: ['R', 'G', 'B'],
     toon: ['math', 'word', 'face', 'rgb'],
     ens: ['preset'],
+    lock: ['lock'],
+    browse: ['bk', 'pg', 'so', 'pal', 'pow', 'p0', 'p1', 'us'],
+    mine: ['mk', 'mp', 'ms', 'm0', 'm1', 'ml', 'mw', 'mu'],
   };
   const URL_KEY = 'math.url.v1';
   const MARK_KEY = 'math.url.mark.v1';
-  const MARK_MAX = 1024;
+  const MARK_MAX = 4096;
+  const HIST_MAX = 64;
+
+  function lockOn(raw) {
+    return String(raw == null ? '' : raw) === '1';
+  }
+
+  function pickLock(urlLock, storedLock, bootLocked) {
+    if (lockOn(urlLock)) return true;
+    if (bootLocked) return false;
+    return lockOn(storedLock);
+  }
+
+  function kindName(raw) {
+    if (raw === '1') return 'rgb';
+    if (raw === '2') return 'toon';
+    return 'math';
+  }
+
+  function kindCode(name) {
+    if (name === 'rgb') return '1';
+    if (name === 'toon') return '2';
+    return '';
+  }
+
+  function sortName(raw) {
+    if (raw === '1') return 'id';
+    if (raw === '2') return 'pop';
+    return 'index';
+  }
+
+  function sortCode(name) {
+    if (name === 'id') return '1';
+    if (name === 'pop') return '2';
+    return '';
+  }
+
+  function usedName(raw) {
+    if (raw === '1') return 'r';
+    if (raw === '2') return 'g';
+    if (raw === '3') return 'b';
+    if (raw === '4') return 'free';
+    return 'any';
+  }
+
+  function usedCode(name) {
+    if (name === 'r') return '1';
+    if (name === 'g') return '2';
+    if (name === 'b') return '3';
+    if (name === 'free') return '4';
+    return '';
+  }
+
+  function pageNum(raw) {
+    const n = pageDigits(raw);
+    if (n === '') return 0;
+    return Number(n);
+  }
+
+  function listState(bag, which) {
+    const b = asBag(bag);
+    const mine = which === 'mine';
+    return {
+      kind: kindName(mine ? b.mk : b.bk),
+      page: pageNum(mine ? b.mp : b.pg),
+      popMin: mine ? b.m0 : b.p0,
+      popMax: mine ? b.m1 : b.p1,
+      pal: (mine ? b.ml : b.pal) === '1',
+      pow: (mine ? b.mw : b.pow) === '1',
+      used: usedName(mine ? b.mu : b.us),
+      sort: sortName(mine ? b.ms : b.so),
+    };
+  }
+
+  function listPatch(which, kind, page, filter) {
+    const mine = which === 'mine';
+    const src = filter || {};
+    const patch = {};
+    patch[mine ? 'mk' : 'bk'] = kindCode(kind);
+    patch[mine ? 'mp' : 'pg'] = page ? String(page) : '';
+    patch[mine ? 'ms' : 'so'] = sortCode(src.sort);
+    patch[mine ? 'ml' : 'pal'] = src.pal ? '1' : '';
+    patch[mine ? 'mw' : 'pow'] = src.pow ? '1' : '';
+    patch[mine ? 'm0' : 'p0'] = digits(src.popMin, true);
+    patch[mine ? 'm1' : 'p1'] = digits(src.popMax, true);
+    patch[mine ? 'mu' : 'us'] = usedCode(src.used);
+    return patch;
+  }
+
+  function histPush(undo, redo, before, after) {
+    const u = Array.isArray(undo) ? undo.slice() : [];
+    const keep = Array.isArray(redo) ? redo.slice() : [];
+    if (before == null || String(before) === String(after)) return { undo: u, redo: keep };
+    u.push(String(before));
+    while (u.length > HIST_MAX) u.shift();
+    return { undo: u, redo: [] };
+  }
+
+  function histUndo(undo, redo, current) {
+    const u = Array.isArray(undo) ? undo.slice() : [];
+    const r = Array.isArray(redo) ? redo.slice() : [];
+    if (!u.length) return null;
+    const value = u.pop();
+    r.push(String(current));
+    return { undo: u, redo: r, value: value };
+  }
+
+  function histRedo(undo, redo, current) {
+    const u = Array.isArray(undo) ? undo.slice() : [];
+    const r = Array.isArray(redo) ? redo.slice() : [];
+    if (!r.length) return null;
+    const value = r.pop();
+    u.push(String(current));
+    return { undo: u, redo: r, value: value };
+  }
 
   function searchPart(value) {
     const s = String(value == null ? '' : value);
@@ -387,6 +528,20 @@
     writeMark: writeMark,
     markedOpen: markedOpen,
     hrefSearch: searchPart,
+    lockOn: lockOn,
+    pickLock: pickLock,
+    kindName: kindName,
+    kindCode: kindCode,
+    sortName: sortName,
+    sortCode: sortCode,
+    usedName: usedName,
+    usedCode: usedCode,
+    pageNum: pageNum,
+    listState: listState,
+    listPatch: listPatch,
+    histPush: histPush,
+    histUndo: histUndo,
+    histRedo: histRedo,
     digits: digits,
     presetName: presetName,
     read: read,

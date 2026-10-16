@@ -115,20 +115,23 @@
       ', msg.value ' + S.fmt(built.msgValue) + ', net ~' + S.fmt(built.net) + warn) +
       '<br>inputs you own are free, so collecting can make future builds cheaper.';
     if (steps) {
-      steps.innerHTML = built.steps.map(function (s, i) {
+      const rows = built.steps.map(function (s, i) {
         const note = stepNote(s);
         const sendOff = note === RULES.payout() ? ' disabled' : '';
         const buttons = s.exists ? '' :
           '<button type="button" data-sim="' + i + '">simulate</button>' + S.mark('ⓘ', S.TIPS.simulate) +
           '<button type="button" data-send="' + i + '"' + sendOff + '>send</button>';
         const noteMark = note === RULES.payout() ? S.mark('ⓘ', S.TIPS.blocked) : note === RULES.unchecked() ? S.mark('ⓘ', S.TIPS.unchecked) : '';
-        return '<div class="step">' + globalThis.TOKEN.sumHtml(s.a, s.b, s.result) +
+        const label = s.a + ' + ' + s.b + ' = ' + s.result;
+        const open = s.exists ? '<div class="step">' : '<div class="step" id="' + globalThis.RUN.stepId(label) + '" data-plan="' + S.esc(label) + '">';
+        return open + '<span class="step-main">' + globalThis.TOKEN.sumHtml(s.a, s.b, s.result) +
           (s.exists ? ' <span class="dim">exists</span>' : '') +
           (note ? ' <span class="' + (note === RULES.unchecked() ? 'dim' : 'bad') + '">' + S.esc(note) + '</span>' + noteMark : '') +
-          '<div class="dim">pay ' + S.addr(s.payTo[0]) + ' ' + S.addr(s.payTo[1]) + ' royalty ' + S.fmt(s.royalty) + '</div>' +
+          '<div class="dim">pay ' + S.addr(s.payTo[0]) + ' ' + S.addr(s.payTo[1]) + ' royalty ' + S.fmt(s.royalty) + '</div></span>' +
           buttons +
           '</div>';
-      }).join('') || '<p class="dim">already minted.</p>';
+      }).join('');
+      steps.innerHTML = '<p class="plan-sum" id="planSum"></p>' + (rows || '<p class="dim">already minted.</p>');
       steps.querySelectorAll('[data-sim]').forEach(function (b) {
         b.onclick = function () { S.sendStep(built.steps[Number(b.dataset.sim)], false); };
       });

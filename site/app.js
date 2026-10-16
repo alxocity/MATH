@@ -39,8 +39,11 @@
     gasPrice: 1000000000n,
     page: 0,
     filter: { q: '', popMin: '', popMax: '', pal: false, pow: false, used: 'any', sort: 'index' },
+    browseDirty: false,
+    rgbLock: false,
     mineKind: 'math',
     minePage: 0,
+    mineDirty: false,
     mineFilter: { q: '', popMin: '', popMax: '', pal: false, pow: false, used: 'any', sort: 'index' },
     words: [],
     faces: [],
@@ -232,6 +235,9 @@
     state.routeDirty = false;
     state.planesDirty = false;
     state.planesTouched = false;
+    state.rgbLock = QUERY.pickLock(v.lock, stored && stored.lock, bootLocked);
+    applyList('browse', v);
+    applyList('mine', v);
     if (QUERY.hasPlanes(v)) {
       try {
         const R = v.R !== '' ? BigInt(v.R) : 0n;
@@ -736,6 +742,7 @@
     const rows = state.run || [];
     if (!rows.length) {
       host.innerHTML = '';
+      decoratePlan([]);
       return;
     }
     const count = globalThis.RUN.runCount(rows);
@@ -766,6 +773,54 @@
     });
     host.querySelectorAll('[data-clear]').forEach(function (b) {
       b.onclick = function () { clearUnknown(rows[Number(b.dataset.clear)]).catch(function () {}); };
+    });
+    decoratePlan(rows);
+  }
+
+  function decoratePlan(rows) {
+    const list = rows || [];
+    const prog = globalThis.RUN.progressSummary(list);
+    const sum = document.querySelector('#planSum');
+    if (sum) {
+      if (!list.length) sum.innerHTML = '';
+      else if (prog.focus >= 0 && list[prog.focus]) {
+        sum.innerHTML = '<a href="#' + globalThis.RUN.stepId(list[prog.focus].label) + '">' + esc(prog.text) + '</a>';
+      } else sum.textContent = prog.text;
+    }
+    let nodes = [];
+    try { nodes = document.querySelectorAll('[data-plan]'); }
+    catch (e) { nodes = []; }
+    Array.prototype.forEach.call(nodes, function (el) {
+      const hit = list.find(function (s) { return s && s.label === el.getAttribute('data-plan'); });
+      el.classList.remove('done', 'failed', 'now');
+      const old = el.querySelector('.plan-status');
+      if (old && old.parentNode) old.parentNode.removeChild(old);
+      if (!hit) return;
+      const cls = globalThis.RUN.stepClass(hit.status);
+      if (cls) el.classList.add(cls);
+      const bits = [];
+      if (hit.hash && /^0x[0-9a-fA-F]{64}$/.test(hit.hash)) {
+        bits.push('<a href="https://etherscan.io/tx/' + hit.hash + '" target="_blank" rel="noopener noreferrer">tx</a>');
+      }
+      if ((hit.status === 'failed' || globalThis.RUN.isUnknown(hit.status)) && hit.error) {
+        bits.push('<span class="bad">' + esc(hit.error) + '</span>');
+      }
+      if (hit.status === 'failed') bits.push('<button type="button" data-retry="1">resume</button>');
+      else if (hit.status === 'submitted' || globalThis.RUN.isUnknown(hit.status)) {
+        bits.push('<button type="button" data-check="1">check</button>');
+      }
+      if (!bits.length) return;
+      const note = document.createElement('div');
+      note.className = 'plan-status';
+      note.innerHTML = bits.join(' ');
+      el.appendChild(note);
+      const retry = note.querySelector('[data-retry]');
+      if (retry) retry.onclick = function () { if (state.runSend) state.runSend(); };
+      const check = note.querySelector('[data-check]');
+      if (check) check.onclick = function () {
+        state.runTick = true;
+        checkSubmitted().catch(function () {});
+      };
     });
   }
 
@@ -1367,7 +1422,42 @@
     if (name === 'route') return !!state.routeDirty;
     if (name === 'rgb') return !!state.planesDirty;
     if (name === 'toon') return !!state.toonDirty;
+    if (name === 'browse') return !!state.browseDirty;
+    if (name === 'mine') return !!state.mineDirty;
     return false;
+  }
+
+  function applyList(which, v) {
+    const row = QUERY.listState(v, which);
+    const filter = which === 'mine' ? state.mineFilter : state.filter;
+    filter.popMin = row.popMin;
+    filter.popMax = row.popMax;
+    filter.pal = row.pal;
+    filter.pow = row.pow;
+    filter.used = row.used;
+    filter.sort = row.sort;
+    if (which === 'mine') {
+      state.mineKind = row.kind;
+      state.minePage = row.page;
+      state.mineDirty = false;
+      return;
+    }
+    state.kind = row.kind;
+    state.page = row.page;
+    state.browseDirty = false;
+  }
+
+  function rememberList(which) {
+    if (!globalThis.QUERY) return;
+    if (which === 'mine') state.mineDirty = true;
+    else state.browseDirty = true;
+    const mine = which === 'mine';
+    rememberQuery(QUERY.listPatch(
+      which,
+      mine ? state.mineKind : state.kind,
+      mine ? state.minePage : state.page,
+      mine ? state.mineFilter : state.filter
+    ));
   }
 
   function takeGroup(name, v) {
@@ -1389,6 +1479,14 @@
         rgb: v.rgb || '',
       };
       state.toonDirty = false;
+      return;
+    }
+    if (name === 'browse' || name === 'mine') {
+      applyList(name, v);
+      return;
+    }
+    if (name === 'lock') {
+      state.rgbLock = QUERY.lockOn(v.lock);
       return;
     }
     if (name !== 'rgb' || !QUERY.hasPlanes(v)) return;
@@ -1536,6 +1634,8 @@
     sendStep: sendStep,
     runSteps: runSteps,
     rememberQuery: rememberQuery,
+    rememberList: rememberList,
+    openToken: openToken,
     showBatchWhy: showBatchWhy,
     lead: lead,
     hydrateRun: hydrateRun,
@@ -1723,6 +1823,7 @@
   }
 
   function applyHeart(reshuffle) {
+    if (state.rgbLock) return;
     if (!state.holdersReady) {
       show('rgb', true);
       MOLD.say('heartWait');
@@ -1734,10 +1835,12 @@
       MOLD.say('heartNone');
       return;
     }
+    const before = SITE.planeSnap ? SITE.planeSnap() : '';
     state.planesTouched = true;
     state.planesDirty = true;
     state.grid = state.heartPick.rows.slice();
     show('rgb', true);
+    if (SITE.noteEdit) SITE.noteEdit(before);
     const p = state.heartPick;
     MOLD.say('heart', {
       r: p.R.toString(),

@@ -709,6 +709,107 @@ async function main() {
   assert.strictEqual(loc.search, markedMint);
   global.sessionStorage = realSession;
 
+  loc.search = '';
+  loc.hash = '#rgb';
+  sessionStorage.removeItem(QUERY.MARK_KEY);
+  QUERY.writeStore(store, { lock: '1', bk: '2', pg: '3', R: '5', G: '3', B: '2' });
+  state.planes = { R: 1n, G: 1n, B: 1n };
+  SITE.applyQuery();
+  assert.strictEqual(state.rgbLock, true);
+  assert.strictEqual(state.kind, 'math');
+  assert.strictEqual(state.page, 0);
+  SITE.browse = function () {};
+  SITE.show('browse', true);
+  assert.strictEqual(state.kind, 'toon');
+  assert.strictEqual(state.page, 3);
+  assert.strictEqual(loc.search, '');
+
+  loc.search = '?R=5&G=3&B=2';
+  loc.hash = '#rgb';
+  sessionStorage.removeItem(QUERY.MARK_KEY);
+  state.rgbLock = true;
+  SITE.applyQuery();
+  assert.strictEqual(state.rgbLock, false);
+  assert.strictEqual(state.planes.R, 5n);
+
+  const markedLock = '?R=5&G=3&B=2';
+  sessionStorage.setItem(QUERY.MARK_KEY, markedLock);
+  loc.search = markedLock;
+  QUERY.writeStore(store, { lock: '1', a: '4', b: '6' });
+  state.mintDirty = false;
+  SITE.applyQuery();
+  assert.strictEqual(state.rgbLock, true);
+  assert.strictEqual(state.planes.R, 5n);
+  assert.strictEqual(state.mintQuery.a, '');
+  SITE.show('mint', true);
+  assert.strictEqual(state.mintQuery.a, '4');
+  assert.strictEqual(loc.search, markedLock);
+
+  loc.search = '?lock=1&bk=1&pg=2&so=2&pal=1&us=2&mk=2&mp=1';
+  loc.hash = '#browse';
+  sessionStorage.removeItem(QUERY.MARK_KEY);
+  QUERY.writeStore(store, { lock: '', R: '9', G: '9', B: '9', bk: '2' });
+  SITE.applyQuery();
+  assert.strictEqual(state.rgbLock, true);
+  assert.strictEqual(state.kind, 'rgb');
+  assert.strictEqual(state.page, 2);
+  assert.strictEqual(state.filter.sort, 'pop');
+  assert.strictEqual(state.filter.pal, true);
+  assert.strictEqual(state.filter.used, 'g');
+  assert.strictEqual(state.filter.q, '');
+  assert.strictEqual(state.mineKind, 'toon');
+  assert.strictEqual(state.minePage, 1);
+  SITE.show('rgb', true);
+  assert.notStrictEqual(state.planes && state.planes.R, 9n);
+
+  state.planes = { R: 1n, G: 1n, B: 1n };
+  state.grid = global.PLAN.planesToRows(1n, 1n, 1n);
+  state.rgbLock = false;
+  const beforeHist = writes.length;
+  global.history.pushState = function () { throw new Error('push'); };
+  SITE.noteEdit('9,9,9');
+  SITE.undoPlanes();
+  assert.strictEqual(state.planes.R, 9n);
+  assert.ok(writes.length > beforeHist);
+  SITE.redoPlanes();
+  assert.strictEqual(state.planes.R, 1n);
+  state.planes = { R: 4n, G: 4n, B: 4n };
+  SITE.noteEdit('1,1,1');
+  SITE.redoPlanes();
+  assert.strictEqual(state.planes.R, 4n);
+  const ink = state.ink;
+  SITE.setRgbLock(true);
+  assert.strictEqual(SITE.pickInk('r'), false);
+  assert.strictEqual(state.ink, ink);
+  assert.strictEqual(SITE.paintCell(0, 'r'), false);
+  SITE.undoPlanes();
+  assert.strictEqual(state.planes.R, 4n);
+  SITE.setRgbLock(false);
+  assert.strictEqual(QUERY.read('?lock=1').lock, '1');
+
+  SITE.openToken({ kind: 'math', id: 536n });
+  assert.strictEqual(state.tab, 'token');
+  assert.strictEqual(state.token.kind, 'math');
+  assert.strictEqual(state.token.id, '536');
+  SITE.openToken({ kind: 'rgb', id: 12n });
+  assert.strictEqual(state.token.kind, 'rgb');
+  assert.strictEqual(state.token.id, '12');
+  SITE.openToken({ kind: 'toon', id: 1973n });
+  assert.strictEqual(state.token.kind, 'toon');
+  assert.strictEqual(state.token.id, '1973');
+
+  state.rgbLock = true;
+  state.planes = { R: 0n, G: 0n, B: 0n };
+  state.grid = global.PLAN.planesToRows(0n, 0n, 0n);
+  SITE.planRgb();
+  assert.strictEqual(state.rgbLock, false);
+  state.planes = { R: 1n, G: 1n, B: 1n };
+  state.grid = global.PLAN.planesToRows(1n, 1n, 1n);
+  state.supply.set(1n, user);
+  SITE.planRgb();
+  assert.strictEqual(state.rgbLock, true);
+  assert.ok(state.queue.length);
+
   console.log('persist.test.js ok');
 }
 

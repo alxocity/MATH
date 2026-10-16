@@ -194,6 +194,13 @@ button.share { color: var(--dim); }
 .y { background: #e6c229; }
 .w { background: #f4f4f4; }
 .step { border-top: 1px solid var(--line); padding: 8px 0; }
+.plan-sum { position: sticky; top: 0; z-index: 2; background: var(--bg); margin: 0; padding: 8px 0; }
+.step.done { color: var(--dim); }
+.step.done .step-main { text-decoration: line-through; }
+.step.now { box-shadow: inset 3px 0 0 var(--y); }
+.step.failed { color: var(--bad); }
+#cells.locked { opacity: 0.55; }
+button:disabled { opacity: 0.45; }
 .run { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; border-top: 1px solid var(--line); padding: 8px 0; min-width: 0; }
 .run.done { color: var(--dim); }
 .run.now { color: var(--fg); }
