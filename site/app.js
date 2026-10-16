@@ -411,6 +411,7 @@
     state.unknown = new Set();
     if (inv.blocked) state.blocked = inv.blocked;
     if (inv.blockedDone) state.blockedDone = true;
+    reapplyPending();
   }
 
   function persistTexts() {
@@ -691,7 +692,11 @@
   }
 
   function releaseRun(gen) {
-    globalThis.RUN.releaseRun(gen, state, function () { syncNote(state.run); });
+    const released = globalThis.RUN.releaseRun(gen, state, function () { syncNote(state.run); });
+    if (released && state.mintRefresh) {
+      state.mintRefresh = false;
+      refreshChain();
+    }
   }
 
   function showBatchWhy(why) {
@@ -743,6 +748,7 @@
     if (!rows.length) {
       host.innerHTML = '';
       decoratePlan([]);
+      if (SITE.paintLock) SITE.paintLock();
       return;
     }
     const count = globalThis.RUN.runCount(rows);
@@ -775,6 +781,7 @@
       b.onclick = function () { clearUnknown(rows[Number(b.dataset.clear)]).catch(function () {}); };
     });
     decoratePlan(rows);
+    if (SITE.paintLock) SITE.paintLock();
   }
 
   function decoratePlan(rows) {
@@ -782,10 +789,21 @@
     const prog = globalThis.RUN.progressSummary(list);
     const sum = document.querySelector('#planSum');
     if (sum) {
-      if (!list.length) sum.innerHTML = '';
-      else if (prog.focus >= 0 && list[prog.focus]) {
-        sum.innerHTML = '<a href="#' + globalThis.RUN.stepId(list[prog.focus].label) + '">' + esc(prog.text) + '</a>';
-      } else sum.textContent = prog.text;
+      sum.setAttribute('role', 'status');
+      sum.innerHTML = '';
+      if (list.length && prog.focus >= 0 && list[prog.focus]) {
+        const id = globalThis.RUN.stepId(list[prog.focus].label);
+        const btn = document.createElement('button');
+        btn.type = 'button';
+        btn.className = 'plan-jump';
+        btn.textContent = prog.text;
+        btn.onclick = function (ev) {
+          if (ev && ev.preventDefault) ev.preventDefault();
+          const el = document.getElementById(id);
+          if (el && el.scrollIntoView) el.scrollIntoView({ block: 'center' });
+        };
+        sum.appendChild(btn);
+      } else if (list.length) sum.textContent = prog.text;
     }
     let nodes = [];
     try { nodes = document.querySelectorAll('[data-plan]'); }
@@ -868,6 +886,10 @@
     list.push(id);
   }
 
+  function detach(kind) {
+    if (state.inventory && state.inventory[kind] === state[kind]) state[kind] = state[kind].slice();
+  }
+
   function noteMath(id, owner) {
     const n = asId(id);
     if (n == null) return;
@@ -875,16 +897,75 @@
     state.supply.set(n, who);
     const row = findRow(state.math, n);
     if (row) row.owner = who;
-    else state.math.push({ id: n, owner: who });
+    else {
+      detach('math');
+      state.math.push({ id: n, owner: who });
+    }
     rememberHeld(state.heldMath, n, who);
   }
 
-  function noteRgb(r, g, b, owner) {
+  function indexRgbChannels(row) {
+    state.usedR.add(row.r);
+    state.usedG.add(row.g);
+    state.usedB.add(row.b);
+    state.rgbBy.r.set(row.r, row.id);
+    state.rgbBy.g.set(row.g, row.id);
+    state.rgbBy.b.set(row.b, row.id);
+    ['r', 'g', 'b'].forEach(function (ch) {
+      const cid = row[ch];
+      if (!state.channels.has(cid)) state.channels.set(cid, new Set());
+      state.channels.get(cid).add(ch);
+    });
+  }
+
+  function dropPending(r, g, b) {
+    state.pendingRgb = (state.pendingRgb || []).filter(function (p) {
+      return !(p.r === r && p.g === g && p.b === b);
+    });
+  }
+
+  function channelBusy(r, g, b) {
+    if (state.rgbBy.r.has(r) || state.rgbBy.g.has(g) || state.rgbBy.b.has(b)) return true;
+    return (state.pendingRgb || []).some(function (p) {
+      if (p.r === r && p.g === g && p.b === b) return false;
+      return p.r === r || p.g === g || p.b === b;
+    });
+  }
+
+  function reapplyPending() {
+    const left = [];
+    (state.pendingRgb || []).forEach(function (p) {
+      const have = state.rgb.some(function (t) {
+        return t && t.r != null && t.g != null && t.b != null && t.r.toString() === p.r.toString() && t.g.toString() === p.g.toString() && t.b.toString() === p.b.toString();
+      });
+      if (have) return;
+      state.usedR.add(p.r);
+      state.usedG.add(p.g);
+      state.usedB.add(p.b);
+      left.push(p);
+    });
+    state.pendingRgb = left;
+  }
+
+  function refreshChain() {
+    if (state.runBusy || state.txLock) {
+      state.mintRefresh = true;
+      return;
+    }
+    if (typeof ETH.loadDelta !== 'function') return;
+    refresh().catch(function () {});
+  }
+
+  // A real RGB id comes from the mint Transfer. Without one, the channels are
+  // marked used and the chain refresh fills the row. Guessing totalSupply+1
+  // would put someone else's token in the held list.
+  function noteRgb(r, g, b, owner, id) {
     const rr = asId(r);
     const gg = asId(g);
     const bb = asId(b);
     if (rr == null || gg == null || bb == null) return;
     const who = pickOwner(owner);
+    const token = asId(id);
     let row = null;
     for (let i = 0; i < state.rgb.length; i++) {
       const t = state.rgb[i];
@@ -894,28 +975,36 @@
       }
     }
     if (row) {
+      if (token != null && token > 0n && row.id !== token) {
+        refreshChain();
+        return;
+      }
       row.owner = who;
+      indexRgbChannels(row);
       rememberHeld(state.heldRgb, row.id, who);
+      dropPending(rr, gg, bb);
       return;
     }
-    if (state.rgbBy.r.has(rr) || state.rgbBy.g.has(gg) || state.rgbBy.b.has(bb)) return;
-    let max = 0n;
-    state.rgb.forEach(function (t) { if (t && t.id > max) max = t.id; });
-    const id = max + 1n;
-    row = { id: id, owner: who, r: rr, g: gg, b: bb };
-    state.rgb.push(row);
+    if (channelBusy(rr, gg, bb)) return;
     state.usedR.add(rr);
     state.usedG.add(gg);
     state.usedB.add(bb);
-    state.rgbBy.r.set(rr, id);
-    state.rgbBy.g.set(gg, id);
-    state.rgbBy.b.set(bb, id);
-    ['r', 'g', 'b'].forEach(function (ch) {
-      const cid = row[ch];
-      if (!state.channels.has(cid)) state.channels.set(cid, new Set());
-      state.channels.get(cid).add(ch);
-    });
-    rememberHeld(state.heldRgb, id, who);
+    if (token == null || token <= 0n) {
+      state.pendingRgb = state.pendingRgb || [];
+      state.pendingRgb.push({ r: rr, g: gg, b: bb });
+      refreshChain();
+      return;
+    }
+    if (findRow(state.rgb, token)) {
+      refreshChain();
+      return;
+    }
+    detach('rgb');
+    row = { id: token, owner: who, r: rr, g: gg, b: bb };
+    state.rgb.push(row);
+    indexRgbChannels(row);
+    rememberHeld(state.heldRgb, token, who);
+    dropPending(rr, gg, bb);
   }
 
   function noteToon(spec, owner) {
@@ -932,6 +1021,7 @@
       row.face = face;
       row.rgb = rgb;
     } else {
+      detach('toon');
       row = { id: math, owner: who, word: word, face: face, rgb: rgb };
       state.toon.push(row);
     }
@@ -946,51 +1036,113 @@
     rememberHeld(state.heldToon, math, who);
   }
 
-  function blockOk(v) {
-    return typeof v === 'number' && Number.isSafeInteger(v) && v >= 0;
-  }
-
-  function cacheInventory() {
-    const block = blockOk(state.block) ? state.block : (state.inventory && blockOk(state.inventory.block) ? state.inventory.block : null);
-    if (block == null) return;
-    if (!state.inventory) {
-      state.inventory = {
-        block: block,
-        math: state.math,
-        rgb: state.rgb,
-        toon: state.toon,
-        words: state.wordText,
-        faces: state.faceText,
-      };
-    } else {
-      state.inventory.block = block;
-      state.inventory.math = state.math;
-      state.inventory.rgb = state.rgb;
-      state.inventory.toon = state.toon;
-      if (!state.inventory.words) state.inventory.words = state.wordText;
-      if (!state.inventory.faces) state.inventory.faces = state.faceText;
-    }
-    if (typeof ETH.writeCache !== 'function') return;
-    try {
-      ETH.writeCache(state.inventory, state.inventory.blockedDone ? state.inventory.blocked : null);
-    } catch (e) { /* quota, or a block the cache cannot pack */ }
-  }
-
   function paintHeld() {
     const tab = state.tab;
     if (tab !== 'browse' && tab !== 'mine' && tab !== 'toon' && tab !== 'token') return;
     const view = $('#view');
     if (!view || typeof SITE[tab] !== 'function') return;
-    try { SITE[tab](view); } catch (e) { /* lists are already updated */ }
+    const scroller = document.scrollingElement || document.documentElement;
+    const top = scroller && typeof scroller.scrollTop === 'number' ? scroller.scrollTop : 0;
+    const left = scroller && typeof scroller.scrollLeft === 'number' ? scroller.scrollLeft : 0;
+    const focusId = document.activeElement && document.activeElement.id;
+    try { SITE[tab](view); }
+    catch (e) { return; }
+    if (scroller) {
+      scroller.scrollTop = top;
+      scroller.scrollLeft = left;
+    }
+    if (focusId) {
+      const el = document.getElementById(focusId);
+      if (el && el.focus) {
+        try { el.focus(); } catch (err) { /* the node was replaced */ }
+      }
+    }
+  }
+
+  function takeId(s) {
+    if (!/^(0|[1-9]\d*)$/.test(s) || s.length > 78) return null;
+    try { return BigInt(s); } catch (e) { return null; }
+  }
+
+  function fillStep(step) {
+    if (!step || step.result != null || (step.r != null && step.g != null && step.b != null)) return;
+    const label = String(step.label || '');
+    const math = /^(\d+) \+ (\d+) = (\d+)$/.exec(label);
+    if (math) {
+      const n = takeId(math[3]);
+      if (n != null) step.result = n;
+      return;
+    }
+    const rgb = /^RGB\.add (\d+), (\d+), (\d+)$/.exec(label);
+    if (!rgb) return;
+    const r = takeId(rgb[1]);
+    const g = takeId(rgb[2]);
+    const b = takeId(rgb[3]);
+    if (r == null || g == null || b == null) return;
+    step.r = r;
+    step.g = g;
+    step.b = b;
+  }
+
+  const RGB_TRANSFER = '0xddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef';
+
+  function topicAddr(topic) {
+    const h = String(topic || '').toLowerCase().replace(/^0x/, '');
+    if (h.length < 40) return '';
+    return '0x' + h.slice(-40);
+  }
+
+  function rgbMintIds(receipt) {
+    const ids = [];
+    const logs = receipt && receipt.logs;
+    if (!logs || !ADDR.RGB) return ids;
+    const want = ADDR.RGB.toLowerCase();
+    const zero = '0x' + '0'.repeat(40);
+    logs.forEach(function (log) {
+      if (!log || String(log.address || '').toLowerCase() !== want) return;
+      const topics = log.topics || [];
+      if (String(topics[0] || '').toLowerCase() !== RGB_TRANSFER) return;
+      if (topicAddr(topics[1]) !== zero) return;
+      if (!topics[3] || !/^0x[0-9a-f]+$/i.test(String(topics[3]))) return;
+      try { ids.push(BigInt(topics[3])); } catch (e) { /* skip */ }
+    });
+    return ids;
+  }
+
+  function isRgbStep(step) {
+    return !!(step && step.r != null && step.g != null && step.b != null && step.result == null);
+  }
+
+  function assignRgbIds(group, receipts) {
+    const list = receipts || [];
+    if (list.length === group.length) {
+      group.forEach(function (s, i) {
+        if (!isRgbStep(s) || s.rgbId != null) return;
+        const ids = rgbMintIds(list[i]);
+        if (ids.length === 1) s.rgbId = ids[0];
+      });
+      return;
+    }
+    const ids = [];
+    list.forEach(function (rec) {
+      rgbMintIds(rec).forEach(function (id) { ids.push(id); });
+    });
+    const steps = group.filter(isRgbStep);
+    if (ids.length !== steps.length) return;
+    steps.forEach(function (s, i) {
+      if (s.rgbId == null) s.rgbId = ids[i];
+    });
   }
 
   // WORD and FACE are not minted from this site. Their catalogs still come from the index.
+  // Minted rows stay in memory. They are not written to math.site.v1; a reload reads them
+  // back with loadDelta so the cached length still matches the chain.
   function noteStep(step, owner) {
     if (!step) return;
-    if (step.r != null && step.g != null && step.b != null && step.result == null) noteRgb(step.r, step.g, step.b, owner);
+    fillStep(step);
+    if (isRgbStep(step)) noteRgb(step.r, step.g, step.b, owner, step.rgbId);
     else if (step.word != null && step.face != null && step.rgb != null && (step.math != null || step.id != null) && step.result == null) noteToon(step, owner);
     else if (step.result != null) noteMath(step.result, owner);
-    cacheInventory();
     paintHeld();
   }
 
@@ -1030,11 +1182,16 @@
     return added;
   }
 
-  function confirm(step) {
+  function confirm(step, receipt) {
     if (!step || step.status === 'confirmed') return;
     const fn = step.onOk;
     markStep(step, { status: 'confirmed', error: '' });
     if (fn) fn();
+    fillStep(step);
+    if (isRgbStep(step) && step.rgbId == null) {
+      const ids = rgbMintIds(receipt);
+      if (ids.length === 1) step.rgbId = ids[0];
+    }
     noteStep(step, me());
   }
 
@@ -1203,6 +1360,7 @@
       return '';
     }
     if (outcome === 'confirmed') {
+      assignRgbIds(group, receipts);
       let waiting = false;
       for (let i = 0; i < group.length; i++) {
         const held = await confirmOwned(group[i]);
@@ -1235,7 +1393,7 @@
           fail(step, 'reverted');
           continue;
         }
-        confirm(step);
+        confirm(step, rec);
         MOLD.say('mined', { status: 'ok' });
       } else if (step.calls && !seen[step.calls]) {
         seen[step.calls] = true;
@@ -1398,7 +1556,7 @@
         fail(step, 'reverted');
         return;
       }
-      confirm(step);
+      confirm(step, rec);
       MOLD.say('mined', { status: 'ok' });
     }
   }
@@ -1789,6 +1947,7 @@
       return;
     }
     const raw = location.hash ? location.hash.slice(1) : '';
+    if (raw.indexOf('step-') === 0) return;
     let name = raw || 'rgb';
     if (TABS.indexOf(name) === -1) name = 'browse';
     if (state.tab === name && !state.token) {
@@ -1832,6 +1991,9 @@
     confirmMint: confirm,
     confirmOwned: confirmOwned,
     keepRows: keepRows,
+    decoratePlan: decoratePlan,
+    onHash: onHash,
+    refresh: refresh,
     sendStep: sendStep,
     runSteps: runSteps,
     rememberQuery: rememberQuery,
@@ -2036,6 +2198,7 @@
       MOLD.say('heartNone');
       return;
     }
+    show('rgb', true);
     const before = SITE.planeSnap ? SITE.planeSnap() : '';
     state.planesTouched = true;
     state.planesDirty = true;
@@ -2100,6 +2263,16 @@
       const inv = base ? await ETH.loadDelta(base, progress, { words: state.snapWords, faces: state.snapFaces }) : await ETH.loadInventory(progress);
       if (gen !== loadGen) return;
       state.indexState = 'ready';
+      const chain = {
+        block: inv.block,
+        math: inv.math.map(copyRow),
+        rgb: inv.rgb.map(copyRow),
+        toon: inv.toon.map(copyRow),
+        words: inv.words,
+        faces: inv.faces,
+        wordOwners: inv.wordOwners,
+        faceOwners: inv.faceOwners,
+      };
       keepRows(inv, kept);
       indexInventory(inv);
       const grew = !before || inv.math.length !== before.math || inv.rgb.length !== before.rgb || inv.toon.length !== before.toon;
@@ -2115,7 +2288,7 @@
       state.blockedDone = scan.blockedDone;
       state.holdersReady = true;
       prepareHeart();
-      const saved = ETH.cacheScan(state.inventory, scan);
+      const saved = ETH.cacheScan(chain, scan);
       if (saved) {
         MOLD.say('blocked', { n: scan.blocked.size });
         setStatus('block ' + state.block + ' · ' + scan.blocked.size + ' blocked', TIPS.blocked);
@@ -2200,18 +2373,31 @@
       return;
     }
     if (load.tab === 'rgb') {
+      if (SITE.setRgbLock) SITE.setRgbLock(false);
       show('rgb', true);
+      const before = SITE.planeSnap ? SITE.planeSnap() : '';
+      let R = null;
+      let G = null;
+      let B = null;
+      try {
+        R = BigInt(load.r);
+        G = BigInt(load.g);
+        B = BigInt(load.b);
+      } catch (e) { return; }
       state.planesTouched = true;
       state.planesDirty = true;
+      state.planes = { R: R, G: G, B: B };
+      state.grid = P.planesToRows(R, G, B);
       const r = $('#pR');
       const g = $('#pG');
       const b = $('#pB');
       if (r && g && b) {
-        r.value = load.r;
-        g.value = load.g;
-        b.value = load.b;
+        r.value = String(load.r);
+        g.value = String(load.g);
+        b.value = String(load.b);
         r.dispatchEvent(new Event('change'));
       }
+      if (SITE.noteEdit) SITE.noteEdit(before);
       return;
     }
     if (load.tab === 'toon') {
@@ -2355,6 +2541,7 @@
   }
 
   SITE.applyHeart = applyHeart;
+  SITE.applyLoad = applyLoad;
   SITE.applyQuery = applyQuery;
   SITE.persistLive = persistLive;
   SITE.bindPersist = bindPersist;

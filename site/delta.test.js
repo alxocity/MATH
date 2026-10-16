@@ -285,6 +285,99 @@ assert.strictEqual(rgb[0].r, 1n);
   const afterFail = JSON.parse(localStorage.getItem('math.holders.v1'));
   assert.ok(!afterFail.holders[dave]);
 
+  function aggregateCalls(data) {
+    const h = String(data).replace(/^0x/, '').slice(8);
+    const words = [];
+    for (let i = 0; i + 64 <= h.length; i += 64) words.push(h.slice(i, i + 64));
+    const n = Number(BigInt('0x' + words[1]));
+    const calls = [];
+    for (let i = 0; i < n; i++) {
+      const el = 2 + Number(BigInt('0x' + words[2 + i]) / 32n);
+      const len = Number(BigInt('0x' + words[el + 3]));
+      const hex = words.slice(el + 4).join('').slice(0, len * 2);
+      calls.push({ to: '0x' + words[el].slice(24), data: '0x' + hex });
+    }
+    return calls;
+  }
+
+  function answerCall(to, data) {
+    const sel = String(data).slice(2, 10);
+    const arg = String(data).length >= 74 ? BigInt('0x' + String(data).slice(10, 74)) : 0n;
+    const addr = String(to).toLowerCase();
+    if (sel === ABI.SEL.totalSupply) {
+      if (addr === ETH.ADDR.MATH.toLowerCase()) return '0x' + ABI.word(3);
+      if (addr === ETH.ADDR.RGB.toLowerCase()) return '0x' + ABI.word(7);
+      return '0x' + ABI.word(0);
+    }
+    if (sel === ABI.SEL.tokenByIndex) {
+      if (addr === ETH.ADDR.MATH.toLowerCase()) return '0x' + ABI.word([1n, 600n, 700n][Number(arg)]);
+      return '0x' + ABI.word(arg + 1n);
+    }
+    if (sel === ABI.SEL.ownerOf) return '0x' + ABI.addr(alice);
+    if (sel === ABI.SEL.get) {
+      const ch = arg === 6n ? [60n, 61n, 62n] : [70n, 71n, 72n];
+      return '0x' + ch.map(function (n) { return ABI.word(n); }).join('');
+    }
+    throw new Error('call ' + sel);
+  }
+
+  function answerAggregate(data) {
+    return encodeReturn(aggregateCalls(data).map(function (c) { return answerCall(c.to, c.data); }));
+  }
+
+  global.fetch = function (url, opts) {
+    const body = JSON.parse(opts.body);
+    if (body.method === 'eth_blockNumber') return Promise.resolve(jsonResponse({ result: '0xb' }));
+    if (body.method === 'eth_getLogs') return Promise.resolve(jsonResponse({ result: [] }));
+    if (body.method === 'eth_call') {
+      const data = String(body.params[0].data || '');
+      const result = data.slice(2, 10) === '82ad56cb' ? answerAggregate(data) : answerCall(body.params[0].to, data);
+      return Promise.resolve(jsonResponse({ result: result }));
+    }
+    throw new Error('unexpected ' + body.method);
+  };
+
+  const rgbPrefix = [1, 2, 3, 4, 5].map(function (id) {
+    return { id: BigInt(id), owner: alice, r: BigInt(id), g: BigInt(id), b: BigInt(id) };
+  });
+  ETH.writeCache({
+    block: 10,
+    math: [{ id: 1n, owner: alice }],
+    rgb: rgbPrefix,
+    toon: [],
+    words: new Map(),
+    faces: new Map(),
+  }, null);
+  const aligned = await ETH.loadDelta(ETH.readCache());
+  assert.strictEqual(aligned.math.filter(function (t) { return t.id === 700n; }).length, 1);
+  assert.ok(aligned.math.some(function (t) { return t.id === 600n; }));
+  assert.strictEqual(aligned.rgb.length, 7);
+  assert.strictEqual(aligned.rgb[5].id, 6n);
+  assert.strictEqual(aligned.rgb[5].r, 60n);
+  assert.strictEqual(aligned.rgb[5].g, 61n);
+  assert.strictEqual(aligned.rgb[5].b, 62n);
+  assert.strictEqual(aligned.rgb[6].id, 7n);
+  assert.strictEqual(aligned.rgb[6].r, 70n);
+  assert.strictEqual(aligned.rgb[6].g, 71n);
+  assert.strictEqual(aligned.rgb[6].b, 72n);
+
+  ETH.writeCache({
+    block: 10,
+    math: [{ id: 1n, owner: alice }, { id: 700n, owner: alice }],
+    rgb: rgbPrefix.concat([{ id: 6n, owner: alice, r: 70n, g: 71n, b: 72n }]),
+    toon: [],
+    words: new Map(),
+    faces: new Map(),
+  }, null);
+  const skewed = await ETH.loadDelta(ETH.readCache());
+  assert.strictEqual(skewed.math.filter(function (t) { return t.id === 700n; }).length, 2);
+  assert.ok(!skewed.math.some(function (t) { return t.id === 600n; }));
+  assert.ok(!skewed.rgb.some(function (t) { return t.r === 60n && t.g === 61n && t.b === 62n; }));
+  const echoed = skewed.rgb.filter(function (t) { return t.r === 70n && t.g === 71n && t.b === 72n; });
+  assert.strictEqual(echoed.length, 2);
+  assert.ok(echoed.some(function (t) { return t.id === 6n; }));
+  assert.ok(echoed.some(function (t) { return t.id === 7n; }));
+
   console.log('delta.test.js ok');
 })().catch(function (e) {
   console.error(e);

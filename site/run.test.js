@@ -337,5 +337,15 @@ const quiet = RUN.progressSummary([
 ]);
 assert.strictEqual(quiet.text, '1 of 3 done');
 assert.strictEqual(quiet.focus, 1);
+const failedLater = RUN.progressSummary([
+  { status: 'pending' },
+  { status: 'failed' },
+  { status: 'confirmed' },
+]);
+assert.strictEqual(failedLater.focus, 1);
+assert.strictEqual(RUN.progressSummary([
+  { status: 'confirmed' },
+  { status: 'confirmed' },
+]).focus, -1);
 
 console.log('run.test.js ok');
