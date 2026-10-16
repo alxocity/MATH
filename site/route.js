@@ -131,7 +131,7 @@
           buttons +
           '</div>';
       }).join('');
-      steps.innerHTML = '<p class="plan-sum" id="planSum"></p>' + (rows || '<p class="dim">already minted.</p>');
+      steps.innerHTML = '<p class="plan-sum" id="planSum" role="status"></p>' + (rows || '<p class="dim">already minted.</p>');
       steps.querySelectorAll('[data-sim]').forEach(function (b) {
         b.onclick = function () { S.sendStep(built.steps[Number(b.dataset.sim)], false); };
       });
@@ -145,6 +145,7 @@
     const runs = routeRuns();
     state.runSend = function () { sendRoute(); };
     S.hydrateRun(runs);
+    if (S.decoratePlan) S.decoratePlan(state.run);
     const sendAll = $('#sendRoute');
     if (sendAll) {
       const open = (state.run || []).filter(function (s) {

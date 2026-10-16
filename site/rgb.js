@@ -12,6 +12,23 @@
     try { state.planes = P.gridToPlanes(state.grid); } catch (e) { state.planes = null; }
   }
 
+  function usedSet(ch) {
+    if (ch === 'r') return state.usedR;
+    if (ch === 'g') return state.usedG;
+    return state.usedB;
+  }
+
+  function channelTaken(ch, id, byId) {
+    const named = RULES.rgbChannel(ch, id, byId);
+    if (named) return named;
+    const used = usedSet(ch);
+    if (used && used.has(id)) {
+      const name = ch === 'r' ? 'red' : ch === 'g' ? 'green' : 'blue';
+      return name + ' already used';
+    }
+    return '';
+  }
+
   function planeIssues(p) {
     if (!p) return ['grid'];
     const zero = [];
@@ -23,7 +40,7 @@
     if (image) return [image];
     const out = [];
     [['r', p.R, state.rgbBy.r], ['g', p.G, state.rgbBy.g], ['b', p.B, state.rgbBy.b]].forEach(function (row) {
-      const reason = RULES.rgbChannel(row[0], row[1], row[2]);
+      const reason = channelTaken(row[0], row[1], row[2]);
       if (reason) out.push(reason);
     });
     return out;
@@ -46,7 +63,7 @@
     if (image) return image;
     let why = '';
     [['r', item.r, state.rgbBy.r], ['g', item.g, state.rgbBy.g], ['b', item.b, state.rgbBy.b]].forEach(function (row) {
-      if (!why) why = RULES.rgbChannel(row[0], row[1], row[2]);
+      if (!why) why = channelTaken(row[0], row[1], row[2]);
     });
     return why;
   }
@@ -180,7 +197,7 @@
   function paintQueue() {
     const host = $('#queue');
     if (!host) return;
-    host.innerHTML = '<p class="plan-sum" id="planSum"></p>' + state.queue.map(function (tx, i) {
+    host.innerHTML = '<p class="plan-sum" id="planSum" role="status"></p>' + state.queue.map(function (tx, i) {
       if (tx.kind === 'math') {
         const step = tx.step;
         const note = payNote(step);
@@ -213,6 +230,8 @@
     const btn = $('#sendQueueAll');
     if (state.queue.length) S.hydrateRun(queueRuns());
     else S.paintSavedRun();
+    if (S.decoratePlan) S.decoratePlan(state.run || []);
+    paintLock();
     if (btn) {
       const open = (state.run || []).filter(function (s) {
         return s.tx && s.status !== 'confirmed' && s.status !== 'submitted' && !globalThis.RUN.isUnknown(s.status);
@@ -260,14 +279,27 @@
     if (redo) redo.disabled = !!state.rgbLock || !redoStack.length;
   }
 
+  function flightOpen() {
+    if (state.runBusy || state.txLock) return true;
+    return (state.run || []).some(function (s) {
+      if (!s) return false;
+      if (s.status === 'submitted' || s.status === 'signing') return true;
+      return !!(globalThis.RUN && globalThis.RUN.isUnknown(s.status));
+    });
+  }
+
   function paintLock() {
     const btn = $('#rgbLock');
     const note = $('#lockNote');
     const cells = $('#cells');
+    const flying = flightOpen();
     if (btn) {
-      btn.textContent = state.rgbLock ? 'unlock' : 'lock';
+      btn.textContent = 'lock';
       btn.setAttribute('aria-pressed', state.rgbLock ? 'true' : 'false');
+      btn.disabled = !!state.rgbLock && flying;
     }
+    const plan = $('#planRgb');
+    if (plan) plan.disabled = flying;
     if (note) note.textContent = state.rgbLock ? 'locked' : '';
     if (cells) cells.classList.toggle('locked', !!state.rgbLock);
     ['pR', 'pG', 'pB'].forEach(function (id) {
@@ -279,6 +311,10 @@
 
   function setLock(on) {
     const next = !!on;
+    if (!next && flightOpen()) {
+      paintLock();
+      return;
+    }
     if (state.rgbLock === next) {
       paintLock();
       return;
@@ -356,6 +392,7 @@
   }
 
   function planRgb() {
+    if (flightOpen()) return;
     const wasLocked = !!state.rgbLock;
     if (wasLocked) setLock(false);
     syncPlanes();
@@ -577,7 +614,7 @@
     const p = state.planes || { R: 0n, G: 0n, B: 0n };
     view.innerHTML =
       S.lead('Paint three channels. Each one is a MATH id.', 'planes') +
-      '<div class="row"><button type="button" id="rgbLock" aria-pressed="' + (state.rgbLock ? 'true' : 'false') + '">' + (state.rgbLock ? 'unlock' : 'lock') + '</button>' +
+      '<div class="row"><button type="button" id="rgbLock" aria-pressed="' + (state.rgbLock ? 'true' : 'false') + '"' + (state.rgbLock && flightOpen() ? ' disabled' : '') + '>lock</button>' +
       '<button type="button" id="undo">undo</button><button type="button" id="redo">redo</button>' +
       '<span id="lockNote" class="dim">' + (state.rgbLock ? 'locked' : '') + '</span></div>' +
       '<div class="row"><button type="button" id="heart">heart</button>' +
@@ -592,10 +629,10 @@
       '<div class="row"><label class="num">B <input id="pB" spellcheck="false" inputmode="numeric" value="' + p.B + '"></label></div>' +
       '<div class="row"><button type="button" id="suggest">suggest another</button><span id="hintNote" class="dim"></span>' +
       QUERY.copyHtml() + '</div>' +
-      '<p id="rgbTraits" class="dim"></p><p id="rgbMeta"></p><div id="queue"></div>' +
+      '<p id="rgbTraits" class="dim"></p><p id="rgbMeta"></p><div id="queue"><p class="plan-sum" id="planSum" role="status"></p></div>' +
       '<p class="dim" id="batchNote" hidden>A batch may ask MetaMask for a one-time smart account upgrade (EIP-7702). That delegates this address for the calls. You approve it in the wallet. This page does not sign by itself.</p>' +
       '<div id="run"></div>' +
-      '<div class="row"><button type="button" id="planRgb">plan routes</button><button type="button" id="sendQueueAll">send</button>' +
+      '<div class="row"><button type="button" id="planRgb"' + (flightOpen() ? ' disabled' : '') + '>plan routes</button><button type="button" id="sendQueueAll">send</button>' +
       '<button type="button" id="sendBatch" disabled>send as one batch</button>' +
       '<span id="batchWhy" class="dim"></span></div>' +
       '<div class="preview" id="preview">MATH mints, then RGB.add at 0.03 ETH, paid to the channel owners. send signs the next batch.' + S.mark('ⓘ', S.TIPS.fees) + '</div>';
@@ -809,6 +846,7 @@
   S.undoPlanes = undoPlanes;
   S.redoPlanes = redoPlanes;
   S.setRgbLock = setLock;
+  S.paintLock = paintLock;
   S.paintCell = paintCell;
   S.pickInk = pickInk;
   S.planRgb = planRgb;

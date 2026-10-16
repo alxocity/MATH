@@ -68,7 +68,7 @@ button, select, input {
 }
 nav button.on, button.on { border-color: var(--y); color: var(--y); }
 button { cursor: pointer; }
-button:disabled { opacity: 0.4; cursor: default; }
+button:disabled { opacity: 0.75; cursor: default; }
 option:disabled, option.spent { color: var(--dim); }
 main { padding: 16px 18px 48px; max-width: 920px; min-width: 0; overflow-wrap: anywhere; }
 aside {
@@ -195,12 +195,13 @@ button.share { color: var(--dim); }
 .w { background: #f4f4f4; }
 .step { border-top: 1px solid var(--line); padding: 8px 0; }
 .plan-sum { position: sticky; top: 0; z-index: 2; background: var(--bg); margin: 0; padding: 8px 0; }
+button.plan-jump { background: none; border: 0; padding: 0; color: var(--y); font: inherit; text-align: left; }
 .step.done { color: var(--dim); }
 .step.done .step-main { text-decoration: line-through; }
 .step.now { box-shadow: inset 3px 0 0 var(--y); }
 .step.failed { color: var(--bad); }
 #cells.locked { opacity: 0.55; }
-button:disabled { opacity: 0.45; }
+button:disabled { opacity: 0.75; }
 .run { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; border-top: 1px solid var(--line); padding: 8px 0; min-width: 0; }
 .run.done { color: var(--dim); }
 .run.now { color: var(--fg); }

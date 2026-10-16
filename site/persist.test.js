@@ -25,13 +25,18 @@ function element(id) {
     dataset: {},
     options: [],
     files: null,
+    attrs: {},
     classList: {
-      toggle: function () {},
-      add: function () {},
-      remove: function () {},
-      contains: function () { return false; },
+      toggle: function (c, on) { if (on) node.classList.names[c] = true; else delete node.classList.names[c]; },
+      add: function (c) { node.classList.names[c] = true; },
+      remove: function (c) { delete node.classList.names[c]; },
+      contains: function (c) { return !!node.classList.names[c]; },
+      names: {},
     },
-    setAttribute: function () {},
+    setAttribute: function (k, v) { node.attrs[k] = String(v); },
+    getAttribute: function (k) { return Object.prototype.hasOwnProperty.call(node.attrs, k) ? node.attrs[k] : null; },
+    scrollIntoView: function (opts) { node.scrolled = opts; },
+    focus: function () { page.activeElement = node; },
     appendChild: function (child) {
       node.options.push(child);
       return child;
@@ -77,8 +82,10 @@ const page = {
   },
   querySelectorAll: function (sel) {
     if (sel === '.swatches button') return [swatch];
+    if (sel === '[data-plan]') return page.planNodes || [];
     return [];
   },
+  getElementById: function (id) { return els[id] || null; },
   addEventListener: function () {},
 };
 
@@ -872,6 +879,15 @@ async function main() {
   const foreign = { label: '2 + 7 = 9', result: 9n, status: 'submitted', onOk: function () { throw new Error('foreign onOk'); } };
   state.run = [minted, image, foreign];
   savedEth.ownerOf = async function (addr, id) { return id === 9n ? other : user; };
+  savedEth.writeCache({
+    block: 12,
+    math: [{ id: 1n, owner: user }, { id: 2n, owner: user }],
+    rgb: [],
+    toon: [],
+    words: new Map(),
+    faces: new Map(),
+  }, null);
+  const cacheBytes = store.getItem('math.site.v1');
   await SITE.confirmOwned(minted);
   await SITE.confirmOwned(image);
   await SITE.confirmOwned(foreign);
@@ -885,23 +901,32 @@ async function main() {
   assert.ok(state.math.some(function (t) { return t.id === 9n && t.owner === other; }));
   assert.ok(state.heldMath.some(function (id) { return id === 3n; }));
   assert.ok(!state.heldMath.some(function (id) { return id === 9n; }));
-  assert.strictEqual(state.rgb.length, 1);
-  assert.strictEqual(state.rgb[0].id, 1n);
-  assert.strictEqual(state.rgb[0].owner, user);
+  assert.ok(!state.inventory.math.some(function (t) { return t.id === 3n; }));
+  assert.strictEqual(state.rgb.length, 0);
+  assert.ok(!state.heldRgb.length);
+  assert.ok(!state.rgbBy.r.has(8n));
   assert.ok(state.usedR.has(8n));
   assert.ok(state.usedG.has(16n));
   assert.ok(state.usedB.has(32n));
-  assert.strictEqual(state.rgbBy.r.get(8n), 1n);
-  assert.ok(state.heldRgb.some(function (id) { return id === 1n; }));
-  assert.ok(global.RULES.rgbChannel('r', 8n, state.rgbBy.r));
+  assert.ok((state.pendingRgb || []).some(function (p) { return p.r === 8n && p.g === 16n && p.b === 32n; }));
+  assert.ok(SITE.planeIssues({ R: 8n, G: 16n, B: 32n }).length);
   const afterPlan = global.PLAN.plan(3n, planCtx);
   assert.strictEqual(afterPlan.exists, true);
   assert.strictEqual(afterPlan.mints, 0);
 
   const mathCount = state.math.length;
+  SITE.noteMint({ label: 'RGB.add 8, 16, 32', r: 8n, g: 16n, b: 32n, rgbId: 7n });
+  assert.strictEqual(state.rgb.length, 1);
+  assert.strictEqual(state.rgb[0].id, 7n);
+  assert.strictEqual(state.rgb[0].owner, user);
+  assert.strictEqual(state.rgbBy.r.get(8n), 7n);
+  assert.ok(state.heldRgb.some(function (id) { return id === 7n; }));
+  assert.ok(!state.heldRgb.some(function (id) { return id === 1n; }));
+  assert.ok(global.RULES.rgbChannel('r', 8n, state.rgbBy.r));
+  assert.ok(!(state.pendingRgb || []).some(function (p) { return p.r === 8n; }));
   const rgbCount = state.rgb.length;
   await SITE.confirmOwned(minted);
-  SITE.noteMint({ r: 8n, g: 16n, b: 32n });
+  SITE.noteMint({ r: 8n, g: 16n, b: 32n, rgbId: 7n });
   SITE.noteMint({ r: 8n, g: 1n, b: 1n });
   assert.strictEqual(state.math.length, mathCount);
   assert.strictEqual(state.rgb.length, rgbCount);
@@ -914,18 +939,24 @@ async function main() {
   assert.ok(state.heldToon.some(function (id) { return id === 3n; }));
   assert.ok(global.RULES.toonPart('math', 3n, state.toonBy.math));
 
+  SITE.noteMint({ result: 4n });
+  SITE.noteMint({ r: 30n, g: 31n, b: 33n });
+  assert.strictEqual(store.getItem('math.site.v1'), cacheBytes);
   const cached = savedEth.readCache();
   assert.ok(cached);
-  assert.ok(cached.math.some(function (t) { return t.id === 3n && t.owner === user; }));
-  assert.ok(cached.math.some(function (t) { return t.id === 9n && t.owner === other; }));
-  assert.ok(cached.rgb.some(function (t) { return t.id === 1n && t.r === 8n && t.g === 16n && t.b === 32n; }));
-  assert.ok(cached.toon.some(function (t) { return t.id === 3n && t.word === 0n && t.face === 1n && t.rgb === 1n; }));
+  assert.ok(!cached.math.some(function (t) { return t.id === 3n || t.id === 4n || t.id === 9n; }));
+  assert.strictEqual(cached.rgb.length, 0);
+  assert.strictEqual(cached.toon.length, 0);
+  assert.ok(state.usedR.has(30n));
+  assert.ok(state.usedB.has(33n));
+  assert.strictEqual(state.rgb.filter(function (t) { return t.r === 30n; }).length, 0);
+  assert.ok(!state.heldRgb.some(function (id) { return id !== 7n; }));
 
   const stale = { math: [{ id: 1n, owner: user }], rgb: [], toon: [] };
   const added = SITE.keepRows(stale, null);
   assert.ok(added >= 3);
   assert.ok(stale.math.some(function (t) { return t.id === 3n; }));
-  assert.ok(stale.rgb.some(function (t) { return t.r === 8n; }));
+  assert.ok(stale.rgb.some(function (t) { return t.id === 7n && t.r === 8n; }));
   assert.ok(stale.toon.some(function (t) { return t.id === 3n; }));
   assert.strictEqual(SITE.keepRows(stale, null), 0);
 
@@ -935,6 +966,278 @@ async function main() {
   assert.strictEqual(state.run.length, 3);
   assert.strictEqual(writes.length, writesBefore);
   assert.strictEqual(loc.search, searchBefore);
+
+  const transfer = '0xddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef';
+  function topicWord(n) { return '0x' + BigInt(n).toString(16).padStart(64, '0'); }
+  function topicAddr(a) { return '0x' + String(a).toLowerCase().replace(/^0x/, '').padStart(64, '0'); }
+  const mintedRgb = { label: 'RGB.add 40, 41, 42', result: null, status: 'submitted' };
+  SITE.confirmMint(mintedRgb, {
+    logs: [{
+      address: global.ETH.ADDR.RGB,
+      topics: [transfer, topicWord(0), topicAddr(user), topicWord(9)],
+    }],
+  });
+  assert.strictEqual(mintedRgb.rgbId, 9n);
+  assert.ok(state.rgb.some(function (t) { return t.id === 9n && t.r === 40n && t.g === 41n && t.b === 42n; }));
+  assert.ok(state.heldRgb.some(function (id) { return id === 9n; }));
+  assert.ok(!state.heldRgb.some(function (id) { return id === 6n; }));
+
+  const named = { label: '4 + 7 = 11', result: null, status: 'submitted' };
+  await SITE.confirmOwned(named);
+  assert.strictEqual(named.result, 11n);
+  assert.strictEqual(state.supply.get(11n), user);
+  assert.ok(state.math.some(function (t) { return t.id === 11n && t.owner === user; }));
+  const rgbNamed = { label: 'RGB.add 20, 21, 22', result: null, status: 'submitted' };
+  const rgbNamedCount = state.rgb.length;
+  SITE.confirmMint(rgbNamed);
+  assert.strictEqual(rgbNamed.r, 20n);
+  assert.strictEqual(state.rgb.length, rgbNamedCount);
+  assert.ok(state.usedR.has(20n));
+  assert.ok(!state.heldRgb.some(function (id) { return id === 20n; }));
+
+  load('run.js');
+  state.tab = 'rgb';
+  state.token = null;
+  loc.hash = '#step-1-2-3';
+  SITE.onHash();
+  assert.strictEqual(state.tab, 'rgb');
+  assert.strictEqual(loc.hash, '#step-1-2-3');
+
+  const sum = get('planSum');
+  sum.options = [];
+  sum.innerHTML = '';
+  sum.textContent = '';
+  const jump = get('step-1-2-3');
+  SITE.decoratePlan([{ label: '1 + 2 = 3', status: 'pending' }]);
+  assert.strictEqual(sum.getAttribute('role'), 'status');
+  assert.strictEqual(sum.options.length, 1);
+  assert.strictEqual(sum.options[0].className, 'plan-jump');
+  let prevented = false;
+  sum.options[0].onclick({ preventDefault: function () { prevented = true; } });
+  assert.strictEqual(prevented, true);
+  assert.deepStrictEqual(jump.scrolled, { block: 'center' });
+  assert.strictEqual(loc.hash, '#step-1-2-3');
+  const planRow = element('plan-row');
+  planRow.attrs['data-plan'] = '1 + 2 = 3';
+  page.planNodes = [planRow];
+  SITE.decoratePlan([{ label: '1 + 2 = 3', status: 'failed', error: 'reverted' }]);
+  assert.ok(planRow.classList.contains('failed'));
+  assert.ok(planRow.options.some(function (n) { return n.className === 'plan-status'; }));
+  page.planNodes = [];
+
+  state.runBusy = false;
+  state.txLock = null;
+  state.run = [];
+  state.rgbLock = false;
+  state.planesTouched = true;
+  state.planes = { R: 1n, G: 1n, B: 1n };
+  state.grid = global.PLAN.planesToRows(1n, 1n, 1n);
+  [state.usedR, state.usedG, state.usedB].forEach(function (set) { set.delete(1n); });
+  state.rgbBy.r.delete(1n);
+  state.rgbBy.g.delete(1n);
+  state.rgbBy.b.delete(1n);
+  get('queue');
+  sum.options = [];
+  sum.textContent = '';
+  sum.innerHTML = '';
+  SITE.planRgb();
+  assert.ok(state.queue.length);
+  assert.ok(sum.options.length);
+  assert.ok(sum.options[sum.options.length - 1].textContent.indexOf('0 of') === 0);
+
+  get('rgbLock');
+  state.rgbLock = true;
+  state.run = [{ status: 'pending', label: '1 + 1 = 2' }];
+  SITE.setRgbLock(false);
+  assert.strictEqual(state.rgbLock, false);
+  state.rgbLock = true;
+  state.run = [{ status: 'submitted', label: '1 + 1 = 2' }];
+  state.queue = [{ kind: 'keep' }];
+  SITE.setRgbLock(false);
+  assert.strictEqual(state.rgbLock, true);
+  assert.strictEqual(get('rgbLock').textContent, 'lock');
+  assert.strictEqual(get('rgbLock').getAttribute('aria-pressed'), 'true');
+  assert.strictEqual(get('rgbLock').disabled, true);
+  assert.strictEqual(get('planRgb').disabled, true);
+  SITE.planRgb();
+  assert.strictEqual(state.rgbLock, true);
+  assert.strictEqual(state.queue[0].kind, 'keep');
+  state.run = [];
+  state.runBusy = true;
+  SITE.planRgb();
+  assert.strictEqual(state.rgbLock, true);
+  assert.strictEqual(state.queue[0].kind, 'keep');
+  state.runBusy = false;
+  state.txLock = 'run';
+  SITE.planRgb();
+  assert.strictEqual(state.rgbLock, true);
+  assert.strictEqual(state.queue[0].kind, 'keep');
+  state.txLock = null;
+  state.run = [{ status: 'status unknown — check your wallet', label: '1 + 1 = 2' }];
+  SITE.setRgbLock(false);
+  assert.strictEqual(state.rgbLock, true);
+  state.run = [];
+  SITE.setRgbLock(false);
+  assert.strictEqual(state.rgbLock, false);
+
+  state.rgbLock = true;
+  state.tab = 'rgb';
+  state.planesTouched = true;
+  state.planes = { R: 1n, G: 2n, B: 3n };
+  state.grid = global.PLAN.planesToRows(1n, 2n, 3n);
+  get('pR').value = '1';
+  get('pG').value = '2';
+  get('pB').value = '3';
+  get('pR').disabled = true;
+  const oldCells = SITE.cellsHtml(state.grid);
+  get('cells').innerHTML = oldCells;
+  SITE.applyLoad({ tab: 'rgb', r: '8', g: '9', b: '10' });
+  assert.strictEqual(state.rgbLock, false);
+  assert.strictEqual(state.planes.R, 8n);
+  assert.strictEqual(state.planes.G, 9n);
+  assert.strictEqual(state.planes.B, 10n);
+  assert.strictEqual(get('pR').value, '8');
+  assert.strictEqual(get('pG').value, '9');
+  assert.strictEqual(get('pB').value, '10');
+  assert.strictEqual(get('cells').innerHTML, SITE.cellsHtml(global.PLAN.planesToRows(8n, 9n, 10n)));
+  assert.notStrictEqual(get('cells').innerHTML, oldCells);
+  SITE.undoPlanes();
+  assert.strictEqual(state.planes.R, 1n);
+  assert.strictEqual(state.planes.G, 2n);
+  assert.strictEqual(state.planes.B, 3n);
+
+  state.rgbLock = false;
+  state.planes = { R: 1n, G: 1n, B: 1n };
+  state.grid = global.PLAN.planesToRows(1n, 1n, 1n);
+  SITE.noteEdit('9,9,9');
+  SITE.undoPlanes();
+  assert.strictEqual(state.planes.R, 9n);
+  SITE.setRgbLock(true);
+  SITE.redoPlanes();
+  assert.strictEqual(state.planes.R, 9n);
+  SITE.setRgbLock(false);
+  SITE.redoPlanes();
+  assert.strictEqual(state.planes.R, 1n);
+
+  state.rgbLock = true;
+  state.holdersReady = true;
+  state.grid = global.PLAN.planesToRows(4n, 4n, 4n);
+  state.planes = { R: 4n, G: 4n, B: 4n };
+  state.heartPick = { rows: global.PLAN.planesToRows(1n, 1n, 1n), R: 1n, G: 1n, B: 1n, mints: 0 };
+  SITE.applyHeart(false);
+  assert.strictEqual(state.planes.R, 4n);
+  assert.strictEqual(state.grid[0], global.PLAN.planesToRows(4n, 4n, 4n)[0]);
+
+  state.rgbLock = false;
+  state.planesTouched = true;
+  state.usedR.delete(1n);
+  state.usedG.delete(1n);
+  state.usedB.delete(1n);
+  state.grid = global.PLAN.planesToRows(5n, 3n, 2n);
+  state.planes = { R: 0n, G: 0n, B: 0n };
+  get('pR').value = '5';
+  get('pG').value = '3';
+  get('pB').value = '2';
+  state.heartPick = { rows: global.PLAN.planesToRows(1n, 1n, 1n).slice(), R: 1n, G: 1n, B: 1n, mints: 0 };
+  SITE.applyHeart(false);
+  assert.strictEqual(state.planes.R, 1n);
+  SITE.undoPlanes();
+  assert.strictEqual(state.planes.R, 5n);
+  assert.strictEqual(state.planes.G, 3n);
+  assert.strictEqual(state.planes.B, 2n);
+
+  state.rgbLock = false;
+  state.grid = global.PLAN.planesToRows(1n, 1n, 1n);
+  state.planes = { R: 1n, G: 1n, B: 1n };
+  const paintSnap = SITE.planeSnap();
+  assert.strictEqual(SITE.paintCell(0, 'r'), true);
+  assert.notStrictEqual(SITE.planeSnap(), paintSnap);
+  SITE.undoPlanes();
+  assert.strictEqual(SITE.planeSnap(), paintSnap);
+
+  let drained = 0;
+  while (drained < 80) {
+    const snap = SITE.planeSnap();
+    SITE.undoPlanes();
+    if (SITE.planeSnap() === snap) break;
+    drained++;
+  }
+  state.rgbLock = false;
+  state.planes = { R: 0n, G: 0n, B: 0n };
+  state.grid = global.PLAN.planesToRows(0n, 0n, 0n);
+  for (let i = 1; i <= 70; i++) {
+    const before = SITE.planeSnap();
+    state.planes = { R: BigInt(i), G: 0n, B: 0n };
+    SITE.noteEdit(before);
+  }
+  assert.strictEqual(state.planes.R, 70n);
+  for (let i = 0; i < 80; i++) SITE.undoPlanes();
+  assert.strictEqual(state.planes.R, 6n);
+
+  state.browseDirty = false;
+  state.mineDirty = false;
+  SITE.rememberList('browse');
+  assert.strictEqual(state.browseDirty, true);
+  assert.strictEqual(state.mineDirty, false);
+  state.browseDirty = false;
+  SITE.rememberList('mine');
+  assert.strictEqual(state.mineDirty, true);
+  assert.strictEqual(state.browseDirty, false);
+
+  const baseInv = {
+    block: 10,
+    math: [{ id: 1n, owner: user }, { id: 2n, owner: user }],
+    rgb: [],
+    toon: [],
+    words: new Map(),
+    faces: new Map(),
+  };
+  savedEth.readCache = function () {
+    return {
+      block: baseInv.block,
+      math: baseInv.math.map(function (t) { return { id: t.id, owner: t.owner }; }),
+      rgb: [],
+      toon: [],
+      words: new Map(),
+      faces: new Map(),
+    };
+  };
+  savedEth.preferIndex = function (a, b) { return a || b; };
+  savedEth.overlayTexts = function (a) { return a || new Map(); };
+  let scanned = null;
+  savedEth.loadDelta = async function (base) {
+    return {
+      block: 11,
+      math: base.math.map(function (t) { return { id: t.id, owner: t.owner }; }),
+      rgb: [],
+      toon: [],
+      words: new Map(),
+      faces: new Map(),
+    };
+  };
+  savedEth.gasPrice = async function () { return 1n; };
+  savedEth.catchHolders = async function () { return { blocked: [], unknown: [] }; };
+  savedEth.scanResult = function () { return { blocked: new Set(), unknown: new Set(), blockedDone: false }; };
+  savedEth.cacheScan = function (inv) { scanned = inv; return false; };
+  global.fetch = function () { return Promise.reject(new Error('no snapshot')); };
+  state.tab = 'rgb';
+  state.runBusy = false;
+  state.txLock = null;
+  state.math = [{ id: 1n, owner: user }, { id: 700n, owner: user }];
+  state.rgb = [];
+  state.toon = [];
+  await SITE.refresh();
+  assert.ok(state.math.some(function (t) { return t.id === 700n; }));
+  assert.ok(scanned);
+  assert.ok(scanned.math.some(function (t) { return t.id === 1n; }));
+  assert.ok(!scanned.math.some(function (t) { return t.id === 700n; }));
+
+  savedEth.loadDelta = async function () { throw new Error('rpc down'); };
+  state.math = [{ id: 1n, owner: user }, { id: 9n, owner: user }];
+  state.rgb = [];
+  state.toon = [];
+  await SITE.refresh();
+  assert.ok(state.math.some(function (t) { return t.id === 9n && t.owner === user; }));
 
   console.log('persist.test.js ok');
 }
