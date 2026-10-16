@@ -321,6 +321,7 @@
     if (meta) meta.innerHTML = issuesHtml(planeIssues(state.planes));
     if (S.hydrateRun && globalThis.RUN) {
       S.hydrateRun((state.run || []).filter(function (s) { return s && s.status === 'confirmed'; }), true);
+      if (S.decoratePlan) S.decoratePlan([]);
     }
     const btn = $('#sendQueueAll');
     if (btn) btn.disabled = true;
