@@ -120,6 +120,7 @@ global.TOKEN = {
   sumHtml: function (a, b) { return String(a) + '+' + String(b); },
   idLink: function () { return ''; },
   planesHtml: function () { return ''; },
+  labelHtml: function () { return ''; },
   parse: function () { return null; },
 };
 global.LIST = { ownedRows: function () { return []; } };
@@ -1232,12 +1233,380 @@ async function main() {
   assert.ok(scanned.math.some(function (t) { return t.id === 1n; }));
   assert.ok(!scanned.math.some(function (t) { return t.id === 700n; }));
 
+  state.blockedDone = true;
+  if (state.inventory) {
+    state.inventory.wordOwners = null;
+    state.inventory.faceOwners = null;
+  }
+  savedEth.ensurePartOwners = async function (inv) {
+    return Object.assign({}, inv, { wordOwners: [user], faceOwners: [user] });
+  };
+  let partScan = null;
+  const scanBefore = savedEth.cacheScan;
+  savedEth.cacheScan = function (inv) {
+    partScan = inv;
+    return true;
+  };
+  await SITE.ensureParts();
+  assert.ok(partScan);
+  assert.ok(partScan.math.some(function (t) { return t.id === 1n; }));
+  assert.ok(!partScan.math.some(function (t) { return t.id === 700n; }));
+  assert.deepStrictEqual(partScan.wordOwners, [user]);
+  assert.deepStrictEqual(partScan.faceOwners, [user]);
+  savedEth.cacheScan = scanBefore;
+  state.blockedDone = false;
+
   savedEth.loadDelta = async function () { throw new Error('rpc down'); };
   state.math = [{ id: 1n, owner: user }, { id: 9n, owner: user }];
   state.rgb = [];
   state.toon = [];
   await SITE.refresh();
   assert.ok(state.math.some(function (t) { return t.id === 9n && t.owner === user; }));
+
+  state.runBusy = true;
+  state.mintRefresh = false;
+  const wrong = { label: 'RGB.add 90, 91, 92', result: null, status: 'submitted' };
+  const rgbBefore = state.rgb.length;
+  SITE.confirmMint(wrong, {
+    logs: [{
+      address: global.ETH.ADDR.MATH,
+      topics: [transfer, topicWord(0), topicAddr(user), topicWord(21)],
+    }],
+  });
+  assert.strictEqual(state.rgb.length, rgbBefore);
+  assert.ok(state.usedR.has(90n));
+  assert.ok(!state.heldRgb.some(function (id) { return id === 21n; }));
+  const moved = { label: 'RGB.add 93, 94, 95', result: null, status: 'submitted' };
+  SITE.confirmMint(moved, {
+    logs: [{
+      address: global.ETH.ADDR.RGB,
+      topics: [transfer, topicAddr(user), topicAddr(user), topicWord(22)],
+    }],
+  });
+  assert.strictEqual(state.rgb.filter(function (t) { return t.id === 22n; }).length, 0);
+  assert.ok(state.usedR.has(93n));
+  const many = { label: 'RGB.add 96, 97, 98', result: null, status: 'submitted' };
+  SITE.confirmMint(many, {
+    logs: [
+      { address: global.ETH.ADDR.RGB, topics: [transfer, topicWord(0), topicAddr(user), topicWord(23)] },
+      { address: global.ETH.ADDR.RGB, topics: [transfer, topicWord(0), topicAddr(user), topicWord(24)] },
+    ],
+  });
+  assert.strictEqual(state.rgb.filter(function (t) { return t.id === 23n || t.id === 24n; }).length, 0);
+  assert.ok(state.usedR.has(96n));
+  state.mintRefresh = false;
+  state.runBusy = false;
+  state.txLock = null;
+  state.account = user;
+  const watched = {
+    label: 'RGB.add 80, 81, 82',
+    result: null,
+    status: 'submitted',
+    hash: '0x' + 'cd'.repeat(32),
+  };
+  state.run = [watched];
+  savedEth.receipt = async function () {
+    return {
+      status: '0x1',
+      logs: [{ address: global.ETH.ADDR.RGB, topics: [transfer, topicWord(0), topicAddr(user), topicWord(16)] }],
+    };
+  };
+  await SITE.checkSubmitted();
+  assert.strictEqual(watched.status, 'confirmed');
+  assert.ok(state.rgb.some(function (t) { return t.id === 16n && t.r === 80n && t.g === 81n && t.b === 82n; }));
+
+  global.ethereum = {
+    request: async function () {
+      return {
+        status: 200,
+        receipts: [{
+          logs: [{ address: global.ETH.ADDR.RGB, topics: [transfer, topicWord(0), topicAddr(user), topicWord(30)] }],
+        }, {
+          logs: [{ address: global.ETH.ADDR.RGB, topics: [transfer, topicWord(0), topicAddr(user), topicWord(31)] }],
+        }],
+      };
+    },
+  };
+  const pairA = { label: 'RGB.add 120, 121, 122', result: null, r: 120n, g: 121n, b: 122n, status: 'submitted', calls: '0xbatch1' };
+  const pairB = { label: 'RGB.add 123, 124, 125', result: null, r: 123n, g: 124n, b: 125n, status: 'submitted', calls: '0xbatch1' };
+  state.run = [pairA, pairB];
+  await SITE.checkSubmitted();
+  assert.ok(state.rgb.some(function (t) { return t.id === 30n && t.r === 120n; }));
+  assert.ok(state.rgb.some(function (t) { return t.id === 31n && t.r === 123n; }));
+  const looseA = { label: 'RGB.add 130, 131, 132', result: null, r: 130n, g: 131n, b: 132n, status: 'submitted', calls: '0xbatch2' };
+  const looseB = { label: 'RGB.add 133, 134, 135', result: null, r: 133n, g: 134n, b: 135n, status: 'submitted', calls: '0xbatch2' };
+  global.ethereum = {
+    request: async function () {
+      return {
+        status: 200,
+        receipts: [{
+          logs: [
+            { address: global.ETH.ADDR.RGB, topics: [transfer, topicWord(0), topicAddr(user), topicWord(40)] },
+            { address: global.ETH.ADDR.RGB, topics: [transfer, topicWord(0), topicAddr(user), topicWord(41)] },
+          ],
+        }],
+      };
+    },
+  };
+  state.run = [looseA, looseB];
+  await SITE.checkSubmitted();
+  assert.ok(state.rgb.some(function (t) { return t.id === 40n && t.r === 130n; }));
+  assert.ok(state.rgb.some(function (t) { return t.id === 41n && t.r === 133n; }));
+  state.runBusy = true;
+  state.mintRefresh = false;
+  const crowded = { label: 'RGB.add 136, 137, 138', result: null, r: 136n, g: 137n, b: 138n, status: 'submitted', calls: '0xbatch3' };
+  global.ethereum = {
+    request: async function () {
+      return {
+        status: 200,
+        receipts: [{
+          logs: [
+            { address: global.ETH.ADDR.RGB, topics: [transfer, topicWord(0), topicAddr(user), topicWord(42)] },
+            { address: global.ETH.ADDR.RGB, topics: [transfer, topicWord(0), topicAddr(user), topicWord(43)] },
+          ],
+        }],
+      };
+    },
+  };
+  state.run = [crowded];
+  await SITE.checkSubmitted();
+  assert.strictEqual(state.rgb.filter(function (t) { return t.r === 136n; }).length, 0);
+  assert.ok(state.usedR.has(136n));
+  state.mintRefresh = false;
+  state.runBusy = false;
+
+  savedEth.ensureChain = async function () {};
+  savedEth.send = async function () { return '0x' + 'ab'.repeat(32); };
+  savedEth.simulate = async function () { return {}; };
+  savedEth.gasPrice = async function () { return 1n; };
+  savedEth.balance = async function () { return 1000000000000000000n; };
+  savedEth.reason = function (e) { return (e && e.message) || 'reverted'; };
+  let seqReceipts = 0;
+  savedEth.receipt = async function () {
+    seqReceipts++;
+    return {
+      status: '0x1',
+      logs: [{ address: global.ETH.ADDR.RGB, topics: [transfer, topicWord(0), topicAddr(user), topicWord(15)] }],
+    };
+  };
+  global.ethereum = {
+    request: async function (q) {
+      if (q && q.method === 'eth_chainId') return '0x1';
+      return null;
+    },
+  };
+  const prevInterval = global.setInterval;
+  const prevClear = global.clearInterval;
+  global.setInterval = function (fn, ms) {
+    if (ms === 200) {
+      Promise.resolve().then(fn);
+      return 1;
+    }
+    return prevInterval(fn, ms);
+  };
+  global.clearInterval = function (id) {
+    if (id === 1) return;
+    return prevClear(id);
+  };
+  state.runTick = true;
+  state.runBusy = false;
+  state.txLock = null;
+  state.mintRefresh = false;
+  state.run = [];
+  const seq = {
+    label: 'RGB.add 70, 71, 72',
+    result: null,
+    status: 'pending',
+    tx: function () { return { to: global.ETH.ADDR.RGB, data: '0x', value: 0 }; },
+    done: async function () { return false; },
+    ready: async function () { return ''; },
+  };
+  await SITE.runSteps([seq]);
+  global.setInterval = prevInterval;
+  global.clearInterval = prevClear;
+  assert.strictEqual(seq.status, 'confirmed');
+  assert.ok(state.rgb.some(function (t) { return t.id === 15n && t.r === 70n && t.g === 71n && t.b === 72n; }));
+
+  get('run');
+  get('planRgb').disabled = false;
+  get('lockNote').textContent = '';
+  state.rgbLock = true;
+  state.runBusy = true;
+  state.txLock = 'run';
+  state.runGen = 8;
+  state.run = [{ label: '1 + 1 = 2', status: 'confirmed' }];
+  SITE.paintRun();
+  assert.strictEqual(get('planRgb').disabled, true);
+  assert.strictEqual(get('rgbLock').disabled, true);
+  assert.strictEqual(get('lockNote').textContent, 'a send is running');
+  state.run = [];
+  await SITE.releaseRun(8);
+  assert.strictEqual(state.runBusy, false);
+  assert.strictEqual(get('planRgb').disabled, false);
+  assert.strictEqual(get('rgbLock').disabled, false);
+  assert.strictEqual(get('lockNote').textContent, 'locked');
+
+  let waits = 0;
+  const prevSay = global.MOLD.say;
+  global.MOLD.say = function (key) {
+    if (key === 'wait') waits++;
+    return prevSay.apply(global.MOLD, arguments);
+  };
+  state.runBusy = false;
+  state.txLock = null;
+  state.rgbLock = false;
+  state.run = [];
+  state.queue = [{ kind: 'keep' }];
+  const prevTimeout = global.setTimeout;
+  global.setTimeout = function (fn, ms) {
+    if (ms >= 4000) return 0;
+    return prevTimeout(fn, ms);
+  };
+  SITE.noteSent('0x' + '11'.repeat(32));
+  global.setTimeout = prevTimeout;
+  assert.strictEqual(get('planRgb').disabled, true);
+  assert.strictEqual(get('lockNote').textContent, 'a send is running');
+  waits = 0;
+  SITE.planRgb();
+  assert.ok(waits >= 1);
+  assert.strictEqual(state.queue[0].kind, 'keep');
+  state.rgbLock = true;
+  waits = 0;
+  SITE.setRgbLock(false);
+  assert.ok(waits >= 1);
+  assert.strictEqual(state.rgbLock, true);
+  savedEth.receipt = async function () { return { status: '0x1', logs: [] }; };
+  await SITE.checkPending();
+  assert.strictEqual(state.txLock, null);
+  assert.strictEqual(get('planRgb').disabled, false);
+  assert.strictEqual(get('lockNote').textContent, 'locked');
+  state.rgbLock = true;
+  state.run = [];
+  state.runBusy = false;
+  savedEth.receipt = async function () { return null; };
+  const holdTimeout = global.setTimeout;
+  global.setTimeout = function (fn, ms) {
+    if (ms >= 4000) {
+      Promise.resolve().then(fn);
+      return 0;
+    }
+    return holdTimeout(fn, ms);
+  };
+  SITE.noteSent('0x' + '22'.repeat(32));
+  await new Promise(function (r) { holdTimeout(r, 0); });
+  global.setTimeout = holdTimeout;
+  assert.strictEqual(state.txLock, null);
+  assert.strictEqual(get('planRgb').disabled, false);
+  assert.strictEqual(get('lockNote').textContent, 'locked');
+
+  state.rgbLock = true;
+  state.runBusy = true;
+  state.txLock = 'run';
+  state.planesTouched = true;
+  state.planesDirty = false;
+  state.planes = { R: 1n, G: 1n, B: 1n };
+  state.grid = global.PLAN.planesToRows(1n, 1n, 1n);
+  get('pR').value = '1';
+  get('pG').value = '1';
+  get('pB').value = '1';
+  const flightCells = SITE.cellsHtml(state.grid);
+  get('cells').innerHTML = flightCells;
+  waits = 0;
+  SITE.applyLoad({ tab: 'rgb', r: '4', g: '5', b: '6' });
+  assert.ok(waits >= 1);
+  assert.strictEqual(state.rgbLock, true);
+  assert.strictEqual(state.planes.R, 1n);
+  assert.strictEqual(state.planes.G, 1n);
+  assert.strictEqual(state.planes.B, 1n);
+  assert.strictEqual(get('pR').value, '1');
+  assert.strictEqual(get('cells').innerHTML, flightCells);
+  assert.strictEqual(state.planesDirty, false);
+  global.MOLD.say = prevSay;
+  state.runBusy = false;
+  state.txLock = null;
+
+  page.scrollingElement = { scrollTop: 40, scrollLeft: 7 };
+  const caret = get('keepFocus');
+  caret.selectionStart = 2;
+  caret.selectionEnd = 5;
+  caret.setSelectionRange = function (a, b) {
+    caret.selectionStart = a;
+    caret.selectionEnd = b;
+    caret.ranged = [a, b];
+  };
+  page.activeElement = caret;
+  state.tab = 'browse';
+  SITE.browse = function () {
+    page.scrollingElement.scrollTop = 0;
+    page.scrollingElement.scrollLeft = 0;
+    page.activeElement = null;
+  };
+  SITE.noteMint({ result: 400n });
+  assert.strictEqual(page.scrollingElement.scrollTop, 40);
+  assert.strictEqual(page.scrollingElement.scrollLeft, 7);
+  assert.strictEqual(page.activeElement && page.activeElement.id, 'keepFocus');
+  assert.deepStrictEqual(caret.ranged, [2, 5]);
+  delete SITE.browse;
+  state.tab = 'rgb';
+
+  state.runBusy = true;
+  state.txLock = 'run';
+  state.runGen = 11;
+  state.mintRefresh = false;
+  state.run = [];
+  let deltaN = 0;
+  savedEth.loadDelta = async function () {
+    deltaN++;
+    return {
+      block: 11,
+      math: [{ id: 1n, owner: user }],
+      rgb: [],
+      toon: [],
+      words: new Map(),
+      faces: new Map(),
+    };
+  };
+  savedEth.owned = async function () { return { ids: [], total: 0 }; };
+  SITE.noteMint({ r: 110n, g: 111n, b: 112n });
+  assert.strictEqual(deltaN, 0);
+  assert.strictEqual(state.mintRefresh, true);
+  assert.ok(state.usedR.has(110n));
+  const pendN = state.pendingRgb.length;
+  SITE.noteMint({ r: 110n, g: 211n, b: 212n });
+  assert.strictEqual(state.pendingRgb.length, pendN);
+  assert.ok(!state.usedG.has(211n));
+  await SITE.releaseRun(11);
+  assert.ok(deltaN >= 1);
+  assert.strictEqual(state.mintRefresh, false);
+  assert.strictEqual(state.runBusy, false);
+  assert.ok(state.usedR.has(110n));
+  assert.ok(state.pendingRgb.some(function (p) { return p.r === 110n && p.g === 111n && p.b === 112n; }));
+
+  state.runBusy = true;
+  state.txLock = 'run';
+  state.runGen = 12;
+  state.mintRefresh = false;
+  state.heldRgb = [];
+  state.account = user;
+  savedEth.loadDelta = async function () {
+    return {
+      block: 12,
+      math: [{ id: 1n, owner: user }],
+      rgb: [{ id: 11n, owner: user, r: 50n, g: 51n, b: 52n }],
+      toon: [],
+      words: new Map(),
+      faces: new Map(),
+    };
+  };
+  savedEth.owned = async function (addr) {
+    if (String(addr).toLowerCase() === String(global.ETH.ADDR.RGB).toLowerCase()) return { ids: [11n], total: 1 };
+    return { ids: [], total: 0 };
+  };
+  SITE.noteMint({ r: 50n, g: 51n, b: 52n });
+  assert.strictEqual(state.mintRefresh, true);
+  await SITE.releaseRun(12);
+  assert.ok(state.rgb.some(function (t) { return t.id === 11n && t.r === 50n && t.g === 51n && t.b === 52n; }));
+  assert.ok(state.heldRgb.some(function (id) { return id === 11n; }));
 
   console.log('persist.test.js ok');
 }
