@@ -129,7 +129,7 @@
       const hash = await ETH.send(tx);
       S.rememberSum(hash, pair.n);
       S.noteSent(hash, function () {
-        state.supply.set(pair.n, S.me());
+        S.noteMint({ result: pair.n });
       });
     });
   }

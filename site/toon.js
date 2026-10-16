@@ -588,7 +588,9 @@
       if (sim.error) throw new Error(ETH.reason(sim.error));
       if ($('#preview')) $('#preview').textContent = preview + '\nsimulation ok. confirm in the wallet.';
       const hash = await ETH.send(tx);
-      S.noteSent(hash);
+      S.noteSent(hash, function () {
+        S.noteMint({ math: pick.math, word: pick.word, face: pick.face, rgb: pick.rgb });
+      });
     });
   }
 
