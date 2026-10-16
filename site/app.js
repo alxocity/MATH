@@ -834,11 +834,208 @@
     syncNote(state.run);
   }
 
+  function asId(v) {
+    if (typeof v === 'bigint') return v >= 0n ? v : null;
+    if (typeof v === 'number' && Number.isSafeInteger(v) && v >= 0) return BigInt(v);
+    if (typeof v === 'string' && /^(0|[1-9]\d*)$/.test(v) && v.length <= 78) {
+      try { return BigInt(v); } catch (e) { return null; }
+    }
+    return null;
+  }
+
+  function normOwner(owner) {
+    const a = String(owner || '').toLowerCase();
+    if (/^0x[0-9a-f]{40}$/.test(a) && !/^0x0{40}$/.test(a)) return a;
+    return '';
+  }
+
+  function pickOwner(owner) {
+    return normOwner(owner) || me();
+  }
+
+  function findRow(list, id) {
+    const s = id.toString();
+    for (let i = 0; i < list.length; i++) {
+      if (list[i] && list[i].id != null && list[i].id.toString() === s) return list[i];
+    }
+    return null;
+  }
+
+  function rememberHeld(list, id, owner) {
+    if (!state.account || owner !== state.account.toLowerCase()) return;
+    const s = id.toString();
+    if (list.some(function (x) { return x != null && x.toString() === s; })) return;
+    list.push(id);
+  }
+
+  function noteMath(id, owner) {
+    const n = asId(id);
+    if (n == null) return;
+    const who = pickOwner(owner);
+    state.supply.set(n, who);
+    const row = findRow(state.math, n);
+    if (row) row.owner = who;
+    else state.math.push({ id: n, owner: who });
+    rememberHeld(state.heldMath, n, who);
+  }
+
+  function noteRgb(r, g, b, owner) {
+    const rr = asId(r);
+    const gg = asId(g);
+    const bb = asId(b);
+    if (rr == null || gg == null || bb == null) return;
+    const who = pickOwner(owner);
+    let row = null;
+    for (let i = 0; i < state.rgb.length; i++) {
+      const t = state.rgb[i];
+      if (t && t.r != null && t.g != null && t.b != null && t.r.toString() === rr.toString() && t.g.toString() === gg.toString() && t.b.toString() === bb.toString()) {
+        row = t;
+        break;
+      }
+    }
+    if (row) {
+      row.owner = who;
+      rememberHeld(state.heldRgb, row.id, who);
+      return;
+    }
+    if (state.rgbBy.r.has(rr) || state.rgbBy.g.has(gg) || state.rgbBy.b.has(bb)) return;
+    let max = 0n;
+    state.rgb.forEach(function (t) { if (t && t.id > max) max = t.id; });
+    const id = max + 1n;
+    row = { id: id, owner: who, r: rr, g: gg, b: bb };
+    state.rgb.push(row);
+    state.usedR.add(rr);
+    state.usedG.add(gg);
+    state.usedB.add(bb);
+    state.rgbBy.r.set(rr, id);
+    state.rgbBy.g.set(gg, id);
+    state.rgbBy.b.set(bb, id);
+    ['r', 'g', 'b'].forEach(function (ch) {
+      const cid = row[ch];
+      if (!state.channels.has(cid)) state.channels.set(cid, new Set());
+      state.channels.get(cid).add(ch);
+    });
+    rememberHeld(state.heldRgb, id, who);
+  }
+
+  function noteToon(spec, owner) {
+    const math = asId(spec.math != null ? spec.math : spec.id);
+    const word = asId(spec.word);
+    const face = asId(spec.face);
+    const rgb = asId(spec.rgb);
+    if (math == null || word == null || face == null || rgb == null) return;
+    const who = pickOwner(owner);
+    let row = findRow(state.toon, math);
+    if (row) {
+      row.owner = who;
+      row.word = word;
+      row.face = face;
+      row.rgb = rgb;
+    } else {
+      row = { id: math, owner: who, word: word, face: face, rgb: rgb };
+      state.toon.push(row);
+    }
+    state.usedWord.add(word);
+    state.usedFace.add(face);
+    state.usedRgb.add(rgb);
+    state.usedMath.add(math);
+    state.toonBy.word.set(word, math);
+    state.toonBy.face.set(face, math);
+    state.toonBy.rgb.set(rgb, math);
+    state.toonBy.math.set(math, math);
+    rememberHeld(state.heldToon, math, who);
+  }
+
+  function blockOk(v) {
+    return typeof v === 'number' && Number.isSafeInteger(v) && v >= 0;
+  }
+
+  function cacheInventory() {
+    const block = blockOk(state.block) ? state.block : (state.inventory && blockOk(state.inventory.block) ? state.inventory.block : null);
+    if (block == null) return;
+    if (!state.inventory) {
+      state.inventory = {
+        block: block,
+        math: state.math,
+        rgb: state.rgb,
+        toon: state.toon,
+        words: state.wordText,
+        faces: state.faceText,
+      };
+    } else {
+      state.inventory.block = block;
+      state.inventory.math = state.math;
+      state.inventory.rgb = state.rgb;
+      state.inventory.toon = state.toon;
+      if (!state.inventory.words) state.inventory.words = state.wordText;
+      if (!state.inventory.faces) state.inventory.faces = state.faceText;
+    }
+    if (typeof ETH.writeCache !== 'function') return;
+    try {
+      ETH.writeCache(state.inventory, state.inventory.blockedDone ? state.inventory.blocked : null);
+    } catch (e) { /* quota, or a block the cache cannot pack */ }
+  }
+
+  function paintHeld() {
+    const tab = state.tab;
+    if (tab !== 'browse' && tab !== 'mine' && tab !== 'toon' && tab !== 'token') return;
+    const view = $('#view');
+    if (!view || typeof SITE[tab] !== 'function') return;
+    try { SITE[tab](view); } catch (e) { /* lists are already updated */ }
+  }
+
+  // WORD and FACE are not minted from this site. Their catalogs still come from the index.
+  function noteStep(step, owner) {
+    if (!step) return;
+    if (step.r != null && step.g != null && step.b != null && step.result == null) noteRgb(step.r, step.g, step.b, owner);
+    else if (step.word != null && step.face != null && step.rgb != null && (step.math != null || step.id != null) && step.result == null) noteToon(step, owner);
+    else if (step.result != null) noteMath(step.result, owner);
+    cacheInventory();
+    paintHeld();
+  }
+
+  function copyRow(t) {
+    return t ? Object.assign({}, t) : t;
+  }
+
+  function keepRows(inv, extra) {
+    let added = 0;
+    function add(src, dst, fields) {
+      if (!src || !dst) return;
+      const seen = new Set();
+      dst.forEach(function (t) {
+        if (t && t.id != null) seen.add(t.id.toString());
+      });
+      src.forEach(function (t) {
+        if (!t || t.id == null || seen.has(t.id.toString())) return;
+        const row = { id: t.id, owner: t.owner };
+        for (let i = 0; i < fields.length; i++) {
+          if (t[fields[i]] == null) return;
+          row[fields[i]] = t[fields[i]];
+        }
+        dst.push(row);
+        seen.add(t.id.toString());
+        added++;
+      });
+    }
+    if (!inv) return 0;
+    if (extra) {
+      add(extra.math, inv.math, []);
+      add(extra.rgb, inv.rgb, ['r', 'g', 'b']);
+      add(extra.toon, inv.toon, ['word', 'face', 'rgb']);
+    }
+    add(state.math, inv.math, []);
+    add(state.rgb, inv.rgb, ['r', 'g', 'b']);
+    add(state.toon, inv.toon, ['word', 'face', 'rgb']);
+    return added;
+  }
+
   function confirm(step) {
     if (!step || step.status === 'confirmed') return;
     const fn = step.onOk;
     markStep(step, { status: 'confirmed', error: '' });
     if (fn) fn();
+    noteStep(step, me());
   }
 
   async function confirmOwned(step) {
@@ -855,7 +1052,7 @@
     if (mine) confirm(step);
     else {
       markStep(step, { status: 'confirmed', error: '' });
-      state.supply.set(step.result, owner);
+      noteStep(step, owner);
     }
     return true;
   }
@@ -1398,7 +1595,7 @@
       if (sim.error) throw new Error(ETH.reason(sim.error));
       if ($('#preview')) $('#preview').textContent = preview + '\nsimulation ok. confirm in the wallet.';
       const hash = await ETH.send(tx);
-      noteSent(hash, function () { state.supply.set(step.result, me()); });
+      noteSent(hash, function () { noteStep({ result: step.result }); });
     });
   }
 
@@ -1631,6 +1828,10 @@
     mathTx: mathTx,
     guardSend: guardSend,
     noteSent: noteSent,
+    noteMint: noteStep,
+    confirmMint: confirm,
+    confirmOwned: confirmOwned,
+    keepRows: keepRows,
     sendStep: sendStep,
     runSteps: runSteps,
     rememberQuery: rememberQuery,
@@ -1852,6 +2053,11 @@
 
   async function refresh() {
     const gen = ++loadGen;
+    const kept = {
+      math: state.math.slice(),
+      rgb: state.rgb.map(copyRow),
+      toon: state.toon.map(copyRow),
+    };
     state.holdersReady = false;
     let base = null;
     let snap = null;
@@ -1894,6 +2100,7 @@
       const inv = base ? await ETH.loadDelta(base, progress, { words: state.snapWords, faces: state.snapFaces }) : await ETH.loadInventory(progress);
       if (gen !== loadGen) return;
       state.indexState = 'ready';
+      keepRows(inv, kept);
       indexInventory(inv);
       const grew = !before || inv.math.length !== before.math || inv.rgb.length !== before.rgb || inv.toon.length !== before.toon;
       const texts = !before || inv.words.size + inv.faces.size !== before.texts;
@@ -1916,7 +2123,10 @@
         setStatus('block ' + state.block + ' · holder unchecked', TIPS.unchecked);
       }
     } catch (e) {
-      if (gen === loadGen) setStatus(e.message);
+      if (gen !== loadGen) return;
+      const host = state.inventory && Array.isArray(state.inventory.math) ? state.inventory : null;
+      if (host && keepRows(host, kept)) indexInventory(host);
+      setStatus(e.message);
     }
   }
 
