@@ -525,6 +525,7 @@
   function finishWatch(hash, rec, onOk) {
     globalThis.RUN.clearHashLock(state, hash);
     syncNote(state.run);
+    if (SITE.paintLock) SITE.paintLock();
     state.pendingHash = null;
     state.pendingOk = null;
     if (state.pendingSums) state.pendingSums.delete(hash);
@@ -556,6 +557,7 @@
   function noteSent(hash, onOk) {
     state.txLock = hash;
     syncNote(state.run);
+    if (SITE.paintLock) SITE.paintLock();
     state.pendingHash = hash;
     state.pendingOk = onOk || null;
     savePending(hash);
@@ -579,6 +581,7 @@
     if (state.txLock !== hash) return;
     globalThis.RUN.clearHashLock(state, hash);
     syncNote(state.run);
+    if (SITE.paintLock) SITE.paintLock();
     state.pendingHash = hash;
     state.pendingOk = onOk || null;
     savePending(hash);
@@ -692,11 +695,15 @@
   }
 
   function releaseRun(gen) {
-    const released = globalThis.RUN.releaseRun(gen, state, function () { syncNote(state.run); });
+    const released = globalThis.RUN.releaseRun(gen, state, function () {
+      syncNote(state.run);
+      if (SITE.paintLock) SITE.paintLock();
+    });
     if (released && state.mintRefresh) {
       state.mintRefresh = false;
-      refreshChain();
+      return refreshChain();
     }
+    return Promise.resolve(released);
   }
 
   function showBatchWhy(why) {
@@ -950,10 +957,10 @@
   function refreshChain() {
     if (state.runBusy || state.txLock) {
       state.mintRefresh = true;
-      return;
+      return Promise.resolve();
     }
-    if (typeof ETH.loadDelta !== 'function') return;
-    refresh().catch(function () {});
+    if (typeof ETH.loadDelta !== 'function') return Promise.resolve();
+    return refresh().then(function () { return loadHeld(); }, function () { return null; });
   }
 
   // A real RGB id comes from the mint Transfer. Without one, the channels are
@@ -1044,7 +1051,10 @@
     const scroller = document.scrollingElement || document.documentElement;
     const top = scroller && typeof scroller.scrollTop === 'number' ? scroller.scrollTop : 0;
     const left = scroller && typeof scroller.scrollLeft === 'number' ? scroller.scrollLeft : 0;
-    const focusId = document.activeElement && document.activeElement.id;
+    const ae = document.activeElement;
+    const focusId = ae && ae.id;
+    const selStart = ae && typeof ae.selectionStart === 'number' ? ae.selectionStart : null;
+    const selEnd = ae && typeof ae.selectionEnd === 'number' ? ae.selectionEnd : null;
     try { SITE[tab](view); }
     catch (e) { return; }
     if (scroller) {
@@ -1055,6 +1065,9 @@
       const el = document.getElementById(focusId);
       if (el && el.focus) {
         try { el.focus(); } catch (err) { /* the node was replaced */ }
+      }
+      if (el && selStart != null && selEnd != null && el.setSelectionRange) {
+        try { el.setSelectionRange(selStart, selEnd); } catch (err) { /* ignore */ }
       }
     }
   }
@@ -1512,14 +1525,14 @@
     const live = await prepareBatch(batch);
     if (!live || !live.length) return;
     if (live.some(inFlight)) return;
-    let short;
-    try { short = await afford(live); }
+    let shortfall;
+    try { shortfall = await afford(live); }
     catch (e) {
       fail(live[0], clip(e && e.message ? e.message : e));
       return;
     }
-    if (short) {
-      fail(live[0], short);
+    if (shortfall) {
+      fail(live[0], shortfall);
       return;
     }
     for (let i = 0; i < live.length; i++) {
@@ -1567,14 +1580,14 @@
     if (!live) return;
     if (live.some(inFlight)) return;
     if (live.length < 2) return sendSeq(live, gen);
-    let short;
-    try { short = await afford(live); }
+    let shortfall;
+    try { shortfall = await afford(live); }
     catch (e) {
       fail(live[0], clip(e && e.message ? e.message : e));
       return;
     }
-    if (short) {
-      fail(live[0], short);
+    if (shortfall) {
+      fail(live[0], shortfall);
       return;
     }
     let caps = null;
@@ -1991,6 +2004,10 @@
     confirmMint: confirm,
     confirmOwned: confirmOwned,
     keepRows: keepRows,
+    releaseRun: releaseRun,
+    ensureParts: ensureParts,
+    checkSubmitted: checkSubmitted,
+    checkPending: checkPending,
     decoratePlan: decoratePlan,
     onHash: onHash,
     refresh: refresh,
@@ -2263,7 +2280,7 @@
       const inv = base ? await ETH.loadDelta(base, progress, { words: state.snapWords, faces: state.snapFaces }) : await ETH.loadInventory(progress);
       if (gen !== loadGen) return;
       state.indexState = 'ready';
-      const chain = {
+      chainIndex = {
         block: inv.block,
         math: inv.math.map(copyRow),
         rgb: inv.rgb.map(copyRow),
@@ -2288,7 +2305,7 @@
       state.blockedDone = scan.blockedDone;
       state.holdersReady = true;
       prepareHeart();
-      const saved = ETH.cacheScan(chain, scan);
+      const saved = ETH.cacheScan(chainIndex, scan);
       if (saved) {
         MOLD.say('blocked', { n: scan.blocked.size });
         setStatus('block ' + state.block + ' · ' + scan.blocked.size + ' blocked', TIPS.blocked);
@@ -2328,6 +2345,22 @@
   }
 
   let partsFlight = null;
+  let chainIndex = null;
+
+  function partsCache(next) {
+    const src = chainIndex;
+    if (!src) return next;
+    return {
+      block: src.block,
+      math: (src.math || []).map(copyRow),
+      rgb: (src.rgb || []).map(copyRow),
+      toon: (src.toon || []).map(copyRow),
+      words: src.words,
+      faces: src.faces,
+      wordOwners: next.wordOwners,
+      faceOwners: next.faceOwners,
+    };
+  }
 
   function ensureParts() {
     const inv = state.inventory;
@@ -2337,7 +2370,7 @@
       if (partsFlight && partsFlight.inv === inv) partsFlight = null;
       if (state.inventory !== inv) return state.inventory;
       state.inventory = next;
-      if (state.blockedDone) ETH.cacheScan(next, { blocked: state.blocked, unknown: state.unknown, blockedDone: true });
+      if (state.blockedDone) ETH.cacheScan(partsCache(next), { blocked: state.blocked, unknown: state.unknown, blockedDone: true });
       return next;
     }, function (e) {
       if (partsFlight && partsFlight.inv === inv) partsFlight = null;
@@ -2374,6 +2407,10 @@
     }
     if (load.tab === 'rgb') {
       if (SITE.setRgbLock) SITE.setRgbLock(false);
+      if (state.rgbLock) {
+        MOLD.say('wait');
+        return;
+      }
       show('rgb', true);
       const before = SITE.planeSnap ? SITE.planeSnap() : '';
       let R = null;

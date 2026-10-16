@@ -300,7 +300,7 @@
     }
     const plan = $('#planRgb');
     if (plan) plan.disabled = flying;
-    if (note) note.textContent = state.rgbLock ? 'locked' : '';
+    if (note) note.textContent = flying ? 'a send is running' : (state.rgbLock ? 'locked' : '');
     if (cells) cells.classList.toggle('locked', !!state.rgbLock);
     ['pR', 'pG', 'pB'].forEach(function (id) {
       const el = $('#' + id);
@@ -313,6 +313,7 @@
     const next = !!on;
     if (!next && flightOpen()) {
       paintLock();
+      MOLD.say('wait');
       return;
     }
     if (state.rgbLock === next) {
@@ -392,7 +393,11 @@
   }
 
   function planRgb() {
-    if (flightOpen()) return;
+    if (flightOpen()) {
+      paintLock();
+      MOLD.say('wait');
+      return;
+    }
     const wasLocked = !!state.rgbLock;
     if (wasLocked) setLock(false);
     syncPlanes();

@@ -201,7 +201,6 @@ button.plan-jump { background: none; border: 0; padding: 0; color: var(--y); fon
 .step.now { box-shadow: inset 3px 0 0 var(--y); }
 .step.failed { color: var(--bad); }
 #cells.locked { opacity: 0.55; }
-button:disabled { opacity: 0.75; }
 .run { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; border-top: 1px solid var(--line); padding: 8px 0; min-width: 0; }
 .run.done { color: var(--dim); }
 .run.now { color: var(--fg); }
