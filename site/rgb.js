@@ -309,6 +309,20 @@
     paintHist();
   }
 
+  function clearPlan() {
+    if (flightOpen()) {
+      MOLD.say('wait');
+      return;
+    }
+    state.queue = [];
+    const host = $('#queue');
+    if (host) host.innerHTML = '<p class="plan-sum" id="planSum" role="status"></p>';
+    if (S.decoratePlan && globalThis.RUN) S.decoratePlan([]);
+    const btn = $('#sendQueueAll');
+    if (btn) btn.disabled = true;
+    paintLock();
+  }
+
   function setLock(on) {
     const next = !!on;
     if (!next && flightOpen()) {
@@ -322,6 +336,7 @@
     }
     state.rgbLock = next;
     paintLock();
+    if (!next) clearPlan();
     if (globalThis.QUERY) S.rememberQuery({ lock: next ? '1' : '' });
   }
 
@@ -851,6 +866,7 @@
   S.undoPlanes = undoPlanes;
   S.redoPlanes = redoPlanes;
   S.setRgbLock = setLock;
+  S.clearPlan = clearPlan;
   S.paintLock = paintLock;
   S.paintCell = paintCell;
   S.pickInk = pickInk;

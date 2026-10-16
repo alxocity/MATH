@@ -2438,6 +2438,7 @@
         r.dispatchEvent(new Event('change'));
       }
       if (SITE.noteEdit) SITE.noteEdit(before);
+      if (SITE.clearPlan) SITE.clearPlan();
       return;
     }
     if (load.tab === 'toon') {
