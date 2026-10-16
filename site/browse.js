@@ -69,8 +69,8 @@
       pager.innerHTML = LIST.pagerHtml(state.page, pages, list.length);
       const prev = $('#prev');
       const next = $('#next');
-      if (prev) prev.onclick = function () { state.page--; paintCards(); };
-      if (next) next.onclick = function () { state.page++; paintCards(); };
+      if (prev) prev.onclick = function () { state.page--; S.rememberList('browse'); paintCards(); };
+      if (next) next.onclick = function () { state.page++; S.rememberList('browse'); paintCards(); };
     }
     loadSvgs(slice.map(function (t) { return t.id; }));
     slice.forEach(function (t) { ENS.want(t.owner); });
@@ -116,10 +116,16 @@
       '<div id="cards"></div><p id="pager" class="row"></p>' +
       '<p class="dim">low 256 bits. pictures from the renderer, this page only.</p>';
     view.querySelectorAll('[data-kind]').forEach(function (b) {
-      b.onclick = function () { state.kind = b.dataset.kind; state.page = 0; S.show('browse'); };
+      b.onclick = function () {
+        state.kind = b.dataset.kind;
+        state.page = 0;
+        S.rememberList('browse');
+        S.show('browse');
+      };
     });
     LIST.bindSearch(state.filter, function () {
       state.page = 0;
+      S.rememberList('browse');
       paintCards();
     }, paintCards, function () { return state.tab === 'browse'; }, ENS);
     paintCards();

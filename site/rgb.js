@@ -173,25 +173,33 @@
     S.runSteps(runs);
   }
 
+  function planOpen(label) {
+    return '<div class="step" id="' + globalThis.RUN.stepId(label) + '" data-plan="' + S.esc(label) + '"><span class="step-main">';
+  }
+
   function paintQueue() {
     const host = $('#queue');
     if (!host) return;
-    host.innerHTML = state.queue.map(function (tx, i) {
+    host.innerHTML = '<p class="plan-sum" id="planSum"></p>' + state.queue.map(function (tx, i) {
       if (tx.kind === 'math') {
         const step = tx.step;
         const note = payNote(step);
         const sendOff = note === RULES.payout() ? ' disabled' : '';
         const noteMark = note === RULES.payout() ? S.mark('ⓘ', S.TIPS.blocked) : note === RULES.unchecked() ? S.mark('ⓘ', S.TIPS.unchecked) : '';
-        return '<div class="step">' + (i + 1) + '. ' + globalThis.TOKEN.sumHtml(step.a, step.b, step.result) +
+        const label = step.a + ' + ' + step.b + ' = ' + step.result;
+        return planOpen(label) + (i + 1) + '. ' + globalThis.TOKEN.sumHtml(step.a, step.b, step.result) +
           (note ? ' <span class="' + (note === RULES.unchecked() ? 'dim' : 'bad') + '">' + S.esc(note) + '</span>' + noteMark : '') +
-          ' <button type="button" data-sim="' + i + '">simulate</button>' + S.mark('ⓘ', S.TIPS.simulate) +
+          '</span> <button type="button" data-sim="' + i + '">simulate</button>' + S.mark('ⓘ', S.TIPS.simulate) +
           '<button type="button" data-send="' + i + '"' + sendOff + '>send</button></div>';
       }
       const why = rgbQueueWhy(tx);
       const used = why && why.indexOf('already used') !== -1 ? S.mark('ⓘ', S.TIPS.used) : '';
-      return '<div class="step">' + (i + 1) + '. RGB.add ' + globalThis.TOKEN.planesHtml(tx.r, tx.g, tx.b) +
+      const label = 'RGB.add ' + tx.r + ', ' + tx.g + ', ' + tx.b;
+      return planOpen(label) + (i + 1) + '. RGB.add ' + globalThis.TOKEN.planesHtml(tx.r, tx.g, tx.b) +
         ' value 0.03' + S.mark('ⓘ', S.TIPS.fees) +
-        (why ? ' <span class="bad">' + S.esc(why) + '</span>' + used :
+        (why ? ' <span class="bad">' + S.esc(why) + '</span>' + used : '') +
+        '</span>' +
+        (why ? '' :
           ' <button type="button" data-sim="' + i + '">simulate</button>' + S.mark('ⓘ', S.TIPS.simulate) +
           '<button type="button" data-send="' + i + '">send</button>') +
         '</div>';
@@ -237,7 +245,119 @@
     finally { rgbFromUser = prev; }
   }
 
+  let undoStack = [];
+  let redoStack = [];
+
+  function planeSnap() {
+    const p = state.planes || { R: 0n, G: 0n, B: 0n };
+    return p.R.toString() + ',' + p.G.toString() + ',' + p.B.toString();
+  }
+
+  function paintHist() {
+    const undo = $('#undo');
+    const redo = $('#redo');
+    if (undo) undo.disabled = !!state.rgbLock || !undoStack.length;
+    if (redo) redo.disabled = !!state.rgbLock || !redoStack.length;
+  }
+
+  function paintLock() {
+    const btn = $('#rgbLock');
+    const note = $('#lockNote');
+    const cells = $('#cells');
+    if (btn) {
+      btn.textContent = state.rgbLock ? 'unlock' : 'lock';
+      btn.setAttribute('aria-pressed', state.rgbLock ? 'true' : 'false');
+    }
+    if (note) note.textContent = state.rgbLock ? 'locked' : '';
+    if (cells) cells.classList.toggle('locked', !!state.rgbLock);
+    ['pR', 'pG', 'pB'].forEach(function (id) {
+      const el = $('#' + id);
+      if (el) el.disabled = !!state.rgbLock;
+    });
+    paintHist();
+  }
+
+  function setLock(on) {
+    const next = !!on;
+    if (state.rgbLock === next) {
+      paintLock();
+      return;
+    }
+    state.rgbLock = next;
+    paintLock();
+    if (globalThis.QUERY) S.rememberQuery({ lock: next ? '1' : '' });
+  }
+
+  function noteEdit(before) {
+    const next = QUERY.histPush(undoStack, redoStack, before, planeSnap());
+    undoStack = next.undo;
+    redoStack = next.redo;
+    paintHist();
+  }
+
+  function showSnap(raw) {
+    const parts = String(raw || '').split(',');
+    const R = BigInt(parts[0] || '0');
+    const G = BigInt(parts[1] || '0');
+    const B = BigInt(parts[2] || '0');
+    state.planes = { R: R, G: G, B: B };
+    state.grid = P.planesToRows(R, G, B);
+    state.planesTouched = true;
+    state.planesDirty = true;
+    const cells = $('#cells');
+    if (cells) cells.innerHTML = S.cellsHtml(state.grid);
+    writePlaneInputs();
+    paintTraits();
+    rememberPlanes();
+    const issues = planeIssues(state.planes);
+    const meta = $('#rgbMeta');
+    if (meta) meta.innerHTML = issuesHtml(issues);
+    paintHist();
+  }
+
+  function undoPlanes() {
+    if (state.rgbLock) return;
+    const step = QUERY.histUndo(undoStack, redoStack, planeSnap());
+    if (!step) return;
+    undoStack = step.undo;
+    redoStack = step.redo;
+    showSnap(step.value);
+  }
+
+  function redoPlanes() {
+    if (state.rgbLock) return;
+    const step = QUERY.histRedo(undoStack, redoStack, planeSnap());
+    if (!step) return;
+    undoStack = step.undo;
+    redoStack = step.redo;
+    showSnap(step.value);
+  }
+
+  function paintCell(i, ch) {
+    if (state.rgbLock) return false;
+    const before = planeSnap();
+    const next = P.paintCell(state.grid, i, ch);
+    if (next === state.grid) return false;
+    if (QUERY.userCommit('paint')) {
+      state.planesTouched = true;
+      state.planesDirty = true;
+    }
+    state.grid = next;
+    syncPlanes();
+    noteEdit(before);
+    return true;
+  }
+
+  function pickInk(ch) {
+    if (state.rgbLock) return false;
+    if (!P.COL[ch]) return false;
+    state.ink = ch;
+    return true;
+  }
+
   function planRgb() {
+    const wasLocked = !!state.rgbLock;
+    if (wasLocked) setLock(false);
     syncPlanes();
     if (QUERY.userCommit('plan')) {
       state.planesTouched = true;
@@ -271,6 +391,7 @@
       if (meta) meta.textContent = e.message;
     }
     paintQueue();
+    if (state.queue.length) setLock(true);
     let qWhy = '';
     state.queue.forEach(function (item) {
       if (qWhy) return;
@@ -347,6 +468,7 @@
   }
 
   function fillRgb(advance) {
+    if (state.rgbLock) return;
     const rEl = $('#pR');
     const gEl = $('#pG');
     const bEl = $('#pB');
@@ -455,6 +577,9 @@
     const p = state.planes || { R: 0n, G: 0n, B: 0n };
     view.innerHTML =
       S.lead('Paint three channels. Each one is a MATH id.', 'planes') +
+      '<div class="row"><button type="button" id="rgbLock" aria-pressed="' + (state.rgbLock ? 'true' : 'false') + '">' + (state.rgbLock ? 'unlock' : 'lock') + '</button>' +
+      '<button type="button" id="undo">undo</button><button type="button" id="redo">redo</button>' +
+      '<span id="lockNote" class="dim">' + (state.rgbLock ? 'locked' : '') + '</span></div>' +
       '<div class="row"><button type="button" id="heart">heart</button>' +
       '<button type="button" id="shuffle">shuffle</button>' +
       '<input type="file" id="file" accept="image/*">' +
@@ -476,9 +601,13 @@
       '<div class="preview" id="preview">MATH mints, then RGB.add at 0.03 ETH, paid to the channel owners. send signs the next batch.' + S.mark('ⓘ', S.TIPS.fees) + '</div>';
     const grid = $('#cells');
     grid.innerHTML = S.cellsHtml(state.grid);
+    if (state.rgbLock) grid.classList.add('locked');
     paintTraits();
+    paintLock();
     let stroke = '';
+    let strokeBefore = '';
     function put(btn, ch) {
+      if (state.rgbLock) return false;
       if (!btn || !btn.closest('#cells')) return false;
       const i = Number(btn.dataset.i);
       const next = P.paintCell(state.grid, i, ch);
@@ -502,8 +631,10 @@
       return issues;
     }
     grid.addEventListener('pointerdown', function (ev) {
+      if (state.rgbLock) return;
       const btn = ev.target.closest('button');
       if (!btn || ev.button > 0) return;
+      strokeBefore = planeSnap();
       ev.preventDefault();
       stroke = state.ink;
       put(btn, stroke);
@@ -513,26 +644,31 @@
       try { grid.setPointerCapture(ev.pointerId); } catch (e) { /* already gone */ }
     }, { passive: false });
     grid.addEventListener('pointermove', function (ev) {
-      if (!stroke) return;
+      if (state.rgbLock || !stroke) return;
       const el = document.elementFromPoint(ev.clientX, ev.clientY);
       const btn = el && el.closest && el.closest('#cells button');
       if (put(btn, stroke)) syncGrid();
     });
-    function endStroke() { stroke = ''; }
+    function endStroke() {
+      if (stroke) noteEdit(strokeBefore);
+      stroke = '';
+    }
     grid.addEventListener('pointerup', endStroke);
     grid.addEventListener('pointercancel', endStroke);
     grid.addEventListener('click', function (ev) {
-      if (ev.detail !== 0) return;
+      if (state.rgbLock || ev.detail !== 0) return;
       const btn = ev.target.closest('button');
       if (!btn) return;
-      put(btn, state.ink);
+      const before = planeSnap();
+      if (!put(btn, state.ink)) return;
       const issues = syncGrid();
+      noteEdit(before);
       const rule = issues.find(function (s) { return RULES.mold(s); });
       S.hit(rule || '');
     });
     document.querySelectorAll('.swatches button').forEach(function (b) {
       b.onclick = function () {
-        state.ink = b.dataset.ink;
+        if (!pickInk(b.dataset.ink)) return;
         document.querySelectorAll('.swatches button').forEach(function (el) {
           const on = el === b;
           el.classList.toggle('on', on);
@@ -541,9 +677,16 @@
         if (QUERY.userCommit('swatch', { touched: state.planesTouched })) rememberPlanes();
       };
     });
-    $('#heart').onclick = function () { S.applyHeart(false); };
-    $('#shuffle').onclick = function () { S.applyHeart(true); };
+    const lockBtn = $('#rgbLock');
+    if (lockBtn) lockBtn.onclick = function () { setLock(!state.rgbLock); };
+    const undoBtn = $('#undo');
+    if (undoBtn) undoBtn.onclick = undoPlanes;
+    const redoBtn = $('#redo');
+    if (redoBtn) redoBtn.onclick = redoPlanes;
+    $('#heart').onclick = function () { if (state.rgbLock) return; S.applyHeart(false); };
+    $('#shuffle').onclick = function () { if (state.rgbLock) return; S.applyHeart(true); };
     $('#file').onchange = function () {
+      if (state.rgbLock) return;
       const file = $('#file').files && $('#file').files[0];
       if (!file) return;
       state.planesTouched = true;
@@ -555,7 +698,8 @@
       img.src = URL.createObjectURL(file);
     };
     $('#apply').onclick = function () {
-      if (!state.sample) return;
+      if (state.rgbLock || !state.sample) return;
+      const before = planeSnap();
       state.planesTouched = true;
       state.planesDirty = true;
       const px = new Float32Array(state.sample);
@@ -586,12 +730,17 @@
       state.grid = [];
       for (let y = 0; y < 16; y++) state.grid.push(chars.slice(y * 16, y * 16 + 16).join(''));
       S.show('rgb');
+      noteEdit(before);
     };
     ['pR', 'pG', 'pB'].forEach(function (id) {
+      $('#' + id).disabled = !!state.rgbLock;
       $('#' + id).addEventListener('input', function () {
+        if (state.rgbLock) return;
         if (QUERY.userCommit('edit')) state.planesTouched = true;
       });
       $('#' + id).addEventListener('change', function () {
+        if (state.rgbLock) return;
+        const before = planeSnap();
         try {
           const R = BigInt($('#pR').value.trim());
           const G = BigInt($('#pG').value.trim());
@@ -614,14 +763,17 @@
           }
           const rule = issues.find(function (s) { return RULES.mold(s); });
           S.hit(rule || '');
-          if (commit) rememberPlanes();
+          if (commit) {
+            noteEdit(before);
+            rememberPlanes();
+          }
         } catch (e) { /* keep grid */ }
       });
     });
     rememberPlanes();
     state.runSend = function () { sendAllQueue(); };
     $('#planRgb').onclick = planRgb;
-    $('#suggest').onclick = function () { fillRgb(true); };
+    $('#suggest').onclick = function () { if (state.rgbLock) return; fillRgb(true); };
     QUERY.attachCopy(view.querySelector('.copy-link'), function () {
       const r = $('#pR');
       const g = $('#pG');
@@ -652,4 +804,12 @@
   S.signalPlanes = signalPlanes;
   S.planeIssues = planeIssues;
   S.issuesHtml = issuesHtml;
+  S.planeSnap = planeSnap;
+  S.noteEdit = noteEdit;
+  S.undoPlanes = undoPlanes;
+  S.redoPlanes = redoPlanes;
+  S.setRgbLock = setLock;
+  S.paintCell = paintCell;
+  S.pickInk = pickInk;
+  S.planRgb = planRgb;
 })();
