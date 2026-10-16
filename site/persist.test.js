@@ -1224,6 +1224,27 @@ async function main() {
   state.tab = 'rgb';
   state.runBusy = false;
   state.txLock = null;
+  state.blockedDone = true;
+  state.inventory = {
+    block: 3,
+    math: [{ id: 1n, owner: user }, { id: 700n, owner: user }],
+    rgb: [],
+    toon: [],
+    words: new Map(),
+    faces: new Map(),
+    wordOwners: null,
+    faceOwners: null,
+  };
+  let earlyScans = 0;
+  const scanEarly = savedEth.cacheScan;
+  savedEth.cacheScan = function () { earlyScans++; return false; };
+  savedEth.ensurePartOwners = async function (inv) {
+    return Object.assign({}, inv, { wordOwners: [user], faceOwners: [user] });
+  };
+  await SITE.ensureParts();
+  assert.strictEqual(earlyScans, 0);
+  savedEth.cacheScan = scanEarly;
+  state.blockedDone = false;
   state.math = [{ id: 1n, owner: user }, { id: 700n, owner: user }];
   state.rgb = [];
   state.toon = [];
@@ -1422,10 +1443,92 @@ async function main() {
     ready: async function () { return ''; },
   };
   await SITE.runSteps([seq]);
-  global.setInterval = prevInterval;
-  global.clearInterval = prevClear;
   assert.strictEqual(seq.status, 'confirmed');
   assert.ok(state.rgb.some(function (t) { return t.id === 15n && t.r === 70n && t.g === 71n && t.b === 72n; }));
+
+  state.runTick = true;
+  state.runBusy = false;
+  state.txLock = null;
+  state.mintRefresh = false;
+  state.run = [];
+  state.account = user;
+  let sentBatch = 0;
+  savedEth.ownerOf = async function () { return user; };
+  savedEth.send = async function () { throw new Error('sequential send'); };
+  global.ethereum = {
+    request: async function (q) {
+      const method = q && q.method;
+      if (method === 'eth_chainId') return '0x1';
+      if (method === 'wallet_getCapabilities') return { '0x1': { atomic: { status: 'ready' } } };
+      if (method === 'wallet_sendCalls') {
+        sentBatch++;
+        return { id: '0xbatchlive' };
+      }
+      if (method === 'wallet_getCallsStatus') {
+        return {
+          status: 200,
+          receipts: [{
+            status: '0x1',
+            transactionHash: '0x' + '11'.repeat(32),
+            logs: [],
+          }, {
+            status: '0x1',
+            transactionHash: '0x' + '22'.repeat(32),
+            logs: [{ address: global.ETH.ADDR.RGB, topics: [transfer, topicWord(0), topicAddr(user), topicWord(55)] }],
+          }],
+        };
+      }
+      return null;
+    },
+  };
+  const mathStep = {
+    label: '4 + 5 = 9',
+    result: 9n,
+    status: 'pending',
+    tx: function () { return { to: global.ETH.ADDR.MATH, data: '0x', value: 0 }; },
+    done: async function () { return false; },
+    ready: async function () { return ''; },
+  };
+  const rgbStep = {
+    label: 'RGB.add 170, 171, 172',
+    result: null,
+    r: 170n,
+    g: 171n,
+    b: 172n,
+    status: 'pending',
+    tx: function () { return { to: global.ETH.ADDR.RGB, data: '0x', value: 0 }; },
+    done: async function () { return false; },
+    ready: async function () { return ''; },
+  };
+  await SITE.runSteps([mathStep, rgbStep]);
+  assert.strictEqual(sentBatch, 1);
+  assert.strictEqual(mathStep.status, 'confirmed');
+  assert.strictEqual(rgbStep.status, 'confirmed');
+  assert.strictEqual(rgbStep.rgbId, 55n);
+  assert.ok(state.rgb.some(function (t) { return t.id === 55n && t.r === 170n && t.g === 171n && t.b === 172n; }));
+
+  savedEth.balance = async function () { return 0n; };
+  savedEth.send = async function () { return '0x' + 'ab'.repeat(32); };
+  state.runTick = true;
+  state.runBusy = false;
+  state.txLock = null;
+  state.mintRefresh = false;
+  state.run = [];
+  const poor = {
+    label: '8 + 8 = 16',
+    result: 16n,
+    status: 'pending',
+    tx: function () { return { to: global.ETH.ADDR.MATH, data: '0x', value: 0 }; },
+    done: async function () { return false; },
+    ready: async function () { return ''; },
+  };
+  await SITE.runSteps([poor]);
+  assert.strictEqual(poor.status, 'failed');
+  assert.strictEqual(poor.error, 'balance too low — rough pre-check');
+  savedEth.balance = async function () { return 1000000000000000000n; };
+
+  global.setInterval = prevInterval;
+  global.clearInterval = prevClear;
 
   get('run');
   get('planRgb').disabled = false;
@@ -1445,6 +1548,26 @@ async function main() {
   assert.strictEqual(get('planRgb').disabled, false);
   assert.strictEqual(get('rgbLock').disabled, false);
   assert.strictEqual(get('lockNote').textContent, 'locked');
+  state.run = [];
+  state.runBusy = false;
+  state.txLock = null;
+  state.rgbLock = true;
+  get('planRgb').disabled = true;
+  get('lockNote').textContent = 'a send is running';
+  SITE.paintRun();
+  assert.strictEqual(get('planRgb').disabled, false);
+  assert.strictEqual(get('lockNote').textContent, 'locked');
+  get('sendBatch').disabled = false;
+  get('batchWhy').textContent = '';
+  state.runGen = 9;
+  state.runBusy = true;
+  state.txLock = 'run';
+  state.run = [];
+  state.mintRefresh = false;
+  await SITE.releaseRun(9);
+  assert.strictEqual(state.runBusy, false);
+  assert.strictEqual(get('sendBatch').disabled, true);
+  assert.strictEqual(get('batchWhy').textContent, 'nothing to send');
 
   let waits = 0;
   const prevSay = global.MOLD.say;
@@ -1521,6 +1644,21 @@ async function main() {
   assert.strictEqual(get('pR').value, '1');
   assert.strictEqual(get('cells').innerHTML, flightCells);
   assert.strictEqual(state.planesDirty, false);
+  state.rgbLock = false;
+  state.runBusy = true;
+  state.txLock = 'run';
+  state.planes = { R: 1n, G: 1n, B: 1n };
+  state.grid = global.PLAN.planesToRows(1n, 1n, 1n);
+  state.planesDirty = false;
+  get('pR').value = '1';
+  waits = 0;
+  SITE.applyLoad({ tab: 'rgb', r: '4', g: '5', b: '6' });
+  assert.strictEqual(waits, 0);
+  assert.strictEqual(state.rgbLock, false);
+  assert.strictEqual(state.planes.R, 4n);
+  assert.strictEqual(state.planes.G, 5n);
+  assert.strictEqual(state.planes.B, 6n);
+  assert.strictEqual(get('pR').value, '4');
   global.MOLD.say = prevSay;
   state.runBusy = false;
   state.txLock = null;
@@ -1607,6 +1745,60 @@ async function main() {
   await SITE.releaseRun(12);
   assert.ok(state.rgb.some(function (t) { return t.id === 11n && t.r === 50n && t.g === 51n && t.b === 52n; }));
   assert.ok(state.heldRgb.some(function (id) { return id === 11n; }));
+
+  get('planRgb').disabled = false;
+  get('lockNote').textContent = '';
+  state.rgbLock = true;
+  state.runBusy = false;
+  state.txLock = null;
+  state.mintRefresh = false;
+  state.run = [];
+  let whileOpening = null;
+  savedEth.ensureChain = async function () {
+    whileOpening = { plan: get('planRgb').disabled, note: get('lockNote').textContent };
+  };
+  await SITE.runSteps([{
+    label: '6 + 6 = 12',
+    result: 12n,
+    status: 'pending',
+    tx: function () { return { to: global.ETH.ADDR.MATH, data: '0x', value: 0 }; },
+    done: async function () { return true; },
+  }]);
+  assert.deepStrictEqual(whileOpening, { plan: true, note: 'a send is running' });
+
+  const prevInterval2 = global.setInterval;
+  const prevClear2 = global.clearInterval;
+  global.setInterval = function (fn, ms) {
+    if (ms === 200) {
+      Promise.resolve().then(fn);
+      return 1;
+    }
+    return prevInterval2(fn, ms);
+  };
+  global.clearInterval = function (id) {
+    if (id === 1) return;
+    return prevClear2(id);
+  };
+  state.runTick = true;
+  state.runBusy = false;
+  state.txLock = null;
+  state.runGen = 30;
+  state.mintRefresh = false;
+  state.rgbLock = true;
+  state.run = [{ label: '9 + 9 = 18', status: 'submitted', hash: '0x' + 'ef'.repeat(32), result: 18n }];
+  get('planRgb').disabled = false;
+  get('lockNote').textContent = '';
+  savedEth.receipt = async function () { return { status: '0x1', logs: [] }; };
+  SITE.resumeIfSubmitted();
+  assert.strictEqual(get('planRgb').disabled, true);
+  assert.strictEqual(get('lockNote').textContent, 'a send is running');
+  await new Promise(function (r) { setTimeout(r, 0); });
+  global.setInterval = prevInterval2;
+  global.clearInterval = prevClear2;
+  assert.strictEqual(state.runBusy, false);
+
+  const appSrc = fs.readFileSync(path.join(__dirname, 'app.js'), 'utf8');
+  assert.strictEqual(/\b(?:let|const|var) short\b/.test(appSrc), false);
 
   console.log('persist.test.js ok');
 }

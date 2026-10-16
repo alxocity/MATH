@@ -1449,6 +1449,7 @@
     const gen = state.runGen;
     state.runBusy = true;
     state.txLock = 'run';
+    if (SITE.paintLock) SITE.paintLock();
     watchOpen(gen).finally(function () {
       releaseRun(gen);
     });
@@ -1675,6 +1676,7 @@
     state.runBusy = true;
     state.txLock = 'run';
     try {
+      if (SITE.paintLock) SITE.paintLock();
       await ETH.ensureChain();
       if (gen !== state.runGen) return;
       hydrateRun(steps, true);
@@ -2005,6 +2007,7 @@
     confirmOwned: confirmOwned,
     keepRows: keepRows,
     releaseRun: releaseRun,
+    resumeIfSubmitted: resumeIfSubmitted,
     ensureParts: ensureParts,
     checkSubmitted: checkSubmitted,
     checkPending: checkPending,
@@ -2370,7 +2373,7 @@
       if (partsFlight && partsFlight.inv === inv) partsFlight = null;
       if (state.inventory !== inv) return state.inventory;
       state.inventory = next;
-      if (state.blockedDone) ETH.cacheScan(partsCache(next), { blocked: state.blocked, unknown: state.unknown, blockedDone: true });
+      if (state.blockedDone && chainIndex) ETH.cacheScan(partsCache(next), { blocked: state.blocked, unknown: state.unknown, blockedDone: true });
       return next;
     }, function (e) {
       if (partsFlight && partsFlight.inv === inv) partsFlight = null;
@@ -2406,7 +2409,7 @@
       return;
     }
     if (load.tab === 'rgb') {
-      if (SITE.setRgbLock) SITE.setRgbLock(false);
+      if (state.rgbLock && SITE.setRgbLock) SITE.setRgbLock(false);
       if (state.rgbLock) {
         MOLD.say('wait');
         return;
